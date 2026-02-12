@@ -1,0 +1,7 @@
+com/data/guids.dat
+__pycache__/
+.vscode/
+win.code-workspace
+tools/public-win/
+*.pyc
+.git/
