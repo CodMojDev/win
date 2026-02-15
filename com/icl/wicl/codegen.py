@@ -50,9 +50,9 @@ class Code:
         assert self.file and not self.file.closed
         
         if base == '':
-            self.file.write(f'class {name}:\n')
+            self.file.write(f'{self.make_indents()}class {name}:\n')
         else:
-            self.file.write(f'class {name}({base}):\n')
+            self.file.write(f'{self.make_indents()}class {name}({base}):\n')
         
     def append_field(self, name: str, type: str = '', value: str = ''):
         assert self.file and not self.file.closed

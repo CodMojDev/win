@@ -120,6 +120,63 @@ class COMVirtualTable(VirtualTable):
             return _virtual_wrapper
     
         return _com_function_vbstyle
+    
+    def com_function_vbstyle_nonvariant(self, *args: type, exists: bool = False,
+                     intermediate_method: bool = False, retval_index: int = -1,
+                     retval_type: type = type(None), retval_function: Callable = None) -> Callable:
+        """
+        Declare COM function in VB style (Visual Basic).
+        """
+        def _com_function_vbstyle(f: Callable):
+            name = self._pack_name(f.__name__)
+            if not exists:
+                self._add(name)
+            
+            def _virtual_wrapper(f_self, *f_args, **kwargs) -> Callable: 
+                field_name = self.field_name
+                get_vtable = getattr(f_self, f'__get_{self.name}__', None)
+                if get_vtable is not None:
+                    field_name = get_vtable()
+                vtable = i_cast(getattr(f_self, field_name), 
+                                POINTER(self.VType))
+                address = getattr(vtable.contents, name)
+                callback = VirtualTable.func_ptr(PtrUtil.get_address(address))
+                callback.restype = HRESULT
+                
+                if retval_index != -1:
+                    list_args = list(args)
+                    list_args.insert(retval_index, PTR(retval_type))
+                    callback.argtypes = (THIS, *list_args)
+                else:
+                    callback.argtypes = (THIS, *args)
+                
+                list_f_args = list(f_args)
+                if retval_index != -1:
+                    retval = retval_type()
+                    list_f_args.insert(retval_index, byref(retval))
+                    
+                hr = callback(byref(f_self), *list_f_args)
+                if FAILED(hr): raise COMError(hr)
+                
+                if retval_index != -1:
+                    if callable(retval_function):
+                        return retval_function(retval)
+                    return retval
+                return None
+            
+            if not intermediate_method:
+                _virtual_wrapper = wraps(f)(_virtual_wrapper)
+            else:
+                @wraps(f)
+                def _intermediate(*args, **kwargs):
+                    return f(*args, **kwargs, function=_virtual_wrapper)
+                
+            if intermediate_method:
+                return _intermediate
+            
+            return _virtual_wrapper
+    
+        return _com_function_vbstyle
 
 class COMInterface(CStructure):
     """

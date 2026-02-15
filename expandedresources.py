@@ -16,7 +16,7 @@
 
 from . import cpreproc
 
-from comtypes import HRESULT
+from .com.comdefbase import HRESULT
 
 from .minwindef import windll, HRESULT, PULONG, PBOOL
 

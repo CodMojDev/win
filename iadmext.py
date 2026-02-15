@@ -20,7 +20,7 @@ if cpreproc.pragma_once("__iadmext_h__"):
     # REGION *** Desktop Family ***
 
     # header files for imported files
-    from comtypes import IUnknown, COMMETHOD
+    from .com.unknwn import *
     from .winnt import TEXT
     from .guiddef import *
     from .iiscnfg import *
@@ -50,34 +50,37 @@ if cpreproc.pragma_once("__iadmext_h__"):
 
     if cpreproc.pragma_once("__IADMEXT_INTERFACE_DEFINED__"):
         class IADMEXT(IUnknown):
+            virtual_table = COMVirtualTable.from_ancestor(IUnknown)
             _iid_ = IID_IADMEXT
-            _methods_ = IUnknown._methods_ + [
-                #
-                # All methods below will be called under a thread which has called
-                # CoInitializeEx(NULL, COINIT_MULTITHREADED).
-                #
-                # The IMSAdminBase Object will be available during all of these calls.
-                #
-
-                #
-                # Initialize will be called by IISADMIN when it initializes.
-                #
-                COMMETHOD([], HRESULT, "Initialize"),
-
-                #
-                # EnumDcomCLSIDs will be called by IISADMIN when it initializes,
-                # and the returned CLSIDs will be written to the metabase at
-                # the path IISADMIN_EXTENSIONS_CLSID_MD_KEY.
-                #
-                COMMETHOD(["out", "in"], HRESULT, "EnumDcomCLSIDs", 
-                          ("pclsidDcom", LPCLSID),
-                          ("dwEnumIndex", DWORD)),
-
-                #
-                # Terminate will be called by IISADMIN when it terminates.
-                #
-                COMMETHOD([], HRESULT, "Terminate")
-            ]
+            
+            #
+            # All methods below will be called under a thread which has called
+            # CoInitializeEx(NULL, COINIT_MULTITHREADED).
+            #
+            # The IMSAdminBase Object will be available during all of these calls.
+            #
+            
+            @virtual_table.com_function()
+            def Initialize(self) -> int:
+                """
+                Initialize will be called by IISADMIN when it initializes.
+                """
+                
+            @virtual_table.com_function(LPCLSID, DWORD)
+            def EnumDcomCLSIDs(self, pclsidDcom: IPointer[CLSID], dwEnumIndex: int) -> int:
+                """
+                EnumDcomCLSIDs will be called by IISADMIN when it initializes,
+                and the returned CLSIDs will be written to the metabase at
+                the path IISADMIN_EXTENSIONS_CLSID_MD_KEY.
+                """
+                
+            @virtual_table.com_function()
+            def Terminate(self) -> int:
+                """
+                Terminate will be called by IISADMIN when it terminates.
+                """
+            
+            virtual_table.build()
         
     # __IADMEXT_INTERFACE_DEFINED__
     

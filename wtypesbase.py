@@ -245,7 +245,7 @@ if cpreproc.pragma_once():
     CLSCTX_ACTIVATE_32_BIT_SERVER = CLSCTX_ACTIVATE_X86_SERVER, # Old name for CLSCTX_ACTIVATE_X86_SERVER; value must be identical for compatibility
     CLSCTX_ACTIVATE_64_BIT_SERVER = 0x80000 # Pick 64-bit server only
     CLSCTX_ENABLE_CLOAKING = 0x100000 	      # Use the thread token (if present) for the activation.
-# The following flag is internal only
+    # The following flag is internal only
     CLSCTX_APPCONTAINER = 0x400000  # Internal CLSCTX used to indicate activation is for app container
     CLSCTX_ACTIVATE_AAA_AS_IU = 0x800000 # Interactive User activation behavior for As-Activator servers.
     CLSCTX_RESERVED6 = 0x1000000 # reserved

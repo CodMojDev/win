@@ -14,7 +14,7 @@ from .minwindef import *
 
 from .defbase import *
 
-from comtypes import IID, GUID
+from .com.guid import IID, GUID, HRESULT
 
 from .winnt import (PZZSTR, PZZWSTR, PCZZSTR, 
                     PCZZWSTR, PCSTR, PCWSTR, 

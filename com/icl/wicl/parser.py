@@ -18,8 +18,11 @@ class ICLParser(IIMLParser):
         declaring_structure: str
         declaring_class: bool
         enum_entry_count: int
+        in_ifdef_block: bool
         declaring_enum: str
         function_count: int
+        ifver_used: bool
+        in_imports: bool
         commentext: str
         silent: bool
         docs: str
@@ -32,9 +35,12 @@ class ICLParser(IIMLParser):
             self.last_defined_interface = ''
             self.declaring_structure = ''
             self.declaring_class = False
+            self.in_ifdef_block = False
             self.enum_entry_count = 0
             self.declaring_enum = ''
             self.function_count = 0
+            self.in_imports = False
+            self.ifver_used = False
             self.commentext = ''
             self.silent = False
             self.py = False
@@ -152,7 +158,7 @@ class ICLParser(IIMLParser):
                 arg, _ = name_type
                 for j, ref in refs:
                     if i == j:
-                        arg = ref + '.ref()'
+                        arg = f'{ref}.ref() if {ref} else NULL'
                 delegate_args.append(arg)
                 
             if is_foreign:
@@ -243,6 +249,9 @@ class ICLParser(IIMLParser):
         elif instruction == 'ee':
             if not self.context.silent:
                 self.enum_entry()
+        elif instruction == 'eef':
+            if not self.context.silent:
+                self.enum_entry_force()
         elif instruction == 'silent':
             self.context.silent = True
         elif instruction == 'py':
@@ -285,6 +294,35 @@ class ICLParser(IIMLParser):
         elif instruction == 'clsid':
             if not self.context.silent:
                 self.clsid()
+        elif instruction in ('ifver', 'ifver_ge'):
+            self.ifver_ge()
+        elif instruction == 'ifver_l':
+            self.ifver_l()
+        elif instruction == 'ifver_g':
+            self.ifver_g()
+        elif instruction == 'ifdef':
+            self.ifdef()
+        elif instruction == 'ifndef':
+            self.ifndef()
+        elif instruction == 'elifdef':
+            self.elifdef()
+        elif instruction == 'elsedef':
+            self.elsedef()
+        elif instruction == 'unicode':
+            self.context.tokens = [instruction, 'UNICODE']
+            self.context.tokens_length = 2
+            self.ifdef()
+        elif instruction == 'imports':
+            self.context.in_imports = True
+            self.code.append_newline()
+        elif instruction == 'import':
+            self.code.append(f'from {self.context.tokens[1]} import *')
+        elif instruction in ('ifver_ie', 'ifver_ie_ge'):
+            self.ifver_ie_ge()
+        elif instruction == 'ifver_ie_l':
+            self.ifver_ie_l()
+        elif instruction == 'ifver_ie_g':
+            self.ifver_ie_g()
         else:
             return False
         return True
@@ -321,8 +359,11 @@ class ICLParser(IIMLParser):
         if self.context.silent:
             self.context.silent = False
             return True
+        elif self.context.function_count != 0:
+            self.interface_end()
+            return True
         elif self.context.declaring_enum:
-            self.code.append(f'{self.context.declaring_enum} = INT')
+            self.code.append(f'{self.indents}{self.context.declaring_enum} = INT')
             self.code.append_newline()
             self.context.declaring_enum = ''
             self.context.enum_entry_count = 0
@@ -335,6 +376,15 @@ class ICLParser(IIMLParser):
         elif self.context.declaring_class:
             self.context.declaring_class = False
             self.code.unindent()
+            self.code.append_newline()
+            return True
+        elif self.context.in_ifdef_block:
+            self.context.in_ifdef_block = False
+            self.code.unindent()
+            self.code.append_newline()
+            return True
+        elif self.context.in_imports:
+            self.context.in_imports = False
             self.code.append_newline()
             return True
         return False
@@ -462,8 +512,7 @@ class ICLParser(IIMLParser):
         if len(pointer_types) == 0:
             self.syntax_error('Incorrect usage of instruction "pie", '
                             'missing pointer type names.', len(type_name)+3)
-        type_name = self.POINTER_MAP.get(type_name,
-                                            f'{type_name}.PTR()')
+        type_name = self.POINTER_MAP.get(type_name, f'{type_name}.PTR()')
         
         pointer_types.append(type_name)
         if not self.context.silent:
@@ -526,8 +575,17 @@ class ICLParser(IIMLParser):
             else:
                 self.context.enum_entry_count = int(enum_entry_count)
         
-        self.code.append(f'{entry_name} = {enum_entry_count}')
+        self.code.append_field(entry_name, value=enum_entry_count)
         self.context.enum_entry_count += 1
+        
+    def enum_entry_force(self):
+        if self.context.tokens_length < 3:
+            self.syntax_error('Incorrect declaration of enum entry,'
+                              'missing enum entry name and value.')
+        
+        entry_name = self.context.tokens[1]
+        enum_entry_count = self.context.tokens[2]
+        self.code.append_field(entry_name, value=enum_entry_count)
         
     def alias(self):
         if self.context.tokens_length < 3:
@@ -642,7 +700,7 @@ class ICLParser(IIMLParser):
             self.syntax_error('Incorrect declaration of equal statement, '
                               'missing name and value.', len(self.context.last_line))
         
-        self.code.append(f'{self.context.tokens[1]} = {self.context.tokens[2]}')
+        self.code.append_field(name=f'{self.context.tokens[1]}', value=f'{" ".join(self.context.tokens[2:])}')
         
     def define_guid(self, class_name: str = None):
         if class_name is None:
@@ -688,7 +746,7 @@ class ICLParser(IIMLParser):
     def define_coclass(self):
         if self.context.tokens_length == 1:
             self.syntax_error('Incorrect declaration of coclass, '
-                            'missing class name.', 3)
+                              'missing class name.', 3)
         class_name = self.context.tokens[1]
         
         self.code.append_class(class_name, 'COMClass')
@@ -698,8 +756,104 @@ class ICLParser(IIMLParser):
         
     def clsid(self):
         if self.context.tokens_length == 1:
-            self.syntax_error('Incorrect usage of "clsid" instruction,'
-                            'missing CLSID.', len(self.context.last_line)+1)
+            self.syntax_error('Incorrect usage of "clsid" instruction, '
+                              'missing CLSID.', len(self.context.last_line)+1)
         
         clsid = self.context.tokens[1]
         self.code.append_field('_clsid_', value='CLSID("{'+clsid+'}")')
+        
+    def _ifver(self, op: str):
+        if not self.context.ifver_used:
+            self.context.ifver_used = True
+            self.code.append_newline()
+            self.code.append('from ..sdkddkver import *')
+            self.code.append('_version = cpreproc.get_version()\n')
+            
+        version = self.context.tokens[1]
+        if version.startswith('@'):
+            version = 'WIN32_WINNT_' + version[1:]
+        self.code.append(f'if _version {op} {version}:')
+        self.code.indent()
+        self.context.in_ifdef_block = True
+        
+    def ifver_ge(self):
+        if self.context.tokens_length == 1:
+            self.syntax_error('Incorrect usage of "ifver"/"ifver_ge" instruction, '
+                              'missing version.', len(self.context.last_line)+1)
+        
+        self._ifver('>=')
+        
+    def ifver_l(self):
+        if self.context.tokens_length == 1:
+            self.syntax_error('Incorrect usage of "ifver_l" instruction, '
+                              'missing version.', len(self.context.last_line)+1)
+            
+        self._ifver('<')
+        
+    def ifver_g(self):
+        if self.context.tokens_length == 1:
+            self.syntax_error('Incorrect usage of "ifver_g" instruction, '
+                              'missing version.', len(self.context.last_line)+1)
+            
+        self._ifver('>')
+        
+    def ifdef(self):
+        if self.context.tokens_length == 1:
+            self.syntax_error('Incorrect usage of "ifdef" instruction, '
+                              'missing define name.', len(self.context.last_line)+1)
+            
+        self.context.in_ifdef_block = True
+        self.code.append(f'if cpreproc.ifdef("{self.context.tokens[1]}"):')
+        self.code.indent()
+    
+    def elifdef(self):
+        if self.context.tokens_length == 1:
+            self.syntax_error('Incorrect usage of "elifdef" instruction, '
+                              'missing define name.', len(self.context.last_line)+1)
+            
+        self.code.append(f'elif cpreproc.ifdef("{self.context.tokens[1]}"):')
+        
+    def elsedef(self):
+        self.code.append(f'else:')
+        
+    def ifndef(self):
+        if self.context.tokens_length == 1:
+            self.syntax_error('Incorrect usage of "ifndef" instruction, '
+                              'missing define name.', len(self.context.last_line)+1)
+            
+        self.context.in_ifdef_block = True
+        self.code.append(f'if cpreproc.ifndef("{self.context.tokens[1]}"):')
+        self.code.indent()
+        
+    def _ifver_ie(self, op: str):
+        if not self.context.ifver_used:
+            self.context.ifver_used = True
+            self.code.append('from ..sdkddkver import *')
+            
+        version = self.context.tokens[1]
+        if version.startswith('@'):
+            version = 'WIN32_IE_' + version[1:]
+        self.code.append(f'if WIN32_IE {op} {version}:')
+        self.code.indent()
+        self.context.in_ifdef_block = True
+        
+    def ifver_ie_ge(self):
+        if self.context.tokens_length == 1:
+            self.syntax_error('Incorrect usage of "ifver_ie"/"ifver_ie_ge" instruction, '
+                              'missing version.', len(self.context.last_line)+1)
+        
+        self._ifver_ie('>=')
+        
+    def ifver_ie_l(self):
+        if self.context.tokens_length == 1:
+            self.syntax_error('Incorrect usage of "ifver_ie_l" instruction, '
+                              'missing version.', len(self.context.last_line)+1)
+            
+        self._ifver_ie('<')
+        
+    def ifver_ie_g(self):
+        if self.context.tokens_length == 1:
+            self.syntax_error('Incorrect usage of "ifver_ie_g" instruction, '
+                              'missing version.', len(self.context.last_line)+1)
+            
+        self._ifver_ie('>')

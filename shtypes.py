@@ -6,8 +6,7 @@
 #--------------------------------------------------------------------------
 
 from . import cpreproc
-from .minwindef import *
-from comtypes import GUID
+from .wtypes import *
 
 if cpreproc.ifndef("__shtypes_h__"):
     cpreproc.define("__shtypes_h__")
@@ -131,6 +130,13 @@ if cpreproc.ifndef("__shtypes_h__"):
             ("uType", UINT),
             ("u", _DUMMYUNIONNAME)
         ]
+        _anonymous_ = ['u']
+        
+        cStr: IWideCharArrayFixedSize[260]
+        pOleStr: LPOLESTR
+        uOffset: int
+        uType: int
+        
     LPSTRRET = POINTER(STRRET)
 
     #-------------------------------------------------------------------------
@@ -152,6 +158,11 @@ if cpreproc.ifndef("__shtypes_h__"):
             ("cxChar", INT),
             ("str", STRRET)
         ]
+        
+        cxChar: int
+        str: STRRET
+        fmt: int
+        
     LPSHELLDETAILS = POINTER(SHELLDETAILS)
 
     #if (_WIN32_IE >= _WIN32_IE_IE60SP2)
@@ -231,9 +242,8 @@ if cpreproc.ifndef("__shtypes_h__"):
 
     SHCOLSTATEF = DWORD
 
-    #typedef PROPERTYKEY SHCOLUMNID;
-
-    #typedef const SHCOLUMNID *LPCSHCOLUMNID;
+    SHCOLUMNID = PROPERTYKEY
+    LPCSHCOLUMNID = PTR(SHCOLUMNID)
 
     DEVICE_SCALE_FACTOR = INT
     if True:

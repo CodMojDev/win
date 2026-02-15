@@ -1,3 +1,9 @@
+#
+# Deprecated
+#
+
+raise RuntimeError()
+
 if False:
     from ..winuser import *
     from .base_exception import *

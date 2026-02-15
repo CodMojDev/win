@@ -43,7 +43,7 @@ class CComPtr(CStructure, Template[IT]):
         return NotImplemented
     
     def ref(self) -> IPointer[IT]:
-        return byref(self._cached_reinterpret_cast(self.p))
+        return i_cast(byref(self), PTR(self._cached_reinterpret_cast.typ))
     
     @property
     def contents(self) -> IT:

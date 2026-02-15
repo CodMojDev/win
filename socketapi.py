@@ -17,7 +17,7 @@ from .minwindef import BOOL, WinDLL
 
 from .sdkddkver import WIN32_WINNT_WIN8
 
-from comtypes import HRESULT
+from .com.comdefbase import HRESULT
 
 from .defbase import *
 

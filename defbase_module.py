@@ -2,6 +2,7 @@ from .libloaderapi import *
 from .tlhelp32 import *
 from .psapi import *
 
+from .defbase_errordef import *
 from .defbase_process import *
 
 WT_FARPROC = TypeVar('WT_FARPROC', bound=FARPROC)
@@ -10,6 +11,7 @@ class CModule:
     handle: WT_ADDRLIKE
     process: CProcess
     local: 'CModule'
+    need_free: bool
     _name: str
     
     @overload
@@ -22,7 +24,8 @@ class CModule:
     def __init__(self, process: CProcess, name: str): ...
     
     def __init__(self, var = None, name: str = None):
-        if var is None: 
+        if var is None:
+            self.need_free = False
             self.process = None
             self.handle = None
             self._name = None
@@ -32,6 +35,7 @@ class CModule:
         
         if isinstance(var, str):
             self.handle = LoadLibraryEx(var, NULL, DONT_RESOLVE_DLL_REFERENCES)
+            self.need_free = True
             self.process = None
             self.local = None
             self._name = None
@@ -40,6 +44,7 @@ class CModule:
                 raise OSError(f'Cannot open module handle for "{var}"')
             
         elif isinstance(var, CProcess) and name is not None:
+            self.need_free = True
             self.process = var
             
             if not var.handle:
@@ -82,16 +87,19 @@ class CModule:
                 if GetModuleFileName(self.handle, szModuleName, MAX_PATH):
                     self._name = szModuleName.value
                 else:
-                    raise OSError('Cannot get module file name.')
+                    raise WinException()
             else: # remote handle
                 if GetModuleFileNameEx(self.process.handle, self.handle, szModuleName, MAX_PATH):
                     self._name = szModuleName.value
                 else:
-                    raise OSError('Cannot get module file name.')
+                    raise WinException()
                 
         return self._name
             
     def close(self):
+        if not self.need_free:
+            return
+        
         process_is_not_None = self.process is not None
         
         if process_is_not_None: # remote handle

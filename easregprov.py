@@ -27,7 +27,7 @@ from .defbase import *
 
 from .minwindef import windll, LPCWSTR, VOID
 
-from comtypes import HRESULT
+from .com.comdefbase import HRESULT
 
 #
 # User Function

@@ -15,6 +15,20 @@ from .errors import *
 
 from typing import Optional, Callable
 
+# COM initialization flags; passed to CoInitialize.
+#  DCOM
+# These constants are only valid on Windows NT 4.0
+COINITBASE_MULTITHREADED      = 0x0      # OLE calls objects on any thread.
+COINITBASE = INT
+
+# COM initialization flags; passed to CoInitialize.
+COINIT_APARTMENTTHREADED  = 0x2      # Apartment model
+# These constants are only valid on Windows NT 4.0
+COINIT_MULTITHREADED      = COINITBASE_MULTITHREADED
+COINIT_DISABLE_OLE1DDE    = 0x4      # Don't use DDE for Ole1 support.
+COINIT_SPEED_OVER_MEMORY  = 0x8      # Trade memory for speed.
+COINIT = INT
+
 S_OK = 0
 S_FALSE = 1
 

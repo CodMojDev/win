@@ -256,6 +256,7 @@ if TYPE_CHECKING:
     from .defbase_module import CModule
 
 class CProcess:
+    is_current: bool
     handle: int
     pid: int
     
@@ -269,10 +270,13 @@ class CProcess:
             self.handle = handle.value
             
             self.pid = GetCurrentProcessId()
+            self.is_current = True
+            
             return
         
         self.handle = OpenProcess(PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION, 
                                   False, pid)
+        self.is_current = False
         self.pid = pid
         
         if not self.handle:
@@ -335,7 +339,10 @@ class CProcess:
         
         if EnumProcessModules(self.handle, hModules, 1024, byref(cbNeeded)):
             for i in range(cbNeeded.value // sizeof(HMODULE)):
-                modules.append(defbase_module.CModule.from_handle(hModules[i]))
+                module = defbase_module.CModule.from_handle(hModules[i])
+                if not self.is_current:
+                    module.process = self
+                modules.append(module)
 
         return modules
     

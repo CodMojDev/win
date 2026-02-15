@@ -1,11 +1,18 @@
-class ClassNotRegisteredError(Exception):
-    pass
+#
+# Deprecated
+#
 
-class ClassAlreadyRegisteredError(Exception):
-    pass
+raise RuntimeError()
 
-class ClassRegistrationError(Exception):
-    pass
+if False:
+    class ClassNotRegisteredError(Exception):
+        pass
 
-class ClassUnregistrationError(Exception):
-    pass
+    class ClassAlreadyRegisteredError(Exception):
+        pass
+
+    class ClassRegistrationError(Exception):
+        pass
+
+    class ClassUnregistrationError(Exception):
+        pass

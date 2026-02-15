@@ -12,9 +12,9 @@ from . import cpreproc
 
 from .minwindef import *
 
-from .wingdi import LPDEVMODE, DM_COPIES, DM_COLLATE, LPLOGFONTA, LPLOGFONTW
+from .wingdi import LPDEVMODE, DEVMODEW, DM_COPIES, DM_COLLATE, LPLOGFONTA, LPLOGFONTW
 
-from comtypes import IID, HRESULT, COMMETHOD, IUnknown
+from .com.unknwn import *
 
 from .winuser import SendMessage
 
@@ -732,18 +732,19 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
     #
     #-------------------------------------------------------------------------
     class IPrintDialogCallback(IUnknown):
+        virtual_table = COMVirtualTable.from_ancestor(IUnknown)
         _iid_ = IID_IPrintDialogCallback
-        _methods_ = [
-            COMMETHOD([], HRESULT, 'InitDone'),
-            COMMETHOD([], HRESULT, 'SelectionChange'),
-            COMMETHOD(['in', 'in', 'in', 'in', 'out'], HRESULT, 'HandleMessage',
-                    ('hDlg', HWND),
-                    ('uMsg', UINT),
-                    ('wParam', WPARAM),
-                    ('lParam', LPARAM),
-                    ('pResult', LRESULT)
-                    ),
-        ]
+        
+        @virtual_table.com_function()
+        def InitDone(self) -> int: ...
+        
+        @virtual_table.com_function()
+        def SelectionChange(self) -> int: ...
+        
+        @virtual_table.com_function(HWND, UINT, WPARAM, LPARAM, LRESULT)
+        def HandleMessage(self, hDlg: WT_HANDLE, uMsg: int, wParam: int, lParam: int, pResult: int) -> int: ...
+        
+        virtual_table.build()
 
     #-------------------------------------------------------------------------
     #
@@ -761,12 +762,19 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
     #-------------------------------------------------------------------------
     
     class IPrintDialogServices(IUnknown):
+        virtual_table = COMVirtualTable.from_ancestor(IUnknown)
         _iid_ = IID_IPrintDialogServices
-        _methods_ = [
-            COMMETHOD(['inout', 'inout'], HRESULT, 'GetCurrentDevMode', ('pDevMode', LPDEVMODE), ('pcbSize', PUINT)),
-            COMMETHOD(['out', 'inout'], HRESULT, 'GetCurrentPrinterName', ('pPrinterName', LPWSTR), ('pcchSize', PUINT)),
-            COMMETHOD(['out', 'inout'], HRESULT, 'GetCurrentPortName', ('pPortName', LPWSTR), ('pcchSize', PUINT))
-        ]
+        
+        @virtual_table.com_function(LPDEVMODE, PUINT)
+        def GetCurrentDevMode(self, pDevMode: IPointer[DEVMODEW], pcbSize: PUINT) -> int: ...
+        
+        @virtual_table.com_function(LPWSTR, PUINT)
+        def GetCurrentPrinterName(self, pPrinterName: WT_LPWSTR, pcchSize: PUINT) -> int: ...
+        
+        @virtual_table.com_function(LPWSTR, PUINT)
+        def GetCurrentPortName(self, pPortName: WT_LPWSTR, pcchSize: PUINT) -> int: ...
+        
+        virtual_table.build()
 
     #
     #  Page Range structure for PrintDlgEx.

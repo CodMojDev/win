@@ -4,7 +4,7 @@ from .minwindef import *
 
 from .winnt import UCHAR
 
-from comtypes import GUID
+from .com.guid import GUID, PGUID
 
 if cpreproc.pragma_once("_IFDEF_"):
     #
@@ -22,7 +22,7 @@ if cpreproc.pragma_once("_IFDEF_"):
     # Define NetworkGUID type:
     #
     NET_IF_NETWORK_GUID = GUID
-    PNET_IF_NETWORK_GUID = POINTER(GUID)
+    PNET_IF_NETWORK_GUID = PGUID
 
     NET_IF_COMPARTMENT_ID_UNSPECIFIED = 0
     NET_IF_COMPARTMENT_ID_PRIMARY = 1

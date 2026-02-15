@@ -116,7 +116,8 @@ __all__ = [
     "IHandle", 
     "ICharArray", "IWideCharArray",
     "WT_HANDLE", "flexible_array", 
-    "LI"
+    "LI",
+    "IWideCharArrayFixedSize", "ICharArrayFixedSize"
 ]
 
 _WT_UNSTABLE_API = True
@@ -1291,14 +1292,19 @@ class CStructure(Structure):
 
 def _resolve_genericalias(generic_alias: IGenericAlias) -> type:
     origin = generic_alias.__origin__
-    typ = generic_alias.__args__[0]
     
     if origin is IPointer:
         return _ipointer_to_pointer(generic_alias)
     elif issubclass(origin, IAliasableGeneric):
-        return typ
+        return generic_alias.__args__[0]
+    elif issubclass(origin, IWideCharArrayFixedSize):
+        size, = generic_alias.__args__
+        return c_wchar * size
+    elif issubclass(origin, ICharArrayFixedSize):
+        size, = generic_alias.__args__
+        return c_char * size
     elif issubclass(origin, IArrayFixedSize):
-        size = generic_alias.__args__[1]
+        typ, size = generic_alias.__args__
         if isinstance(typ, GenericAlias): 
             return _resolve_genericalias(typ) * size
         return _resolve_type(typ) * size
@@ -1385,6 +1391,23 @@ class IWideCharArray(IArray[IChar]):
     """
     
     value: str
+    
+class ICharArrayFixedSize(IArrayFixedSize[IChar, WT2]):
+    """
+    Type-safe interface over
+    ctypes characters array.
+    """
+    
+    value: bytes
+    raw: bytes
+    
+class IWideCharArrayFixedSize(IArrayFixedSize[IChar, WT2]):
+    """
+    Type-safe interface over
+    ctypes wide characters array.
+    """
+    
+    value: str
 
 class IWideChar(IAliasable, str):
     """
@@ -1438,6 +1461,8 @@ class IUnsignedLong(IAliasable, int):
 IUlong = IULong = IUnsignedLong
 IUshort = IUShort = IUnsignedShort
 IUint = IUInt = IUnsignedInt
+
+warnings.filterwarnings("ignore", category=SyntaxWarning)
 
 class IAnonymous(Generic[WT], IInterface): 
     """
