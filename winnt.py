@@ -4965,6 +4965,161 @@ if cpreproc.pragma_once("_WINNT_"):
 
         PIMAGE_DELAYLOAD_DESCRIPTOR = PCIMAGE_DELAYLOAD_DESCRIPTOR = IMAGE_DELAYLOAD_DESCRIPTOR.PTR()
 
+        #
+        # Resource Format.
+        #
+
+        #
+        # Resource directory consists of two counts, following by a variable length
+        # array of directory entries.  The first count is the number of entries at
+        # beginning of the array that have actual names associated with each entry.
+        # The entries are in ascending order, case insensitive strings.  The second
+        # count is the number of entries that immediately follow the named entries.
+        # This second count identifies the number of entries that have 16-bit integer
+        # Ids as their name.  These entries are also sorted in ascending order.
+        #
+        # This structure allows fast lookup by either name or number, but for any
+        # given resource entry only one form of lookup is supported, not both.
+        # This is consistant with the syntax of the .RC file and the .RES file.
+        #
+        
+        class IMAGE_RESOURCE_DIRECTORY(CStructure):
+            _fields_ = [
+                ('Characteristics', DWORD),
+                ('TimeDateStamp', DWORD),
+                ('MajorVersion', WORD),
+                ('MinorVersion', WORD),
+                ('NumberOfNamedEntries', WORD),
+                ('NumberOfIdEntries', WORD)
+            ]
+            
+            DirectoryEntries: IArray['IMAGE_RESOURCE_DIRECTORY_ENTRY']
+            NumberOfNamedEntries: int
+            NumberOfIdEntries: int
+            Characteristics: int
+            TimeDateStamp: int
+            MajorVersion: int
+            MinorVersion: int
+            
+        PIMAGE_RESOURCE_DIRECTORY = IMAGE_RESOURCE_DIRECTORY.PTR()
+            
+        IMAGE_RESOURCE_NAME_IS_STRING        = 0x80000000
+        IMAGE_RESOURCE_DATA_IS_DIRECTORY     = 0x80000000
+        
+        #
+        # Each directory contains the 32-bit Name of the entry and an offset,
+        # relative to the beginning of the resource directory of the data associated
+        # with this directory entry.  If the name of the entry is an actual text
+        # string instead of an integer Id, then the high order bit of the name field
+        # is set to one and the low order 31-bits are an offset, relative to the
+        # beginning of the resource directory of the string, which is of type
+        # IMAGE_RESOURCE_DIRECTORY_STRING.  Otherwise the high bit is clear and the
+        # low-order 16-bits are the integer Id that identify this resource directory
+        # entry. If the directory entry is yet another resource directory (i.e. a
+        # subdirectory), then the high order bit of the offset field will be
+        # set to indicate this.  Otherwise the high bit is clear and the offset
+        # field points to a resource data entry.
+        #
+        
+        class IMAGE_RESOURCE_DIRECTORY_ENTRY(CStructure):
+            NameOffset: int
+            NameIsString: int
+            Name: int
+            Id: int
+            OffsetToDirectory: int
+            DataIsDirectory: int
+            OffsetToData: int
+            
+            class _U1(CUnion):
+                class _S(CStructure):
+                    _fields_ = [
+                        ('NameOffset', DWORD, 31),
+                        ('NameIsString', DWORD, 1)
+                    ]
+                _fields_ = [
+                    ('_s', _S),
+                    ('Name', DWORD),
+                    ('Id', WORD)
+                ]
+                _anonymous_ = ['_s']
+            
+            class _U2(CUnion):
+                class _S(CStructure):
+                    _fields_ = [
+                        ('OffsetToDirectory', DWORD, 31),
+                        ('DataIsDirectory', DWORD, 1)
+                    ]
+                _fields_ = [
+                    ('OffsetToData', DWORD),
+                    ('_s', _S)
+                ]
+                _anonymous_ = ['_s']
+            
+            _fields_ = [
+                ('_u1', _U1),
+                ('_u2', _U2)
+            ]
+            _anonymous_ = ['_u1', '_u2']
+            
+        PIMAGE_RESOURCE_DIRECTORY_ENTRY = IMAGE_RESOURCE_DIRECTORY_ENTRY.PTR()
+        
+        flexible_array(IMAGE_RESOURCE_DIRECTORY, 'DirectoryEntries', IMAGE_RESOURCE_DIRECTORY_ENTRY)
+
+        #
+        # For resource directory entries that have actual string names, the Name
+        # field of the directory entry points to an object of the following type.
+        # All of these string objects are stored together after the last resource
+        # directory entry and before the first resource data object.  This minimizes
+        # the impact of these variable length objects on the alignment of the fixed
+        # size directory entry objects.
+        #
+
+        class IMAGE_RESOURCE_DIRECTORY_STRING(CStructure):
+            _fields_ = [
+                ('Length', WORD)
+            ]
+            
+            NameString: ICharArray
+            Length: int
+        
+        flexible_array(IMAGE_RESOURCE_DIRECTORY_STRING, 'NameString', CHAR)
+        PIMAGE_RESOURCE_DIRECTORY_STRING = IMAGE_RESOURCE_DIRECTORY_STRING.PTR()
+
+        class IMAGE_RESOURCE_DIR_STRING_U(CStructure):
+            _fields_ = [
+                ('Length', WORD)
+            ]
+            
+            NameString: IWideCharArray
+            Length: int
+        
+        flexible_array(IMAGE_RESOURCE_DIR_STRING_U, 'NameString', WCHAR)
+        PIMAGE_RESOURCE_DIR_STRING_U = IMAGE_RESOURCE_DIR_STRING_U.PTR()
+
+        #
+        # Each resource data entry describes a leaf node in the resource directory
+        # tree.  It contains an offset, relative to the beginning of the resource
+        # directory of the data for the resource, a size field that gives the number
+        # of bytes of data at that offset, a CodePage that should be used when
+        # decoding code point values within the resource data.  Typically for new
+        # applications the code page would be the unicode code page.
+        #
+
+        #@[comment("MVI_tracked")]
+        class IMAGE_RESOURCE_DATA_ENTRY(CStructure):
+            _fields_ = [
+                ('OffsetToData', DWORD),
+                ('Size', DWORD),
+                ('CodePage', DWORD),
+                ('Reserved', DWORD)
+            ]
+            
+            OffsetToData: int
+            CodePage: int
+            Size: int
+            
+        PIMAGE_RESOURCE_DATA_ENTRY = IMAGE_RESOURCE_DATA_ENTRY.PTR()
+
         if cpreproc.ifdef("_WIN64"):
             IMAGE_NT_HEADERS = IMAGE_NT_HEADERS64
             PIMAGE_NT_HEADERS = PIMAGE_NT_HEADERS64

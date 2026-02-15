@@ -10,7 +10,7 @@ class IServiceProvider(IUnknown):
     
     @virtual_table.com_function(REFGUID, REFIID, PVOID, intermediate_method=True)
     def QueryService(self, guidService: GUID, iid: IID, ppvObject: IPointer[PVOID]) -> int:
-        return self.virt_delegate(guidService.ref(), iid.ref(), ppvObject)
+        return self.virt_delegate(guidService.ref() if guidService else GUID_NULL, iid.ref(), ppvObject)
     
     virtual_table.build()
     

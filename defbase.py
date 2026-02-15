@@ -120,7 +120,9 @@ __all__ = [
     "IWideCharArrayFixedSize", "ICharArrayFixedSize"
 ]
 
-_WT_UNSTABLE_API = True
+from . import cpreproc
+
+_WT_UNSTABLE_API = cpreproc.defined('WT_UNSTABLE_API')
 
 if _WT_UNSTABLE_API:
     __all__.extend([
@@ -518,16 +520,19 @@ class VirtualTable:
                 self._add(name)
             
             def _virtual_wrapper(f_self, *f_args, **kwargs) -> Callable: 
-                field_name = self.field_name
-                get_vtable = getattr(f_self, f'__get_{self.name}__', None)
-                if get_vtable is not None:
-                    field_name = get_vtable()
-                vtable = i_cast(getattr(f_self, field_name), 
-                                POINTER(self.VType))
-                address = getattr(vtable.contents, name)
-                callback = VirtualTable.func_ptr(address)
-                callback.restype = ret
-                callback.argtypes = (THIS, *args)
+                callback = getattr(f, 'callback', None)
+                if callback is None:
+                    field_name = self.field_name
+                    get_vtable = getattr(f_self, f'__get_{self.name}__', None)
+                    if get_vtable is not None:
+                        field_name = get_vtable()
+                    vtable = i_cast(getattr(f_self, field_name), 
+                                    POINTER(self.VType))
+                    address = getattr(vtable.contents, name)
+                    callback = VirtualTable.func_ptr(address)
+                    callback.restype = ret
+                    callback.argtypes = (THIS, *args)
+                    setattr(f, 'callback', callback)
                 
                 result = callback(byref(f_self), *f_args)
                 if callable(result_function):
@@ -1850,14 +1855,6 @@ class CClass(CStructure):
         friend_classes.append(friend.__qualname__)
    
 from typing import overload
-    
-def i_cast(obj: Any, typ: IPointer[WT]) -> IPointer[WT]:
-    """
-    Type-safe interface over
-    ctypes cast(...) function.
-    
-    Recommended to use instead of ctypes cast(...).
-    """
 
 if TYPE_CHECKING:
     def i_cast(obj: Any, typ: Type[IPointer[WT]]) -> IPointer[WT]:

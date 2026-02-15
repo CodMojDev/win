@@ -63,28 +63,33 @@ class COMVirtualTable(VirtualTable):
         Declare COM function in VB style (Visual Basic).
         """
         from .dispatch import VARIANT, variant_get_value, variant_set_value
+        
         def _com_function_vbstyle(f: Callable):
             name = self._pack_name(f.__name__)
             if not exists:
                 self._add(name)
             
             def _virtual_wrapper(f_self, *f_args, **kwargs) -> Callable: 
-                field_name = self.field_name
-                get_vtable = getattr(f_self, f'__get_{self.name}__', None)
-                if get_vtable is not None:
-                    field_name = get_vtable()
-                vtable = i_cast(getattr(f_self, field_name), 
-                                POINTER(self.VType))
-                address = getattr(vtable.contents, name)
-                callback = VirtualTable.func_ptr(PtrUtil.get_address(address))
-                callback.restype = HRESULT
-                
-                if retval_index != -1:
-                    list_args = list(args)
-                    list_args.insert(retval_index, PTR(retval_type))
-                    callback.argtypes = (THIS, *list_args)
-                else:
-                    callback.argtypes = (THIS, *args)
+                callback = getattr(f, 'callback', None)
+                if callback is None:
+                    field_name = self.field_name
+                    get_vtable = getattr(f_self, f'__get_{self.name}__', None)
+                    if get_vtable is not None:
+                        field_name = get_vtable()
+                    vtable = i_cast(getattr(f_self, field_name), 
+                                    POINTER(self.VType))
+                    address = getattr(vtable.contents, name)
+                    callback = VirtualTable.func_ptr(PtrUtil.get_address(address))
+                    callback.restype = HRESULT
+                    
+                    if retval_index != -1:
+                        list_args = list(args)
+                        list_args.insert(retval_index, PTR(retval_type))
+                        callback.argtypes = (THIS, *list_args)
+                    else:
+                        callback.argtypes = (THIS, *args)
+                        
+                    setattr(f, 'callback', callback)
                 
                 list_f_args = list(f_args)
                 if retval_index != -1:
@@ -126,6 +131,7 @@ class COMVirtualTable(VirtualTable):
                      retval_type: type = type(None), retval_function: Callable = None) -> Callable:
         """
         Declare COM function in VB style (Visual Basic).
+        Without support of VARIANT type.
         """
         def _com_function_vbstyle(f: Callable):
             name = self._pack_name(f.__name__)

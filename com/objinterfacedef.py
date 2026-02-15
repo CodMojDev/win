@@ -92,7 +92,7 @@ class BIND_OPTS3(BIND_OPTS2):
 LPBIND_OPTS3 = BIND_OPTS3.PTR()
     
 class IEnumMoniker(IUnknown):
-    virtual_table = COMVirtualTable.from_ancestor(IMarshal)
+    virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID('{00000101-0000-0000-C000-000000000046}')
     
     @virtual_table.com_function(ULONG, PVOID, PULONG)
