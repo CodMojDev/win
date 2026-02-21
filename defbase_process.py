@@ -360,3 +360,18 @@ class CProcess:
     
     def __del__(self):
         self.close()
+        
+    def format_address(self, address: WT_ADDRLIKE) -> str:
+        if not isinstance(address, int):
+            address = PtrUtil.get_address(address)
+            
+        for module in self.enum_modules():
+            start = module.handle
+            end = start + module.size
+            
+            if start < address and end > address:
+                offset = address - start
+                name = os.path.basename(module.name)
+                return f'{name}+{hex(offset)}'
+            
+        return format_hex(address, sizeof(PVOID))

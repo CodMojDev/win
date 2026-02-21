@@ -1,3 +1,7 @@
+#
+# com/interfacedef.py
+#
+
 from typing import ClassVar
 from functools import wraps
 from .comdefbase import *
@@ -120,7 +124,13 @@ class COMVirtualTable(VirtualTable):
                     return f(*args, **kwargs, function=_virtual_wrapper)
                 
             if intermediate_method:
+                setattr(_intermediate, 'proto', WINFUNCTYPE(HRESULT, THIS, *args))
+                setattr(_intermediate, 'f', f)
+                
                 return _intermediate
+            
+            setattr(_virtual_wrapper, 'proto', WINFUNCTYPE(HRESULT, THIS, *args))
+            setattr(_virtual_wrapper, 'f', f)
             
             return _virtual_wrapper
     
@@ -139,22 +149,26 @@ class COMVirtualTable(VirtualTable):
                 self._add(name)
             
             def _virtual_wrapper(f_self, *f_args, **kwargs) -> Callable: 
-                field_name = self.field_name
-                get_vtable = getattr(f_self, f'__get_{self.name}__', None)
-                if get_vtable is not None:
-                    field_name = get_vtable()
-                vtable = i_cast(getattr(f_self, field_name), 
-                                POINTER(self.VType))
-                address = getattr(vtable.contents, name)
-                callback = VirtualTable.func_ptr(PtrUtil.get_address(address))
-                callback.restype = HRESULT
-                
-                if retval_index != -1:
-                    list_args = list(args)
-                    list_args.insert(retval_index, PTR(retval_type))
-                    callback.argtypes = (THIS, *list_args)
-                else:
-                    callback.argtypes = (THIS, *args)
+                callback = getattr(f, 'callback', None)
+                if callback is None:
+                    field_name = self.field_name
+                    get_vtable = getattr(f_self, f'__get_{self.name}__', None)
+                    if get_vtable is not None:
+                        field_name = get_vtable()
+                    vtable = i_cast(getattr(f_self, field_name), 
+                                    POINTER(self.VType))
+                    address = getattr(vtable.contents, name)
+                    callback = VirtualTable.func_ptr(PtrUtil.get_address(address))
+                    callback.restype = HRESULT
+                    
+                    if retval_index != -1:
+                        list_args = list(args)
+                        list_args.insert(retval_index, PTR(retval_type))
+                        callback.argtypes = (THIS, *list_args)
+                    else:
+                        callback.argtypes = (THIS, *args)
+                    
+                    setattr(f, 'callback', callback)
                 
                 list_f_args = list(f_args)
                 if retval_index != -1:
@@ -178,7 +192,13 @@ class COMVirtualTable(VirtualTable):
                     return f(*args, **kwargs, function=_virtual_wrapper)
                 
             if intermediate_method:
+                setattr(_intermediate, 'proto', WINFUNCTYPE(HRESULT, THIS, *args))
+                setattr(_intermediate, 'f', f)
+                
                 return _intermediate
+            
+            setattr(_virtual_wrapper, 'proto', WINFUNCTYPE(HRESULT, THIS, *args))
+            setattr(_virtual_wrapper, 'f', f)
             
             return _virtual_wrapper
     
@@ -210,8 +230,13 @@ class COMInterface(CStructure):
         """
         virtual_table = self._virtual_table_on_ctx
         function_name = function.__name__
-        setattr(i_cast(getattr(self, virtual_table.field_name), PTR(virtual_table.VType)).contents,
-                function_name, i_cast(getattr(self, function_name + '_Impl'), PVOID))
+        
+        def thunk(this, *args, **kwargs):
+            return getattr(self, function_name + '_Impl')(*args)
+        
+        thunk.__name__ = f'{virtual_table.name}_{function_name}_Thunk'
+        
+        self.stub(function, getattr(function, 'proto')(thunk))
         
     def stub(self, function: Callable, stub: WINFUNCTYPE):
         """

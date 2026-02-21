@@ -12,10 +12,12 @@ import os
 
 class ICLParser(IIMLParser):
     class ICLContext(IIMLContext):
+        declaring_vb_interface: str
         external_function_count: int
         last_defined_interface: str
         in_gencommentlw_block: bool
         declaring_structure: str
+        no_vb_bases: list[str]
         declaring_class: bool
         enum_entry_count: int
         in_ifdef_block: bool
@@ -25,12 +27,14 @@ class ICLParser(IIMLParser):
         in_imports: bool
         commentext: str
         silent: bool
+        vb_base: str
         docs: str
         base: str
         py: bool
         
         def on_initialize(self):
             self.in_gencommentlw_block = False
+            self.declaring_vb_interface = ''
             self.external_function_count = 0
             self.last_defined_interface = ''
             self.declaring_structure = ''
@@ -41,8 +45,10 @@ class ICLParser(IIMLParser):
             self.function_count = 0
             self.in_imports = False
             self.ifver_used = False
+            self.no_vb_bases = []
             self.commentext = ''
             self.silent = False
+            self.vb_base = ''
             self.py = False
             self.docs = ''
             self.base = ''
@@ -55,7 +61,8 @@ class ICLParser(IIMLParser):
         'SHORT': 'int', 'USHORT': 'int', 'UINT': 'int',
         'INT_PTR': 'int', 'UINT_PTR': 'int', 'LONG_PTR': 'int',
         'ULONG_PTR': 'int', 'HRESULT': 'int', 'ULONG': 'int',
-        'LONG': 'int', 'void': '', 'BOOL': 'bool', 'VOID': ''
+        'LONG': 'int', 'void': '', 'BOOL': 'bool', 'VOID': '',
+        'INT64': 'int', 'UINT64': 'int'
     }
     POINTER_MAP = {
         'IUnknown': 'LPUNKNOWN', 'IEnumString': 'LPENUMSTRING',
@@ -323,6 +330,15 @@ class ICLParser(IIMLParser):
             self.ifver_ie_l()
         elif instruction == 'ifver_ie_g':
             self.ifver_ie_g()
+        elif instruction == 'VBI':
+            self.define_vb_interface()
+        elif instruction == 'VBIU':
+            self.define_vb_interface_unknown()
+        elif instruction == 'vbnb':
+            if self.context.tokens_length == 1:
+                self.syntax_error('Incorrect usage of "vbnb" instruction,'
+                                  'missing no-VB-base interface name.')
+            self.context.no_vb_bases.append(self.context.tokens[1])
         else:
             return False
         return True
@@ -346,6 +362,12 @@ class ICLParser(IIMLParser):
         
         if not self.context.silent:
             self.code.append_class(interface_name, self.context.base)
+            if len(self.context.docs) != 0:
+                indents = self.indented
+                self.context.docs = self.context.docs.replace('\n', indents)
+                self.code.append(f'{indents}"""')
+                self.code.append(self.context.docs, not_breakline=True)
+                self.code.append(f'{indents}"""')
             self.code.indent()
             if self.context.base != '':
                 self.code.append_field('virtual_table',
@@ -734,6 +756,12 @@ class ICLParser(IIMLParser):
         
         if not self.context.silent:
             self.code.append_class(interface_name, self.context.base)
+            if len(self.context.docs) != 0:
+                indents = self.indented
+                self.context.docs = self.context.docs.replace('\n', indents)
+                self.code.append(f'{indents}"""')
+                self.code.append(self.context.docs, not_breakline=True)
+                self.code.append(f'{indents}"""')
             self.code.indent()
             if self.context.base != '':
                 self.code.append_field('virtual_table',
@@ -750,6 +778,12 @@ class ICLParser(IIMLParser):
         class_name = self.context.tokens[1]
         
         self.code.append_class(class_name, 'COMClass')
+        if len(self.context.docs) != 0:
+            indents = self.indented
+            self.context.docs = self.context.docs.replace('\n', indents)
+            self.code.append(f'{indents}"""')
+            self.code.append(self.context.docs, not_breakline=True)
+            self.code.append(f'{indents}"""')
         self.code.indent()
         
         self.context.declaring_class = True
@@ -857,3 +891,58 @@ class ICLParser(IIMLParser):
                               'missing version.', len(self.context.last_line)+1)
             
         self._ifver_ie('>')
+        
+    def define_vb_interface(self):
+        self.context.vb_base = ''
+        if self.context.tokens_length != 1:
+            token = self.context.tokens[2]
+            if token != 'ex':
+                self.syntax_error(f'Unknown token "{token}".', len(interface_name)+4)
+            
+            if self.context.tokens_length == 2:
+                self.syntax_error('Incorrect declaration of VB interface base,'
+                                'missing base VB interface name.', len(interface_name)+6)
+            
+            self.context.vb_base = self.context.tokens[3]
+            if not self.context.vb_base.endswith('.VB'):
+                if not self.context.vb_base in self.context.no_vb_bases:
+                    self.context.vb_base += '.VB'
+        
+        if not self.context.silent:
+            self.code.append_class('VB', self.context.vb_base)
+            if len(self.context.docs) != 0:
+                indents = self.indented
+                self.context.docs = self.context.docs.replace('\n', indents)
+                self.code.append(f'{indents}"""')
+                self.code.append(self.context.docs, not_breakline=True)
+                self.code.append(f'{indents}"""')
+            self.code.indent()
+            if self.context.vb_base != '':
+                self.code.append_field('virtual_table',
+                                    value=f"COMVirtualTable.from_ancestor({self.context.vb_base})")
+            else:
+                self.code.append_field('virtual_table', value=f"COMVirtualTable('{interface_name}')")
+                
+    def define_vb_interface_unknown(self):
+        if self.context.tokens_length == 1:
+            self.syntax_error('Incorrect declaration of VB interface, '
+                            'missing VB interface name.', 3)
+        interface_name = self.context.tokens[1]
+        self.context.vb_base = 'IUnknown'
+        if self.context.vb_base not in self.context.no_vb_bases:
+            self.context.vb_base += '.VB'
+        
+        if not self.context.silent:
+            self.code.append_class(interface_name, self.context.vb_base)
+            if len(self.context.docs) != 0:
+                indents = self.indented
+                self.context.docs = self.context.docs.replace('\n', indents)
+                self.code.append(f'{indents}"""')
+                self.code.append(self.context.docs, not_breakline=True)
+                self.code.append(f'{indents}"""')
+            self.code.indent()
+            if self.context.vb_base != '':
+                self.code.append_field('virtual_table',
+                                    value=f"COMVirtualTable.from_ancestor({self.context.vb_base})")
+            else:
+                self.code.append_field('virtual_table', value=f"COMVirtualTable('{interface_name}')")

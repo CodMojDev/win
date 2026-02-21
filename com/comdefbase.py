@@ -15,6 +15,9 @@ from .errors import *
 
 from typing import Optional, Callable
 
+def MAKE_HRESULT(sev: int, fac: int, code: int) -> int:
+    return HRESULT((ULONG(sev).value<<31) | (ULONG(fac).value<<16) | (ULONG(code).value)).value
+
 # COM initialization flags; passed to CoInitialize.
 #  DCOM
 # These constants are only valid on Windows NT 4.0
@@ -143,6 +146,7 @@ com_state = COM_GLOBAL_STATE()
 
 from .. import _defbase_ctypinit as _defb_ci
 
+# manually fix the CPython bug with "initialized is readonly object attribute"
 _defb_ci.PyType_CAST_DEREF(COM_GLOBAL_STATE).SetTPFLAG(_defb_ci.Py_TPFLAGS_MANAGED_DICT)
 
 def CheckCOMInitialized():

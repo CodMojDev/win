@@ -36,7 +36,7 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
     HDROP = HANDLE
 
     DragQueryFileA = declare(shell32.DragQueryFileA, UINT, HDROP, UINT, LPSTR, UINT)
-    DragQueryFileW = declare(shell32.DragQueryFileW, UINT, HDROP, UINT, LPWSTR)
+    DragQueryFileW = declare(shell32.DragQueryFileW, UINT, HDROP, UINT, LPWSTR, UINT)
     DragQueryFile = unicode(DragQueryFileW, DragQueryFileA)
     
     DragQueryPoint = declare(shell32.DragQueryPoint, BOOL, HDROP, PPOINT)

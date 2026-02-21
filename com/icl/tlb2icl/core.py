@@ -58,18 +58,29 @@ def LoadTLB(var) -> ITypeLib:
         raise TypeError(f'Not supported type for loading TLB: {var!r}')
     
 def GetTLBName(tlb: ITypeLib) -> str:
-    pwszTlbName = LPWSTR()
-    hr = tlb.GetDocumentation(-1, byref(pwszTlbName), NULL, NULL, NULL)
+    bszTlbName = BSTR()
+    hr = tlb.GetDocumentation(-1, byref(bszTlbName), NULL, NULL, NULL)
     if FAILED(hr): raise COMError(hr)
-    return pwszTlbName.value
+    
+    tlbName = bszTlbName.value
+    SysFreeString(bszTlbName)
+    
+    return tlbName
 
 def GetTLBPath(tlb: ITypeLib) -> str:
     pLibAttr = TLIBATTR.NULL()
     hr = tlb.GetLibAttr(byref(pLibAttr))
     if FAILED(hr): raise COMError(hr)
+    
     libAttr = pLibAttr.contents
     bstrPathName = BSTR()
+    
     hr = QueryPathOfRegTypeLib(libAttr.guid, libAttr.wMajorVerNum, libAttr.wMinorVerNum, 
                                libAttr.lcid, byref(bstrPathName))
     if FAILED(hr): raise COMError(hr)
-    return bstrPathName.value
+    
+    tlb.ReleaseTLibAttr(pLibAttr)
+    pathName = bstrPathName.value
+    SysFreeString(bstrPathName)
+    
+    return pathName

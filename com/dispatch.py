@@ -303,7 +303,7 @@ def variant_get_value(var: VARIANT):
     elif vt == (VT_R8 | VT_BYREF):
         return var.pdblVal
     elif vt == VT_BOOL:
-        return var.boolVal == -1
+        return var.boolVal == VARIANT_TRUE
     elif vt == (VT_BOOL | VT_BYREF):
         return var.pboolVal
     elif vt == VT_CY:
@@ -339,11 +339,35 @@ def variant_set_value(var: VARIANT, value):
     elif isinstance(value, bool):
         var.vt = VT_BSTR
         var.boolVal = -1 if value else 0
-    elif isinstance(value, (int, c_int)):
-        var.vt = VT_I4
-        var.intVal = value
-    elif isinstance(value (float, c_double)):
+    elif isinstance(value, int):
+        vt = VT_I1
+        if -(2**7) > value or (2**7-1) < value:
+            if value >= 0:
+                vt = VT_UI2
+            else: vt = VT_I2
+        if -(2**15) > value or (2**15-1) < value:
+            if value >= 0:
+                vt = VT_UI4
+            else: vt = VT_I4
+        if -(2**31) > value or (2**31-1) < value:
+            if value >= 0:
+                vt = VT_UI8
+            else: vt = VT_I8
+        else:
+            raise OverflowError(value)
+        var.vt = vt
+        var.int64Val = value
+    elif isinstance(value, (float, c_double)):
         var.vt = VT_R8
         var.dblVal = value
+    elif isinstance(value, IUnknown):
+        var.vt = VT_UNKNOWN
+        var.punkVal = value.ref()
+    elif isinstance(value, IDispatch):
+        var.vt = VT_DISPATCH
+        var.pdispVal = value.ref()
+    elif isinstance(value, Dispatch):
+        var.vt = VT_DISPATCH
+        var.pdispVal = value._disp.ref()
     
     raise NotImplementedError(f'{value}')

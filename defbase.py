@@ -117,7 +117,8 @@ __all__ = [
     "ICharArray", "IWideCharArray",
     "WT_HANDLE", "flexible_array", 
     "LI",
-    "IWideCharArrayFixedSize", "ICharArrayFixedSize"
+    "IWideCharArrayFixedSize", "ICharArrayFixedSize",
+    "dbg_trace"
 ]
 
 from . import cpreproc
@@ -428,6 +429,8 @@ def DOUBLE_PTR(typ: Type[WT]) -> Type[IDoublePtr[WT]]:
 
 POINTER = PTR
 
+from ctypes import WINFUNCTYPE
+
 class VirtualTable:
     """
     Class representing interface to C++ Virtual table.
@@ -478,7 +481,7 @@ class VirtualTable:
         """
         Build the virtual table type.
         """
-        self.VType = type(self.name + '_vtbl', (CStructure,), {'_fields_': self.fields})
+        self.VType = type(self.name + 'Vtbl', (CStructure,), {'_fields_': self.fields})
         return [(self.field_name, c_void_p)]
     
     def __repr__(self) -> str:
@@ -547,7 +550,13 @@ class VirtualTable:
                     return f(*args, **kwargs, function=_virtual_wrapper)
                 
             if intermediate_method:
+                setattr(_intermediate, 'proto', WINFUNCTYPE(ret, THIS, *args))
+                setattr(_intermediate, 'f', f)
+                
                 return _intermediate
+            
+            setattr(_virtual_wrapper, 'proto', WINFUNCTYPE(ret, THIS, *args))
+            setattr(_virtual_wrapper, 'f', f)
             
             return _virtual_wrapper
         
@@ -859,6 +868,27 @@ def filter_self(args_tuple: tuple, typ: type) -> tuple:
         return args_tuple[1:]
     
     return args_tuple
+    
+from typing import TYPE_CHECKING
+    
+if TYPE_CHECKING:
+    def dbg_trace(message: str = ''):
+        """
+        Debug trace.
+        """
+        
+if not TYPE_CHECKING:
+    if cpreproc.defined('DBGTRACE'):
+        def dbg_trace(message: str = ''):
+            caller = get_caller_frame()
+            name = caller.f_code.co_qualname.replace('.', '::')
+            if name.endswith('_Impl'):
+                name = name[:-5]
+            elif name.endswith('__init__'):
+                name = f'new {name[:-10]}'
+            print(f'{name}() {message}')
+    else:
+        def dbg_trace(message: str = ''): ...
     
 class Template(Generic[WT]):
     """

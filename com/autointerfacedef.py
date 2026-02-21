@@ -542,8 +542,8 @@ class TYPEDESC(CStructure):
             ('hreftype', HREFTYPE)
         ]
     _fields_ = [
-        ('vt', VARTYPE),
-        ('u', U)
+        ('u', U),
+        ('vt', VARTYPE)
     ]
     _anonymous_ = ['u']
     
@@ -768,7 +768,7 @@ class FUNCDESC(CStructure):
     ]
     
     lprgelemdescParam: IPointer[ELEMDESC]
-    elemdescFunc: int
+    elemdescFunc: ELEMDESC
     wFuncFlags: int
     lprgscode: PINT
     cParamsOpt: int
@@ -1319,10 +1319,10 @@ class ITypeInfo(IUnknown):
     def ReleaseTypeAttr(self, pTypeAttr: IPointer[TYPEATTR]) -> int: ...
     
     @virtual_table.function(HRESULT, LPFUNCDESC)
-    def ReleaseFuncDesc(self, pTypeAttr: IPointer[FUNCDESC]) -> int: ...
+    def ReleaseFuncDesc(self, pFuncDesc: IPointer[FUNCDESC]) -> int: ...
     
     @virtual_table.function(HRESULT, LPVARDESC)
-    def ReleaseVarDesc(self, pTypeAttr: IPointer[VARDESC]) -> int: ...
+    def ReleaseVarDesc(self, pVarDesc: IPointer[VARDESC]) -> int: ...
     
     virtual_table.build()
     
@@ -1423,6 +1423,9 @@ LPTLIBATTR = TLIBATTR.PTR()
 
 class ITypeLib(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
+    
+    @virtual_table.function(UINT)
+    def GetTypeInfoCount(self) -> int: ...
     
     @virtual_table.function(HRESULT, UINT, PVOID)
     def GetTypeInfo(self, index: int, ppTInfo: IDoublePtr['ITypeInfo']) -> int: ...

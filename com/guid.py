@@ -152,7 +152,7 @@ class REFCLSID(CLSID.PTR()):
             
         if isinstance(value, type) and issubclass(value, unknwn.COMClass):
             com_class: type[COMClass] = value
-            return com_class._clsid_
+            return com_class._clsid_.ptr()
             
         return value
     
@@ -223,7 +223,21 @@ class IID(GUID):
             
         return super().from_param(value)
     
-REFIID = PIID = LPCIID = LPIID = IID.PTR()
+class REFIID(IID.PTR()):
+    @classmethod
+    def from_param(cls, value):
+        interfacedef = getattr(defb._defb_state, '_interfacedef', None)
+        if interfacedef is None:
+            from . import interfacedef
+            defb._defb_state._interfacedef = interfacedef
+            
+        if isinstance(value, type) and issubclass(value, interfacedef.COMInterface):
+            com_class: type[COMInterface] = value
+            return com_class._iid_.ptr()
+            
+        return value
+    
+PIID = LPCIID = LPIID = REFIID
 IID_NULL = IID()
         
 @ole_foreign(LPCOLESTR, LPIID)

@@ -172,13 +172,14 @@ def _cpreproc_init():
     define("INITGUID")
 
     # for version indicating
-    from .defbase import declare
 
     MAKEWORD = lambda a, b: (WORD((BYTE(DWORD_PTR(a).value & 0xFF).value) | (WORD(BYTE(DWORD_PTR(b).value & 0xFF).value)).value << 8)).value
     LOWORD = lambda l: (WORD((DWORD_PTR(l)).value & 0xFFFF)).value
     LOBYTE = lambda w: (BYTE((DWORD_PTR(w)).value & 0xFF)).value
     HIBYTE = lambda w: (WORD((DWORD_PTR(w).value >> 8) & 0xFF)).value
-    dwVersion = declare(windll.kernel32.GetVersion, DWORD, None)()
+    windll.kernel32.GetVersion.argtypes = []
+    windll.kernel32.GetVersion.restype = DWORD
+    dwVersion = windll.kernel32.GetVersion()
 
     define("_WINVER", MAKEWORD(HIBYTE(LOWORD(dwVersion)), LOBYTE(LOWORD(dwVersion))))
 

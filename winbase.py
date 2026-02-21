@@ -489,6 +489,7 @@ MAKEINTATOM = lambda i: cast(ULONG_PTR(WORD(i).value).value, LPTSTR)
 INVALID_ATOM = ATOM(0)
 
 lstrcpynW = declare(kernel32.lstrcpynW, LPWSTR, LPWSTR, LPCWSTR, INT)
+lstrcpynA = declare(kernel32.lstrcpynA, LPSTR, LPSTR, LPCSTR, INT)
 
 class REASON_CONTEXT(CStructure):
     class _Reason(Union):

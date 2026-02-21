@@ -7,6 +7,12 @@ class BSTR(LPOLESTR):
         self._allocated = False
         
     @classmethod
+    def init_untracked(cls):
+        instance = cls()
+        instance._allocated = True
+        return instance
+        
+    @classmethod
     def from_param(cls, value):
         if value is NULL: return NULL
         if isinstance(value, str): return cls.new(value)
@@ -37,7 +43,7 @@ class BSTR(LPOLESTR):
             self._allocated = False
             
     def __bool__(self) -> bool:
-        return self._allocated and self.value
+        return self._allocated and bool(self.value)
     
     def __str__(self) -> str:
         if getattr(self, '_allocated', True): return self.value
