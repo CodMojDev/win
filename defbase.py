@@ -118,7 +118,8 @@ __all__ = [
     "WT_HANDLE", "flexible_array", 
     "LI",
     "IWideCharArrayFixedSize", "ICharArrayFixedSize",
-    "dbg_trace"
+    "dbg_trace",
+    "stdcall_function", "cdecl_function"
 ]
 
 from . import cpreproc
@@ -1704,6 +1705,8 @@ def field_typed(cls: Type[CStructure], field: str, field_real: str, result: WT):
     
     setattr(cls, field, getter_prop)
     setattr(cls, field, setter_prop)
+    
+from ctypes import CFUNCTYPE
     
 class CUnion(Union):
     """

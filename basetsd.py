@@ -152,17 +152,17 @@ if cpreproc.pragma_once("_BASETSD_H_"):
         PSSIZE_T  = PINT
         DWORD_PTR = UINT
         
-    MAXUINT_PTR = UINT_PTR(~0)
-    MAXINT_PTR = UINT_PTR(MAXUINT_PTR.value >> 1)
-    MININT_PTR = INT_PTR(~MAXINT_PTR.value)
+    MAXUINT_PTR = UINT_PTR(~0).value
+    MAXINT_PTR = UINT_PTR(MAXUINT_PTR.value >> 1).value
+    MININT_PTR = INT_PTR(~MAXINT_PTR.value).value
     
-    MAXULONG_PTR = ULONG_PTR(~0)
-    MAXLONG_PTR = ULONG_PTR(MAXULONG_PTR.value >> 1)
-    MINLONG_PTR = LONG_PTR(~MAXLONG_PTR.value)
+    MAXULONG_PTR = ULONG_PTR(~0).value
+    MAXLONG_PTR = ULONG_PTR(MAXULONG_PTR.value >> 1).value
+    MINLONG_PTR = LONG_PTR(~MAXLONG_PTR.value).value
     
-    MAXUHALF_PTR = UHALF_PTR(~0)
-    MAXHALF_PTR = UHALF_PTR(MAXUHALF_PTR.value >> 1)
-    MINHALF_PTR = HALF_PTR(~MAXHALF_PTR.value)
+    MAXUHALF_PTR = UHALF_PTR(~0).value
+    MAXHALF_PTR = UHALF_PTR(MAXUHALF_PTR.value >> 1).value
+    MINHALF_PTR = HALF_PTR(~MAXHALF_PTR.value).value
     
     KAFFINITY = ULONG_PTR
     PKAFFINITY = PULONG_PTR

@@ -5,6 +5,7 @@
 from .winnt import LPTSTR, MAKELANGID, LANG_NEUTRAL, SUBLANG_DEFAULT
 from .errhandlingapi import GetLastError
 from .minwindef import *
+from .winerror import *
 from .defbase import *
 
 from typing import *
