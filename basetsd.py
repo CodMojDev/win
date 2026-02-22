@@ -153,16 +153,16 @@ if cpreproc.pragma_once("_BASETSD_H_"):
         DWORD_PTR = UINT
         
     MAXUINT_PTR = UINT_PTR(~0).value
-    MAXINT_PTR = UINT_PTR(MAXUINT_PTR.value >> 1).value
-    MININT_PTR = INT_PTR(~MAXINT_PTR.value).value
+    MAXINT_PTR = UINT_PTR(MAXUINT_PTR >> 1).value
+    MININT_PTR = INT_PTR(~MAXINT_PTR).value
     
     MAXULONG_PTR = ULONG_PTR(~0).value
-    MAXLONG_PTR = ULONG_PTR(MAXULONG_PTR.value >> 1).value
-    MINLONG_PTR = LONG_PTR(~MAXLONG_PTR.value).value
+    MAXLONG_PTR = ULONG_PTR(MAXULONG_PTR >> 1).value
+    MINLONG_PTR = LONG_PTR(~MAXLONG_PTR).value
     
     MAXUHALF_PTR = UHALF_PTR(~0).value
-    MAXHALF_PTR = UHALF_PTR(MAXUHALF_PTR.value >> 1).value
-    MINHALF_PTR = HALF_PTR(~MAXHALF_PTR.value).value
+    MAXHALF_PTR = UHALF_PTR(MAXUHALF_PTR >> 1).value
+    MINHALF_PTR = HALF_PTR(~MAXHALF_PTR).value
     
     KAFFINITY = ULONG_PTR
     PKAFFINITY = PULONG_PTR
