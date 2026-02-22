@@ -809,7 +809,7 @@ if _version >= WIN32_WINNT_WINXP:
 
     class RPC_HTTP_TRANSPORT_CREDENTIALS_W(CStructure):
         _fields_ = [
-            ('TransportCredentials', SEC_WINNT_AUTH_IDENTITY_W)
+            ('TransportCredentials', SEC_WINNT_AUTH_IDENTITY_W),
             ('Flags', ULONG),
             ('AuthenticationTarget', ULONG),
             ('NumberOfAuthnSchemes', ULONG),
@@ -828,7 +828,7 @@ if _version >= WIN32_WINNT_WINXP:
     
     class RPC_HTTP_TRANSPORT_CREDENTIALS_A(CStructure):
         _fields_ = [
-            ('TransportCredentials', SEC_WINNT_AUTH_IDENTITY_A)
+            ('TransportCredentials', SEC_WINNT_AUTH_IDENTITY_A),
             ('Flags', ULONG),
             ('AuthenticationTarget', ULONG),
             ('NumberOfAuthnSchemes', ULONG),
