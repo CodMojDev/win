@@ -118,8 +118,7 @@ __all__ = [
     "WT_HANDLE", "flexible_array", 
     "LI",
     "IWideCharArrayFixedSize", "ICharArrayFixedSize",
-    "dbg_trace",
-    "stdcall_function", "cdecl_function"
+    "dbg_trace"
 ]
 
 from . import cpreproc
