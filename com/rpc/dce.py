@@ -15,6 +15,11 @@ handle_t = RPC_BINDING_HANDLE
 rpc_binding_handle_t = RPC_BINDING_HANDLE
 
 class UUID(GUID):
+    def __init__(self, string: Optional[str] = None):
+        if string is not None:
+            RpcStatus = UuidFromStringW(string, self.ref())
+            if RpcStatus != RPC_S_OK: raise WinException(RpcStatus)
+    
     def __str__(self) -> str:
         RpcStringUuid = RPC_WSTR()
         RpcStatus = UuidToStringW(self.ref(), byref(RpcStringUuid))
