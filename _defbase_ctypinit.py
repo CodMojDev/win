@@ -871,6 +871,9 @@ def Init():
     t_mappingproxy.members = [PyMemberDef('m_proxy', _Py_T_OBJECT,
                                           MProxy.offset('mapping'))]
     t_mappingproxy.Reload()
+    t_codetype = PyType_CAST_DEREF(type(HasTPFLAG.__code__))
+    for member in t_codetype.members:
+        member.readonly = False
     
 """
 from types import MappingProxyType

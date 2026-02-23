@@ -535,7 +535,7 @@ class VirtualTable:
                     callback = VirtualTable.func_ptr(address)
                     callback.restype = ret
                     callback.argtypes = (THIS, *args)
-                    setattr(f, 'callback', callback)
+                    # setattr(f, 'callback', callback)
                 
                 result = callback(byref(f_self), *f_args)
                 if callable(result_function):
@@ -1132,7 +1132,7 @@ def _make_internal(cls: type) -> type:
             generic_alias = typ
             typ = _resolve_genericalias(generic_alias)
         else:
-            if isinstance(typ, ICustomizable):
+            if isinstance(typ, type) and issubclass(typ, ICustomizable):
                 fields_customed.append((field, typ._custom_))
                 field = '_' + field
             typ = _resolve_type(typ)

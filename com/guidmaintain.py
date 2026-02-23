@@ -137,4 +137,34 @@ def NewGuid(guidName: str, force: bool = False) -> GUID:
     
     return guid
 
+def NewIid(guidName: str, force: bool = False) -> IID:
+    global registry
+    
+    if guidName in registry and not force:
+        iid = IID()
+        memmove(iid.ref(), registry[guidName].ref(), sizeof(GUID))
+        return iid
+    
+    guid = IID.new()
+    registry[guidName] = guid
+    
+    _Save()
+    
+    return guid
+
+def NewClsid(guidName: str, force: bool = False) -> CLSID:
+    global registry
+    
+    if guidName in registry and not force:
+        clsid = CLSID()
+        memmove(clsid.ref(), registry[guidName].ref(), sizeof(GUID))
+        return clsid
+    
+    guid = CLSID.new()
+    registry[guidName] = guid
+    
+    _Save()
+    
+    return guid
+
 _Initialize()

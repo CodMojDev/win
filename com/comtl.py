@@ -159,8 +159,14 @@ class CUnknown(IUnknown):
     
     _refcnt: int
     
+    _trace_id_next_: ClassVar[int] = 0
+    _trace_id: int
+    
     def __init__(self):
-        dbg_trace()
+        self._trace_id = self._trace_id_next_
+        self._trace_id_next_ += 1
+        
+        dbg_trace(f'TraceID {self._trace_id}')
         
         # Virtual table Initialization
         self.initialize_vtable(self.virtual_table)
@@ -176,7 +182,7 @@ class CUnknown(IUnknown):
         
     def AddRef_Impl(self) -> int:
         self._refcnt += 1
-        dbg_trace(f'refcnt = {self._refcnt}')
+        dbg_trace(f'TraceID {self._trace_id} refcnt = {self._refcnt}')
         return self._refcnt
     
     def Release_Impl(self) -> int:
@@ -184,12 +190,12 @@ class CUnknown(IUnknown):
         if self._refcnt == 0:
             self.Release_Internal()
         
-        dbg_trace(f'refcnt = {self._refcnt}')
+        dbg_trace(f'TraceID {self._trace_id} refcnt = {self._refcnt}')
         
         return self._refcnt
             
     def Release_Internal(self):
-        dbg_trace()
+        dbg_trace(f'TraceID {self._trace_id}')
         
 from threading import Lock
         
@@ -197,8 +203,16 @@ class CUnknownMTA(IUnknown):
     _refcnt: int
     _lock: Lock
     
+    _trace_id_next_: ClassVar[int] = 0
+    _trace_id: int
+    
     def __init__(self):
-        dbg_trace()
+        self._lock = Lock()
+        
+        self._trace_id = CUnknownMTA._trace_id_next_
+        CUnknownMTA._trace_id_next_ += 1
+        
+        dbg_trace(f'TraceID {self._trace_id}')
         
         # Virtual table Initialization
         self.initialize_vtable(self.virtual_table)
@@ -210,14 +224,13 @@ class CUnknownMTA(IUnknown):
         self.implement(self.Release)
         
         # class fields
-        self._lock = Lock()
-        self._refcnt = 0
+        self._refcnt = 1
         
     def AddRef_Impl(self) -> int:
         with self._lock:
             self._refcnt += 1
             
-        dbg_trace(f'refcnt = {self._refcnt}')
+        dbg_trace(f'TraceID {self._trace_id} refcnt = {self._refcnt}')
         
         return self._refcnt
     
@@ -228,7 +241,7 @@ class CUnknownMTA(IUnknown):
         if self._refcnt == 0:
             self.Release_Internal()
         
-        dbg_trace(f'refcnt = {self._refcnt}')
+        dbg_trace(f'TraceID {self._trace_id} refcnt = {self._refcnt}')
         
         return self._refcnt
             
@@ -238,22 +251,23 @@ class CUnknownMTA(IUnknown):
 CUnknown.STA = CUnknown
 CUnknown.MTA = CUnknownMTA
         
-def QI_SetInterface(itf: COMInterface, ppvObject: IVoidPtr, virtual_table: COMVirtualTable) -> int:
+def QI_SetInterface(itf: IUnknown, ppvObject: IVoidPtr, virtual_table: COMVirtualTable) -> int:
     if not ppvObject: # unmanaged parameter needs check
         dbg_trace('E_POINTER')
         return E_POINTER
 
     lpVtbl = PVOID(getattr(itf, virtual_table.field_name))
     i_cast(ppvObject, PLPVOID).contents.value = PtrUtil.get_address(pointer(lpVtbl))
+    itf.AddRef()
     
     dbg_trace('S_OK')
     return S_OK
 
-class CComObject(CUnknown):
+class CComObject(CUnknown.MTA):
     _com_map_: ClassVar[list[tuple[COMInterface, COMVirtualTable]]]
     
     def __init__(self):
-        dbg_trace()
+        dbg_trace(f'TraceID {CUnknownMTA._trace_id_next_}')
         super().__init__()
         
         self.implement(self.QueryInterface)
@@ -261,15 +275,19 @@ class CComObject(CUnknown):
     def QueryInterface_Impl(self, piid: IPointer[IID], ppv: IVoidPtr) -> int:
         iid = piid.contents
         if iid == IUnknown.iid() or iid == self.iid():
-            dbg_trace(f'IUnknown | {self.__class__.__name__}')
+            dbg_trace(f'TraceID {self._trace_id} IUnknown | {self.__class__.__name__}')
             return QI_SetInterface(self, ppv, self.virtual_table)
         for ci, virtual_table in self._com_map_:
             if iid == ci.iid():
-                dbg_trace(virtual_table.name)
+                dbg_trace(f'TraceID {self._trace_id} {virtual_table.name}')
                 return QI_SetInterface(self, ppv, virtual_table)
-        dbg_trace(f'No interface {iid}')
+        dbg_trace(f'TraceID {self._trace_id} No interface {iid}')
         i_cast(ppv, PLPVOID).contents.value = NULL
         return E_NOINTERFACE
+
+def Pair_Ref(itf: IUnknown) -> tuple[int, int]:
+    dbg_trace(itf.virtual_table.name)
+    return itf.AddRef(), itf.Release()
 
 def I_DllCanUnloadNow() -> int:
     return 0

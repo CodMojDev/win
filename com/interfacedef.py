@@ -228,13 +228,22 @@ class COMInterface(CStructure):
         
         Needs setted on-context virtual table with `set_vtable_on_ctx`.
         """
+        if cpreproc.ifdef('DBGPLUS'):
+            dbg_trace(f'{self.virtual_table.name}::{function.__name__}')
+        
         virtual_table = self._virtual_table_on_ctx
         function_name = function.__name__
         
-        def thunk(this, *args, **kwargs):
-            return getattr(self, function_name + '_Impl')(*args)
+        if cpreproc.ifdef('DBGPLUS'):
+            def thunk(this, *args, **kwargs):
+                dbg_trace(f'UnusedThis={this}, This={self.virtual_table.name}')
+                return getattr(self, function_name + '_Impl')(*args)
+        else:
+            def thunk(this, *args, **kwargs):
+                return getattr(self, function_name + '_Impl')(*args)
         
         thunk.__name__ = f'{virtual_table.name}_{function_name}_Thunk'
+        thunk.__qualname__ = thunk.__code__.co_name = thunk.__code__.co_qualname = thunk.__name__
         
         self.stub(function, getattr(function, 'proto')(thunk))
         

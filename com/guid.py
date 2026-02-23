@@ -142,6 +142,7 @@ class CLSID(GUID):
             
         return value
     
+"""
 class REFCLSID(CLSID.PTR()):
     @classmethod
     def from_param(cls, value):
@@ -155,6 +156,8 @@ class REFCLSID(CLSID.PTR()):
             return com_class._clsid_.ptr()
             
         return value
+"""
+REFCLSID = CLSID.PTR()
     
 PCLSID = LPCCLSID = LPCLSID = REFCLSID
 CLSID_NULL = CLSID()
@@ -222,7 +225,8 @@ class IID(GUID):
             return com_interface._iid_
             
         return super().from_param(value)
-    
+   
+""" 
 class REFIID(IID.PTR()):
     @classmethod
     def from_param(cls, value):
@@ -236,6 +240,8 @@ class REFIID(IID.PTR()):
             return com_class._iid_.ptr()
             
         return value
+"""
+REFIID = IID.PTR()
     
 PIID = LPCIID = LPIID = REFIID
 IID_NULL = IID()

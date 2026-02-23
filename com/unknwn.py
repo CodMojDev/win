@@ -140,6 +140,7 @@ class IClassFactory(IUnknown):
         virtual_table.build()
         
     virtual_table = COMVirtualTable.from_ancestor(IUnknown.virtual_table, 'IClassFactory')
+    _iid_ = IID('{00000001-0000-0000-C000-000000000046}')
     
     @virtual_table.com_function(LPUNKNOWN, REFIID, PVOID, intermediate_method=True)
     def CreateInstance(self, pUnkOuter: IPointer[IUnknown], iid: IID, ppvObject: IPointer[PVOID], **kwargs) -> int:
