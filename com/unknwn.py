@@ -40,9 +40,13 @@ class IUnknown(COMInterface):
     @classmethod
     def Create(cls, clsid: CLSID, clsctx: int = CLSCTX_INPROC_SERVER,
                  pUnkOuter: IPointer['IUnknown'] = NULL) -> IPointer[Self]:
+        if cpreproc.ifdef('DBGPLUS'):
+            dbg_trace()
         pUnk = cls.NULL()
         hr = CoCreateInstance(clsid, pUnkOuter, clsctx, 
                               cls._iid_, byref(pUnk))
+        if cpreproc.ifdef('DBGPLUS'):
+            dbg_trace('Created instance')
         if FAILED(hr): raise COMError(hr)
         return pUnk
     

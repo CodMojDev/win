@@ -46,6 +46,9 @@ class COMVirtualTable(VirtualTable):
         virtual_table.fields.extend(ancestor.fields)
         return virtual_table
     
+    def __del__(self):
+        print(f'DELETE {self.name}Vtbl!!!')
+    
     def with_fieldname(self, field_name: str):
         """
         1-line variant to set the field name.
@@ -204,6 +207,8 @@ class COMVirtualTable(VirtualTable):
     
         return _com_function_vbstyle
 
+from .. import _defbase_ctypinit as _defb_ci
+
 class COMInterface(CStructure):
     """
     Class representing a COM Interface.
@@ -234,16 +239,15 @@ class COMInterface(CStructure):
         virtual_table = self._virtual_table_on_ctx
         function_name = function.__name__
         
-        if cpreproc.ifdef('DBGPLUS'):
-            def thunk(this, *args, **kwargs):
-                dbg_trace(f'UnusedThis={this}, This={self.virtual_table.name}')
-                return getattr(self, function_name + '_Impl')(*args)
-        else:
-            def thunk(this, *args, **kwargs):
-                return getattr(self, function_name + '_Impl')(*args)
+        def thunk(this, *args, **kwargs):
+            thunk.__name__ = f'{virtual_table.name}_{function_name}_Thunk'
+            thunk.__qualname__ = thunk.__code__.co_name = thunk.__code__.co_qualname = thunk.__name__
+            if cpreproc.ifdef('DBGPLUS'):
+                dbg_trace(f'UnusedThis={this}, This={self.virtual_table.name} {function_name}')
+            return getattr(self, function_name + '_Impl')(*args)
         
-        thunk.__name__ = f'{virtual_table.name}_{function_name}_Thunk'
-        thunk.__qualname__ = thunk.__code__.co_name = thunk.__code__.co_qualname = thunk.__name__
+        #thunk.__name__ = f'{virtual_table.name}_{function_name}_Thunk'
+        #thunk.__qualname__ = thunk.__code__.co_name = thunk.__code__.co_qualname = thunk.__name__
         
         self.stub(function, getattr(function, 'proto')(thunk))
         
@@ -273,6 +277,8 @@ class COMInterface(CStructure):
         resolve what virtual table needed to use.
         """
         self._virtual_table_on_ctx = virtual_table
+        
+    def __del__(self): print('borisnikolaich')
     
 class COMLibrary:
     """

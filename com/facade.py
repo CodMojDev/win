@@ -1,6 +1,7 @@
 from ..libloaderapi import *
 from ..dbg.dbghelp import *
 from .guidmaintain import *
+from .interfacedef import *
 
 import winreg
 import shutil
@@ -61,3 +62,12 @@ class FacadeFactory:
             if ProgID is not None:
                 with self._OpenSubKey(f'{ClsidPath}\\ProgID') as ProgIDKey:
                     winreg.SetValue(ProgIDKey, None, winreg.REG_SZ, ProgID)
+                    
+    def RegisterInterface(self, Interface: COMInterface):
+        NumMethods = len(Interface.virtual_table.VType._fields_)
+        
+        ItfPath = f'Interface\\{Interface.iid()}'
+        with self._OpenSubKey(ItfPath) as ItfKey:
+            winreg.SetValue(ItfKey, None, winreg.REG_SZ, Interface.virtual_table.name)
+            with self._OpenSubKey(f'{ItfPath}\\NumMethods') as NumMethodsKey:
+                winreg.SetValue(NumMethodsKey, None, winreg.REG_SZ, str(NumMethods))

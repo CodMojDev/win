@@ -696,6 +696,12 @@ pythonapi.Py_IncRef.restype = None
 
 def Py_INCREF(obj):
     pythonapi.Py_IncRef(id(obj))
+    
+pythonapi.PyObject_GC_UnTrack.argtypes = [c_void_p]
+pythonapi.PyObject_GC_UnTrack.restype = None
+
+def PyObject_GC_UnTrack(obj):
+    pythonapi.PyObject_GC_UnTrack(PyType_CAST(obj))
         
 class ICArgObject: ...
 

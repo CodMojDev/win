@@ -440,9 +440,9 @@ class VirtualTable:
         _restype_ = c_int
         _flags_ = 0x0
     
+    VType: type['CStructure']
     field_name: str
     fields: list
-    VType: type
     name: str
     
     func_ptr: Type[CFuncPtr] = _FuncPtr
@@ -458,7 +458,7 @@ class VirtualTable:
     
     def __init__(self, name: str, custom_field: str='vtable'):
         self.field_name = custom_field
-        self.VType = type(None)
+        self.VType = None
         self.fields = []
         self.name = name
     
@@ -481,7 +481,8 @@ class VirtualTable:
         """
         Build the virtual table type.
         """
-        self.VType = type(self.name + 'Vtbl', (CStructure,), {'_fields_': self.fields})
+        if self.VType is None:
+            self.VType = type(self.name + 'Vtbl', (CStructure,), {'_fields_': self.fields})
         return [(self.field_name, c_void_p)]
     
     def __repr__(self) -> str:
@@ -870,25 +871,19 @@ def filter_self(args_tuple: tuple, typ: type) -> tuple:
     return args_tuple
     
 from typing import TYPE_CHECKING
-    
-if TYPE_CHECKING:
-    def dbg_trace(message: str = ''):
-        """
-        Debug trace.
-        """
-        
-if not TYPE_CHECKING:
-    if cpreproc.defined('DBGTRACE'):
-        def dbg_trace(message: str = ''):
-            caller = get_caller_frame()
-            name = caller.f_code.co_qualname.replace('.', '::')
-            if name.endswith('_Impl'):
-                name = name[:-5]
-            elif name.endswith('__init__'):
-                name = f'new {name[:-10]}'
-            print(f'{name}() {message}')
-    else:
-        def dbg_trace(message: str = ''): ...
+
+def dbg_trace(message: str = ''):
+    """
+    Debug trace.
+    """
+    if _defb_state._dbgtrace:
+        caller = get_caller_frame()
+        name = caller.f_code.co_qualname.replace('.', '::')
+        if name.endswith('_Impl'):
+            name = name[:-5]
+        elif name.endswith('__init__'):
+            name = f'new {name[:-10]}'
+        print(f'{name}() {message}')
     
 class Template(Generic[WT]):
     """
@@ -2239,11 +2234,13 @@ LI = TypeVar('LI', bound=CDLL)
 
 class _DEFB_STATE: # internal global state
     __slots__  = ['_linked_libraries', '_defbase_process', 
-                  '_defbase_module', '_interfacedef', '_unknwn']
+                  '_defbase_module', '_interfacedef', '_unknwn',
+                  '_dbgtrace']
     _linked_libraries: Dict[str, LI]
     
     def __init__(self):
         self._linked_libraries = {}
+        self._dbgtrace = cpreproc.defined('DBGTRACE')
     
 _defb_state: _DEFB_STATE = _DEFB_STATE()
 
