@@ -44,12 +44,12 @@ if cpreproc.pragma_once("_MINWINDEF_"):
     LOCALHANDLE = HANDLE
     SPHANDLE = LPHANDLE
 
-    MAKEWORD = lambda a, b: (WORD((BYTE(DWORD_PTR(a).value & 0xFF).value) | (WORD(BYTE(DWORD_PTR(b).value & 0xFF).value)).value << 8)).value
-    MAKELONG = lambda a, b: (LONG((WORD(DWORD_PTR(a).value & 0xFFFF).value) | (DWORD(WORD(DWORD_PTR(b).value & 0xFFFF).value)).value << 16)).value
-    LOWORD = lambda l: (WORD((DWORD_PTR(l)).value & 0xFFFF)).value
-    HIWORD = lambda l: (WORD((DWORD_PTR(l).value >> 16) & 0xFFFF)).value
-    LOBYTE = lambda w: (BYTE((DWORD_PTR(w)).value & 0xFF)).value
-    HIBYTE = lambda w: (WORD((DWORD_PTR(w).value >> 8) & 0xFF)).value
+    MAKEWORD = lambda a, b: (WORD((BYTE(DWORD_PTR(a or 0).value & 0xFF).value) | (WORD(BYTE(DWORD_PTR(b or 0).value & 0xFF).value)).value << 8)).value
+    MAKELONG = lambda a, b: (LONG((WORD(DWORD_PTR(a or 0).value & 0xFFFF).value) | (DWORD(WORD(DWORD_PTR(b or 0).value & 0xFFFF).value)).value << 16)).value
+    LOWORD = lambda l: (WORD((DWORD_PTR(l or 0)).value & 0xFFFF)).value
+    HIWORD = lambda l: (WORD((DWORD_PTR(l or 0).value >> 16) & 0xFFFF)).value
+    LOBYTE = lambda w: (BYTE((DWORD_PTR(w or 0)).value & 0xFF)).value
+    HIBYTE = lambda w: (WORD((DWORD_PTR(w or 0).value >> 8) & 0xFF)).value
 
     PROC = WINAPI(INT)
     FARPROC = PROC

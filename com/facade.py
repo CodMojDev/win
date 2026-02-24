@@ -7,6 +7,13 @@ import winreg
 import shutil
 import os
 
+def OpenHKCR(SubKey: str) -> winreg.HKEYType:
+    try:
+        Key = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, SubKey, 0, winreg.KEY_WRITE)
+    except FileNotFoundError:
+        Key = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, SubKey)
+    return Key
+
 class FacadeFactory:
     def Facade(self, ScriptPath: str) -> str:
         if not os.path.isfile(ScriptPath): return None
@@ -42,32 +49,34 @@ class FacadeFactory:
         
         return FacadePath
     
-    def _OpenSubKey(self, SubKey: str) -> winreg.HKEYType:
-        try:
-            Key = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, SubKey, 0, winreg.KEY_WRITE)
-        except FileNotFoundError:
-            Key = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, SubKey)
-        return Key
-    
     def RegisterCLSID(self, ClsidName: str, ScriptPath: str, 
                       ProgID: Optional[str] = None):
         FacadePath = self.Facade(ScriptPath)
         Clsid = NewClsid(ClsidName)
         ClsidPath = f'CLSID\\{Clsid}'
-        with self._OpenSubKey(ClsidPath) as ClsidKey:
+        with OpenHKCR(ClsidPath) as ClsidKey:
             winreg.SetValue(ClsidKey, None, winreg.REG_SZ, ClsidName)
-            with self._OpenSubKey(f'{ClsidPath}\\InprocServer32') as InprocServer32Key:
+            with OpenHKCR(f'{ClsidPath}\\InprocServer32') as InprocServer32Key:
                 winreg.SetValue(InprocServer32Key, None, winreg.REG_SZ, FacadePath)
                 winreg.SetValue(InprocServer32Key, 'ThreadingModel', winreg.REG_SZ, 'Both')
             if ProgID is not None:
-                with self._OpenSubKey(f'{ClsidPath}\\ProgID') as ProgIDKey:
+                with OpenHKCR(f'{ClsidPath}\\ProgID') as ProgIDKey:
                     winreg.SetValue(ProgIDKey, None, winreg.REG_SZ, ProgID)
                     
     def RegisterInterface(self, Interface: COMInterface):
         NumMethods = len(Interface.virtual_table.VType._fields_)
         
         ItfPath = f'Interface\\{Interface.iid()}'
-        with self._OpenSubKey(ItfPath) as ItfKey:
+        with OpenHKCR(ItfPath) as ItfKey:
             winreg.SetValue(ItfKey, None, winreg.REG_SZ, Interface.virtual_table.name)
-            with self._OpenSubKey(f'{ItfPath}\\NumMethods') as NumMethodsKey:
+            with OpenHKCR(f'{ItfPath}\\NumMethods') as NumMethodsKey:
                 winreg.SetValue(NumMethodsKey, None, winreg.REG_SZ, str(NumMethods))
+                
+    def UnregisterCLSID(self, ClsidName: str):
+        Clsid = NewClsid(ClsidName)
+        ClsidPath = f'CLSID\\{Clsid}'
+        winreg.DeleteKey(winreg.HKEY_CLASSES_ROOT, f'{ClsidPath}\\InprocServer32')
+        try:
+            winreg.DeleteKey(winreg.HKEY_CLASSES_ROOT, f'{ClsidPath}\\ProgID')
+        except: ...
+        winreg.DeleteKey(winreg.HKEY_CLASSES_ROOT, ClsidPath)

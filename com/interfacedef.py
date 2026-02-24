@@ -277,8 +277,6 @@ class COMInterface(CStructure):
         resolve what virtual table needed to use.
         """
         self._virtual_table_on_ctx = virtual_table
-        
-    def __del__(self): print('borisnikolaich')
     
 class COMLibrary:
     """

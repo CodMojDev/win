@@ -531,7 +531,7 @@ LPOLEINPLACEFRAME = IOleInPlaceFrame.PTR()
 
 class IOleInPlaceObject(IOleWindow):
 	virtual_table = COMVirtualTable.from_ancestor(IOleWindow)
-	_iid_ = IID("{00000119-0000-0000-C000-000000000046}")
+	_iid_ = IID("{00000113-0000-0000-C000-000000000046}")
 
 	@virtual_table.com_function()
 	def InPlaceDeactivate(self) -> int: ...

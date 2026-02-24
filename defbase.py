@@ -883,7 +883,12 @@ def dbg_trace(message: str = ''):
             name = name[:-5]
         elif name.endswith('__init__'):
             name = f'new {name[:-10]}'
-        print(f'{name}() {message}')
+        
+        if _defb_state._dbgtrace_file_name:
+            _defb_state._dbgtrace_file.write(f'{name}() {message}\n')
+            _defb_state._dbgtrace_file.flush()
+        else:
+            print(f'{name}() {message}')
     
 class Template(Generic[WT]):
     """
@@ -2235,12 +2240,15 @@ LI = TypeVar('LI', bound=CDLL)
 class _DEFB_STATE: # internal global state
     __slots__  = ['_linked_libraries', '_defbase_process', 
                   '_defbase_module', '_interfacedef', '_unknwn',
-                  '_dbgtrace']
+                  '_dbgtrace', '_dbgtrace_file', '_dbgtrace_file_name']
     _linked_libraries: Dict[str, LI]
     
     def __init__(self):
         self._linked_libraries = {}
         self._dbgtrace = cpreproc.defined('DBGTRACE')
+        self._dbgtrace_file_name = cpreproc.getdef('DBGTRACE_FILE')
+        if self._dbgtrace and self._dbgtrace_file_name:
+            self._dbgtrace_file = open(self._dbgtrace_file_name, 'w')
     
 _defb_state: _DEFB_STATE = _DEFB_STATE()
 
