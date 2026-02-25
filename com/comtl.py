@@ -508,7 +508,7 @@ class PythonControl(CComClass, IPythonControl):
             gc.disable()
         return S_OK
     
-
+SetGuid('IEnumWETProvider', IID('{95669320-4BA5-40EF-8A36-73D2C3705302}'))
     
 class IEnumWETProvider(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
@@ -542,6 +542,8 @@ class IWETManager(IUnknown):
     def GetProviderEnumerator(self, ppenum: IDoublePtr[IEnumWETProvider]) -> int: ...
     
     virtual_table.build()
+    
+SetGuid('WETManager', CLSID('{80644DEE-3A49-4574-ADDE-23EDBDC8F3DB}'))
     
 class WETManager(CComClass, IWETManager):
     _com_map_ = [IWETManager, IWETManager.virtual_table]
@@ -606,6 +608,8 @@ class WETManager(CComClass, IWETManager):
         
         dbg_trace(provider, 'S_OK')
         return S_OK
+    
+SetGuid('EnumWETProvider', CLSID('{2F8EAAC1-D186-46F1-B2A4-7023AD1E1338}'))
     
 class EnumWETProvider(CComClass, IEnumWETProvider):
     _com_map_ = [IEnumWETProvider, IEnumWETProvider.virtual_table]
