@@ -423,24 +423,6 @@ SetGuid('IPythonControl', IID('{E33B6F0E-612E-4B9D-B0EA-268FD400E1B1}'))
 class IPythonControl(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = GetIID()
-    
-    @virtual_table.com_function(BOOL)
-    def DebugTrace(self, fTrace: bool) -> int:
-        """
-        Enable/Disable debug trace.
-        """
-        
-    @virtual_table.com_function(LPCWSTR)
-    def Trace(pwszTrace: str) -> int:
-        """
-        Trace the string.
-        """
-        
-    @virtual_table.com_function(BOOL)
-    def DebugPlus(self, fDbgPlus: bool) -> int:
-        """
-        Enable/Disable DBGPLUS.
-        """
         
     @virtual_table.com_function(BOOL)
     def EnableGC(self, fGCEnabled: bool) -> int: 
@@ -465,39 +447,9 @@ class PythonControl(CComClass, IPythonControl):
         
         # IPythonControl
         self.set_vtable_on_ctx(self.virtual_table)
-        self.implement(self.DebugTrace)
-        self.implement(self.Trace)
-        self.implement(self.DebugPlus)
         self.implement(self.EnableGC)
         
         self.__self__ = self
-        
-    def DebugTrace_Impl(self, fTrace):
-        if fTrace:
-            defb._defb_state._dbgtrace = True
-            cpreproc.define('DBGTRACE')
-            
-            dbg_trace(provider, 'Debug trace enabled')
-        else:
-            dbg_trace(provider, 'Debug trace disabled')
-            
-            defb._defb_state._dbgtrace = False
-            cpreproc.undef('DBGTRACE')
-        return S_OK
-        
-    def Trace_Impl(self, pwszTrace: str) -> int:
-        if not pwszTrace: return E_POINTER
-        dbg_trace(provider, pwszTrace)
-        return S_OK
-    
-    def DebugPlus_Impl(self, fDbgPlus) -> int:
-        if fDbgPlus:
-            dbg_trace(provider, 'DebugPlus enabled')
-            cpreproc.define('DBGPLUS')
-        else:
-            dbg_trace(provider, 'DebugPlus disabled')
-            cpreproc.undef('DBGPLUS')
-        return S_OK
     
     def EnableGC_Impl(self, fGCEnabled):
         if fGCEnabled:
@@ -541,6 +493,9 @@ class IWETManager(IUnknown):
     @virtual_table.com_function(IEnumWETProvider.DOUBLE_PTR())
     def GetProviderEnumerator(self, ppenum: IDoublePtr[IEnumWETProvider]) -> int: ...
     
+    @virtual_table.com_function(LPCWSTR, PWET_EVENT)
+    def SendEvent(self, Provider: str, pWetEvent: IPointer[WET_EVENT]) -> int: ...
+    
     virtual_table.build()
     
 SetGuid('WETManager', CLSID('{80644DEE-3A49-4574-ADDE-23EDBDC8F3DB}'))
@@ -559,6 +514,7 @@ class WETManager(CComClass, IWETManager):
         self.implement(self.Subscribe)
         self.implement(self.Unsubscribe)
         self.implement(self.GetProviderEnumerator)
+        self.implement(self.SendEvent)
         
     def Subscribe_Impl(self, Provider: str, EventCallback: FARPROC, pdwCookie: PDWORD) -> int: 
         if not EventCallback:
@@ -605,6 +561,28 @@ class WETManager(CComClass, IWETManager):
         
         enumerator = EnumWETProvider()
         ppenum.contents = enumerator.ptr()
+        
+        dbg_trace(provider, 'S_OK')
+        return S_OK
+    
+    def SendEvent_Impl(self, Provider: str, pWetEvent: IPointer[WET_EVENT]) -> int:
+        if not Provider:
+            dbg_trace(provider, 'Provider == NULL!')
+            return E_POINTER
+        
+        if not pWetEvent:
+            dbg_trace(provider, 'pWetEvent == NULL!')
+            return E_POINTER
+        
+        WetProvider = _WET_GLOBAL_STATE.LookupProvider(Provider)
+        if WetProvider is None:
+            dbg_trace(provider, f'No provider "{Provider}"')
+            return E_INVALIDARG
+        
+        pWetEvent.contents.pWetProvider = WetProvider.ptr()
+        pWetEvent.contents.TimeDateStamp = round(datetime.now().timestamp())
+        
+        WetProvider.SendEvent(pWetEvent.contents)
         
         dbg_trace(provider, 'S_OK')
         return S_OK
