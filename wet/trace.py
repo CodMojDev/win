@@ -19,7 +19,7 @@ class WET_PROVIDER(CStructure):
         ('fEnabled', BOOL)
     ]
     
-    _consumers: list[ConsumerCallback]
+    _consumers: list[tuple[int, ConsumerCallback]]
     
     RegName: LPCWSTR
     fEnabled: int
@@ -29,7 +29,10 @@ class WET_PROVIDER(CStructure):
         self.fEnabled = enabled
         self._consumers = []
         
+        _WET_GLOBAL_STATE._providers_.append(self)
+        
     def SendEvent(self, event: 'WET_EVENT'):
+        if not self.fEnabled: return
         pEvent = event.ptr()
         for _, consumer in self._consumers:
             consumer(pEvent)
@@ -122,7 +125,6 @@ PWET_EVENT = WET_EVENT.PTR()
     
 class _WET_GLOBAL_STATE:
     _providers_: ClassVar[list[WET_PROVIDER]] = []
-    _BIT32 = cpreproc.ifdef('_WIN32')
     
     @classmethod
     def LookupProvider(cls, reg_name: str) -> WET_PROVIDER:

@@ -2,7 +2,9 @@
 # COM Templates Library
 #
 
+from ..wet.trace import _WET_GLOBAL_STATE
 from ..wet.trace import *
+
 from .unknwn import *
 
 provider = WET_PROVIDER('COM-TL')
@@ -453,7 +455,7 @@ class IPythonControl(IUnknown):
 SetGuid('PythonControl', CLSID('{59434B84-E147-49A2-9ED8-84CBBEF0DD4A}'))
     
 class PythonControl(CComClass, IPythonControl):
-    _com_map_ = [(IPythonControl, virtual_table)]
+    _com_map_ = [(IPythonControl, IPythonControl.virtual_table)]
     _clsid_ = GetCLSID()
     _creatable_ = True
     
@@ -506,10 +508,179 @@ class PythonControl(CComClass, IPythonControl):
             gc.disable()
         return S_OK
     
+
+    
+class IEnumWETProvider(IUnknown):
+    virtual_table = COMVirtualTable.from_ancestor(IUnknown)
+    _iid_ = GetIID()
+    
+    @virtual_table.com_function(ULONG, POINTER(PWET_PROVIDER), PULONG)
+    def Next(self, celt: int, rgelt: IDoublePtr[WET_PROVIDER],
+             pceltFetched: PULONG) -> int: ...
+    
+    @virtual_table.com_function(ULONG)
+    def Skip(self, celt: int) -> int: ...
+    
+    @virtual_table.com_function(PVOID)
+    def Clone(self, ppenum: IDoublePtr['IEnumWETProvider']) -> int: ...
+    
+    virtual_table.build()
+    
 SetGuid('IWETManager', IID('{D9123535-E079-4CD9-8B4B-7CFC88DBFC27}'))
     
 class IWETManager(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = GetIID()
     
+    @virtual_table.com_function(LPCWSTR, PWET_EVENT_CALLBACK, PDWORD)
+    def Subscribe(self, Provider: str, EventCallback: FARPROC, pdwCookie: PDWORD) -> int: ...
+    
+    @virtual_table.com_function(LPCWSTR, DWORD)
+    def Unsubscribe(self, Provider: str, dwCookie: int) -> int: ...
+    
+    @virtual_table.com_function(IEnumWETProvider.DOUBLE_PTR())
+    def GetProviderEnumerator(self, ppenum: IDoublePtr[IEnumWETProvider]) -> int: ...
+    
     virtual_table.build()
+    
+class WETManager(CComClass, IWETManager):
+    _com_map_ = [IWETManager, IWETManager.virtual_table]
+    _clsid_ = GetCLSID()
+    _creatable_ = True
+    
+    def __init__(self):
+        dbg_trace(provider, f'Trace ID {self._trace_id_next_}')
+        super().__init__()
+        
+        # IWETManager
+        self.set_vtable_on_ctx(self.virtual_table)
+        self.implement(self.Subscribe)
+        self.implement(self.Unsubscribe)
+        self.implement(self.GetProviderEnumerator)
+        
+    def Subscribe_Impl(self, Provider: str, EventCallback: FARPROC, pdwCookie: PDWORD) -> int: 
+        if not EventCallback:
+            dbg_trace(provider, 'EventCallback == NULL!')
+            return E_POINTER
+        
+        if not pdwCookie:
+            dbg_trace(provider, 'pdwCookie == NULL!')
+            return E_POINTER
+        
+        if not Provider: 
+            dbg_trace(provider, 'Provider == NULL!')
+            return E_POINTER
+        
+        try:
+            cookie = WETProvider_Subscribe(Provider, EventCallback)
+        except ValueError:
+            dbg_trace(provider, f'No provider {Provider}')
+            return E_INVALIDARG
+        
+        dbg_trace(provider, f'Subscribed consumer cookie "{cookie}" for provider {Provider}')
+        pdwCookie.contents.value = cookie
+        
+        return S_OK
+    
+    def Unsubscribe_Impl(self, Provider: str, dwCookie: int) -> int:
+        if not Provider:
+            dbg_trace(provider, 'Provider == NULL!')
+            return E_POINTER
+        
+        try:
+            WETProvider_Unsubscribe(Provider, dwCookie)
+        except ValueError:
+            dbg_trace(provider, f'No provider {Provider} for consumer cookie "{dwCookie}"')
+            return E_INVALIDARG
+        
+        dbg_trace(provider, f'Unsubscribed consumer cookie "{dwCookie}" from provider {Provider}')
+        return S_OK
+    
+    def GetProviderEnumerator_Impl(self, ppenum: IDoublePtr[IEnumWETProvider]) -> int: 
+        if not ppenum:
+            dbg_trace(provider, 'ppenum == NULL!')
+            return E_POINTER
+        
+        enumerator = EnumWETProvider()
+        ppenum.contents = enumerator.ptr()
+        
+        dbg_trace(provider, 'S_OK')
+        return S_OK
+    
+class EnumWETProvider(CComClass, IEnumWETProvider):
+    _com_map_ = [IEnumWETProvider, IEnumWETProvider.virtual_table]
+    _clsid_ = GetCLSID()
+    _creatable_ = True
+    
+    _index: int
+    
+    def __init__(self):
+        dbg_trace(provider, f'Trace ID {self._trace_id_next_}')
+        super().__init__()
+        
+        # IEnumWETProvider
+        self.set_vtable_on_ctx(self.virtual_table)
+        self.implement(self.Next)
+        self.implement(self.Skip)
+        self.implement(self.Clone)
+        
+        self._index = 0
+        
+    def Next_Impl(self, celt: int, rgelt: IDoublePtr[WET_PROVIDER],
+             pceltFetched: PULONG) -> int: 
+        if celt == 0:
+            dbg_trace(provider, 'celt == 0')
+            
+            if pceltFetched:
+                pceltFetched.contents = 0
+                
+            return S_OK
+        
+        if not rgelt:
+            dbg_trace(provider, 'rgelt == NULL!')
+            return E_POINTER
+        
+        if celt != 1 and not pceltFetched:
+            dbg_trace(provider, 'celt != 1 && pceltFetched == NULL!')
+            return E_POINTER
+        
+        for i in range(celt):
+            index = self._index + i
+            
+            if index == len(_WET_GLOBAL_STATE._providers_):
+                self._index += celt
+                
+                if celt != 1:
+                    pceltFetched.contents.value = i
+                    
+                dbg_trace(provider, f'S_FALSE, fetched {i}')
+                    
+                return S_FALSE
+            
+            rgelt[i] = _WET_GLOBAL_STATE._providers_[index].ptr()
+        
+        if celt != 1:
+            pceltFetched.contents.value = celt
+            
+        self._index += celt
+        
+        dbg_trace(provider, f'S_OK, fetched {celt}')
+        
+        return S_OK
+    
+    def Skip_Impl(self, celt: int) -> int: 
+        self._index += celt
+        dbg_trace(provider, 'S_OK')
+        return S_OK
+    
+    def Clone_Impl(self, ppenum: IDoublePtr['IEnumWETProvider']) -> int:
+        if not ppenum:
+            dbg_trace(provider, 'ppenum == NULL!')
+            return E_POINTER
+        
+        enum = EnumWETProvider()
+        ppenum.contents = enum.ptr()
+        enum._index = self._index
+        
+        dbg_trace(provider, 'S_OK')
+        return S_OK

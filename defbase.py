@@ -117,8 +117,7 @@ __all__ = [
     "ICharArray", "IWideCharArray",
     "WT_HANDLE", "flexible_array", 
     "LI",
-    "IWideCharArrayFixedSize", "ICharArrayFixedSize",
-    "dbg_trace"
+    "IWideCharArrayFixedSize", "ICharArrayFixedSize"
 ]
 
 from . import cpreproc
@@ -872,10 +871,11 @@ def filter_self(args_tuple: tuple, typ: type) -> tuple:
     
 from typing import TYPE_CHECKING
 
+"""
 def dbg_trace(message: str = ''):
-    """
+    \"""
     Debug trace.
-    """
+    \"""
     if _defb_state._dbgtrace:
         caller = get_caller_frame()
         name = caller.f_code.co_qualname.replace('.', '::')
@@ -889,6 +889,7 @@ def dbg_trace(message: str = ''):
             _defb_state._dbgtrace_file.flush()
         else:
             print(f'{name}() {message}')
+"""
     
 class Template(Generic[WT]):
     """

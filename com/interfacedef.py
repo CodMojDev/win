@@ -209,6 +209,10 @@ class COMVirtualTable(VirtualTable):
 
 from .. import _defbase_ctypinit as _defb_ci
 
+from ..wet.trace import *
+
+dbgplus_provider = WET_PROVIDER('DbgPlus')
+
 class COMInterface(CStructure):
     """
     Class representing a COM Interface.
@@ -233,8 +237,7 @@ class COMInterface(CStructure):
         
         Needs setted on-context virtual table with `set_vtable_on_ctx`.
         """
-        if cpreproc.ifdef('DBGPLUS'):
-            dbg_trace(f'{self.virtual_table.name}::{function.__name__}')
+        dbg_trace(dbgplus_provider, f'{self.virtual_table.name}::{function.__name__}')
         
         virtual_table = self._virtual_table_on_ctx
         function_name = function.__name__
@@ -243,7 +246,7 @@ class COMInterface(CStructure):
             thunk.__name__ = f'{virtual_table.name}_{function_name}_Thunk'
             thunk.__qualname__ = thunk.__code__.co_name = thunk.__code__.co_qualname = thunk.__name__
             if cpreproc.ifdef('DBGPLUS'):
-                dbg_trace(f'UnusedThis={this}, This={self.virtual_table.name} {function_name}')
+                dbg_trace(dbgplus_provider, f'UnusedThis={this}, This={self.virtual_table.name} {function_name}')
             return getattr(self, function_name + '_Impl')(*args)
         
         #thunk.__name__ = f'{virtual_table.name}_{function_name}_Thunk'
