@@ -501,7 +501,7 @@ class IWETManager(IUnknown):
 SetGuid('WETManager', CLSID('{80644DEE-3A49-4574-ADDE-23EDBDC8F3DB}'))
     
 class WETManager(CComClass, IWETManager):
-    _com_map_ = [IWETManager, IWETManager.virtual_table]
+    _com_map_ = [(IWETManager, IWETManager.virtual_table)]
     _clsid_ = GetCLSID()
     _creatable_ = True
     
@@ -590,7 +590,7 @@ class WETManager(CComClass, IWETManager):
 SetGuid('EnumWETProvider', CLSID('{2F8EAAC1-D186-46F1-B2A4-7023AD1E1338}'))
     
 class EnumWETProvider(CComClass, IEnumWETProvider):
-    _com_map_ = [IEnumWETProvider, IEnumWETProvider.virtual_table]
+    _com_map_ = [(IEnumWETProvider, IEnumWETProvider.virtual_table)]
     _clsid_ = GetCLSID()
     _creatable_ = True
     
