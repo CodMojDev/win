@@ -473,6 +473,9 @@ class IEnumWETProvider(IUnknown):
     @virtual_table.com_function(ULONG)
     def Skip(self, celt: int) -> int: ...
     
+    @virtual_table.com_function()
+    def Reset(self) -> int: ...
+    
     @virtual_table.com_function(PVOID)
     def Clone(self, ppenum: IDoublePtr['IEnumWETProvider']) -> int: ...
     
@@ -604,6 +607,7 @@ class EnumWETProvider(CComClass, IEnumWETProvider):
         self.set_vtable_on_ctx(self.virtual_table)
         self.implement(self.Next)
         self.implement(self.Skip)
+        self.implement(self.Reset)
         self.implement(self.Clone)
         
         self._index = 0
@@ -652,6 +656,11 @@ class EnumWETProvider(CComClass, IEnumWETProvider):
     
     def Skip_Impl(self, celt: int) -> int: 
         self._index += celt
+        dbg_trace(provider, 'S_OK')
+        return S_OK
+    
+    def Reset_Impl(self) -> int:
+        self._index = 0
         dbg_trace(provider, 'S_OK')
         return S_OK
     
