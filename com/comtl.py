@@ -2,7 +2,10 @@
 # COM Templates Library
 #
 
+from ..wet.trace import *
 from .unknwn import *
+
+provider = WET_PROVIDER('COM-TL')
 
 class CComPtr(CStructure, Template[IT]):
     _cached_reinterpret_cast: reinterpret_cast
@@ -181,7 +184,7 @@ class CUnknown(IUnknown):
         self._trace_id = CUnknown._trace_id_next_
         CUnknown._trace_id_next_ += 1
         
-        dbg_trace(f'TraceID {self._trace_id}')
+        dbg_trace(provider, f'TraceID {self._trace_id}')
         
         # Virtual table Initialization
         self.initialize_vtable(self.virtual_table)
@@ -196,7 +199,7 @@ class CUnknown(IUnknown):
         
     def AddRef_Impl(self) -> int:
         if self._unk_outer:
-            dbg_trace(f'TraceID {self._trace_id} AddRef forwarded to outer IUnknown')
+            dbg_trace(provider, f'TraceID {self._trace_id} AddRef forwarded to outer IUnknown')
             return self._unk_outer.AddRef()
         
         if self._mta_:
@@ -205,13 +208,13 @@ class CUnknown(IUnknown):
         else:
             self._refcnt += 1
             
-        dbg_trace(f'TraceID {self._trace_id} refcnt = {self._refcnt}')
+        dbg_trace(provider, f'TraceID {self._trace_id} refcnt = {self._refcnt}')
         
         return self._refcnt
     
     def Release_Impl(self) -> int:
         if self._unk_outer:
-            dbg_trace(f'TraceID {self._trace_id} Release forwarded to outer IUnknown')
+            dbg_trace(provider, f'TraceID {self._trace_id} Release forwarded to outer IUnknown')
             return self._unk_outer.Release()
         
         if self._mta_:
@@ -223,22 +226,22 @@ class CUnknown(IUnknown):
         if self._refcnt == 0:
             self.Cleanup()
         
-        dbg_trace(f'TraceID {self._trace_id} refcnt = {self._refcnt}')
+        dbg_trace(provider, f'TraceID {self._trace_id} refcnt = {self._refcnt}')
         
         return self._refcnt
             
     def Cleanup(self):
-        dbg_trace()
+        dbg_trace(provider, )
         
     def __del__(self): 
-        dbg_trace(f'TraceID {self._trace_id} Delete COMRefCount={self._refcnt} PythonRefCount={sys.getrefcount(self)}')
+        dbg_trace(provider, f'TraceID {self._trace_id} Delete COMRefCount={self._refcnt} PythonRefCount={sys.getrefcount(self)}')
         
 class CUnknownMTA(CUnknown):
     _mta_ = True
         
 def QI_SetInterface(itf: IUnknown, ppvObject: IVoidPtr, virtual_table: COMVirtualTable) -> int:
     if not ppvObject: # unmanaged parameter needs check
-        dbg_trace('E_POINTER')
+        dbg_trace(provider, 'E_POINTER')
         return E_POINTER
 
     lpVtbl = PVOID(getattr(itf, virtual_table.field_name))
@@ -247,7 +250,7 @@ def QI_SetInterface(itf: IUnknown, ppvObject: IVoidPtr, virtual_table: COMVirtua
     i_cast(ppvObject, PLPVOID).contents.value = PtrUtil.get_address(pItf)
     itf.AddRef()
     
-    dbg_trace('S_OK')
+    dbg_trace(provider, 'S_OK')
     return S_OK
 
 class CComObject(CUnknownMTA):
@@ -255,7 +258,7 @@ class CComObject(CUnknownMTA):
     _unk_outer: IUnknown
     
     def __init__(self, *args):
-        dbg_trace(f'TraceID {CUnknown._trace_id_next_}')
+        dbg_trace(provider, f'TraceID {CUnknown._trace_id_next_}')
         super().__init__()
         
         self.implement(self.QueryInterface)
@@ -264,22 +267,22 @@ class CComObject(CUnknownMTA):
         iid = piid.contents
         
         if self._unk_outer and iid == IUnknown._iid_: 
-            dbg_trace(f'TraceID {self._trace_id} QueryInterface forwarded to outer IUnknown')
+            dbg_trace(provider, f'TraceID {self._trace_id} QueryInterface forwarded to outer IUnknown')
             return self._unk_outer.QueryInterface(iid, ppv)
         
         if iid == IUnknown.iid():
-            dbg_trace(f'TraceID {self._trace_id} IUnknown')
+            dbg_trace(provider, f'TraceID {self._trace_id} IUnknown')
             return QI_SetInterface(self, ppv, self.virtual_table)
         elif iid == self.iid():
-            dbg_trace(f'TraceID {self._trace_id} {self.__class__.__name__}')
+            dbg_trace(provider, f'TraceID {self._trace_id} {self.__class__.__name__}')
             return QI_SetInterface(self, ppv, self.virtual_table)
         
         for ci, virtual_table in self._com_map_:
             if iid == ci.iid():
-                dbg_trace(f'TraceID {self._trace_id} {virtual_table.name}')
+                dbg_trace(provider, f'TraceID {self._trace_id} {virtual_table.name}')
                 return QI_SetInterface(self, ppv, virtual_table)
             
-        dbg_trace(f'TraceID {self._trace_id} No interface {iid}')
+        dbg_trace(provider, f'TraceID {self._trace_id} No interface {iid}')
         i_cast(ppv, PLPVOID).contents.value = NULL
         return E_NOINTERFACE
 
@@ -299,16 +302,16 @@ class CComClass(CComObject, COMClass):
             CFactory.g_Factories.append(Factory)
 
 def Pair_Ref(itf: IUnknown) -> tuple[int, int]:
-    dbg_trace(itf.virtual_table.name)
+    dbg_trace(provider, itf.virtual_table.name)
     return itf.AddRef(), itf.Release()
 
 def CI_SetInterface(itf: IUnknown, pvPpvObject: IVoidPtr):
     ppvObject = i_cast(pvPpvObject, PLPVOID)
     if itf is NULL:
-        dbg_trace('*ppvObject = NULL')
+        dbg_trace(provider, '*ppvObject = NULL')
         ppvObject.contents.value = NULL
     else:
-        dbg_trace('*ppvObject = itf')
+        dbg_trace(provider, '*ppvObject = itf')
         ppvObject.contents.value = PtrUtil.get_address(itf.ref())
 
 def DeclareDLLRoutines():
@@ -328,7 +331,7 @@ class CFactory(CComObject, IClassFactory):
     g_cRefs: ClassVar[int] = 0
     
     def __init__(self):
-        dbg_trace(f'TraceID {self._trace_id_next_}')
+        dbg_trace(provider, f'TraceID {self._trace_id_next_}')
         super().__init__()
         
         # IClassFactory
@@ -348,7 +351,7 @@ class CFactory(CComObject, IClassFactory):
     def CreateInstance_Impl(self, pUnkOuter: IPointer[IUnknown], 
                             riid: IPointer[IID], pvPpvObject: IVoidPtr, **kwargs):
         if not self._com_class_._aggregatable_ and pUnkOuter:
-            dbg_trace("Class doesn't support aggregation.")
+            dbg_trace(provider, "Class doesn't support aggregation.")
             return CLASS_E_NOAGGREGATION
         
         iid = riid.contents
@@ -362,11 +365,11 @@ class CFactory(CComObject, IClassFactory):
                 else:
                     com_class = self._com_class_()
                 CI_SetInterface(com_class, pvPpvObject)
-                dbg_trace(f'{com_interface.virtual_table.name} --> '
+                dbg_trace(provider, f'{com_interface.virtual_table.name} --> '
                           f'{self._com_class_.__name__}')
                 return S_OK
             
-        dbg_trace(f'No interface was found for IID {iid}')
+        dbg_trace(provider, f'No interface was found for IID {iid}')
         CI_SetInterface(NULL, pvPpvObject)
         return E_NOINTERFACE
     
@@ -374,10 +377,10 @@ class CFactory(CComObject, IClassFactory):
         with self._lock:
             if fLock:
                 self.__class__.g_cLocks += 1
-                dbg_trace('Lock S_OK')
+                dbg_trace(provider, 'Lock S_OK')
             else:
                 self.__class__.g_cLocks -= 1
-                dbg_trace('Unlock S_OK')
+                dbg_trace(provider, 'Unlock S_OK')
                 
         return S_OK
 
@@ -395,13 +398,13 @@ def TL_I_DllGetClassObject(rclsid: int, riid: int, ppv: int) -> int:
     for cls_factory in CFactory.g_Factories:
         if cls_factory._com_class_._clsid_ == clsid:
             factory = cls_factory()
-            dbg_trace('factory->QueryInterface(iid, ppv)')
+            dbg_trace(provider, 'factory->QueryInterface(iid, ppv)')
             return factory.QueryInterface(iid, ppv)
     
-    dbg_trace(f'CLSID "{clsid}" not available')
+    dbg_trace(provider, f'CLSID "{clsid}" not available')
     return CLASS_E_CLASSNOTAVAILABLE
 
-from .guidmaintain import NewClsid, NewIid
+from .guidmaintain import NewClsid, NewIid, SetGuid
 
 def GetCLSID() -> CLSID:
     caller_frame = get_caller_frame()
@@ -412,6 +415,8 @@ def GetIID() -> IID:
     caller_frame = get_caller_frame()
     qualname = caller_frame.f_locals['__qualname__']
     return NewIid(qualname)
+
+SetGuid('IPythonControl', IID('{E33B6F0E-612E-4B9D-B0EA-268FD400E1B1}'))
 
 class IPythonControl(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
@@ -445,14 +450,15 @@ class IPythonControl(IUnknown):
     
     virtual_table.build()
     
+SetGuid('PythonControl', CLSID('{59434B84-E147-49A2-9ED8-84CBBEF0DD4A}'))
+    
 class PythonControl(CComClass, IPythonControl):
-    virtual_table = COMVirtualTable.from_ancestor(IPythonControl)
     _com_map_ = [(IPythonControl, virtual_table)]
     _clsid_ = GetCLSID()
     _creatable_ = True
     
     def __init__(self):
-        dbg_trace(f'Trace ID {self._trace_id_next_}')
+        dbg_trace(provider, f'Trace ID {self._trace_id_next_}')
         super().__init__()
         
         # IPythonControl
@@ -469,9 +475,9 @@ class PythonControl(CComClass, IPythonControl):
             defb._defb_state._dbgtrace = True
             cpreproc.define('DBGTRACE')
             
-            dbg_trace('Debug trace enabled')
+            dbg_trace(provider, 'Debug trace enabled')
         else:
-            dbg_trace('Debug trace disabled')
+            dbg_trace(provider, 'Debug trace disabled')
             
             defb._defb_state._dbgtrace = False
             cpreproc.undef('DBGTRACE')
@@ -479,25 +485,31 @@ class PythonControl(CComClass, IPythonControl):
         
     def Trace_Impl(self, pwszTrace: str) -> int:
         if not pwszTrace: return E_POINTER
-        dbg_trace(pwszTrace)
+        dbg_trace(provider, pwszTrace)
         return S_OK
     
     def DebugPlus_Impl(self, fDbgPlus) -> int:
         if fDbgPlus:
-            dbg_trace('DebugPlus enabled')
+            dbg_trace(provider, 'DebugPlus enabled')
             cpreproc.define('DBGPLUS')
         else:
-            dbg_trace('DebugPlus disabled')
+            dbg_trace(provider, 'DebugPlus disabled')
             cpreproc.undef('DBGPLUS')
         return S_OK
     
     def EnableGC_Impl(self, fGCEnabled):
         if fGCEnabled:
-            dbg_trace('GC Enabled')
+            dbg_trace(provider, 'GC Enabled')
             gc.enable()
         else:
-            dbg_trace('GC Disabled')
+            dbg_trace(provider, 'GC Disabled')
             gc.disable()
         return S_OK
+    
+SetGuid('IWETManager', IID('{D9123535-E079-4CD9-8B4B-7CFC88DBFC27}'))
+    
+class IWETManager(IUnknown):
+    virtual_table = COMVirtualTable.from_ancestor(IUnknown)
+    _iid_ = GetIID()
     
     virtual_table.build()

@@ -152,6 +152,13 @@ def NewIid(guidName: str, force: bool = False) -> IID:
     
     return guid
 
+def SetGuid(guidName: str, guid: GUID):
+    global registry
+    
+    registry[guidName] = guid
+    
+    _Save()
+
 def NewClsid(guidName: str, force: bool = False) -> CLSID:
     global registry
     
