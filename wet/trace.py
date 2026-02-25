@@ -169,7 +169,7 @@ def WETProvider_Subscribe(RegName: str, Consumer: ConsumerCallback) -> int:
     provider = _WET_GLOBAL_STATE.LookupProvider(RegName)
     if provider is None:
         raise ValueError(f'Unknown provider "{RegName}"')
-    provider.Subscribe(Consumer)
+    return provider.Subscribe(Consumer)
     
 def WETProvider_Unsubscribe(RegName: str, Cookie: int) -> int:
     provider = _WET_GLOBAL_STATE.LookupProvider(RegName)

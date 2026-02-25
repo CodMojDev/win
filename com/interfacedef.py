@@ -245,12 +245,8 @@ class COMInterface(CStructure):
         def thunk(this, *args, **kwargs):
             thunk.__name__ = f'{virtual_table.name}_{function_name}_Thunk'
             thunk.__qualname__ = thunk.__code__.co_name = thunk.__code__.co_qualname = thunk.__name__
-            if cpreproc.ifdef('DBGPLUS'):
-                dbg_trace(dbgplus_provider, f'UnusedThis={this}, This={self.virtual_table.name} {function_name}')
+            dbg_trace(dbgplus_provider, f'UnusedThis={this}, This={self.virtual_table.name}')
             return getattr(self, function_name + '_Impl')(*args)
-        
-        #thunk.__name__ = f'{virtual_table.name}_{function_name}_Thunk'
-        #thunk.__qualname__ = thunk.__code__.co_name = thunk.__code__.co_qualname = thunk.__name__
         
         self.stub(function, getattr(function, 'proto')(thunk))
         

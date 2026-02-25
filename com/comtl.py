@@ -344,8 +344,6 @@ class CFactory(CComObject, IClassFactory):
         with self._lock:
             self.__class__.g_cRefs += 1
             
-        self.__self__ = self # prevent unload
-            
     def Cleanup(self):
         with self._lock:
             self.__class__.g_cRefs -= 1
@@ -436,6 +434,8 @@ class IPythonControl(IUnknown):
     
 SetGuid('PythonControl', CLSID('{59434B84-E147-49A2-9ED8-84CBBEF0DD4A}'))
     
+import types
+    
 class PythonControl(CComClass, IPythonControl):
     _com_map_ = [(IPythonControl, IPythonControl.virtual_table)]
     _clsid_ = GetCLSID()
@@ -448,8 +448,6 @@ class PythonControl(CComClass, IPythonControl):
         # IPythonControl
         self.set_vtable_on_ctx(self.virtual_table)
         self.implement(self.EnableGC)
-        
-        self.__self__ = self
     
     def EnableGC_Impl(self, fGCEnabled):
         if fGCEnabled:
@@ -563,7 +561,7 @@ class WETManager(CComClass, IWETManager):
             return E_POINTER
         
         enumerator = EnumWETProvider()
-        ppenum.contents = enumerator.ptr()
+        i_cast(ppenum, PLPVOID).contents.value = PtrUtil.get_address(enumerator.ptr())
         
         dbg_trace(provider, 'S_OK')
         return S_OK
