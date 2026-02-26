@@ -238,6 +238,9 @@ class CUnknown(IUnknown):
     def __del__(self): 
         dbg_trace(provider, f'TraceID {self._trace_id} Delete COMRefCount={self._refcnt} PythonRefCount={sys.getrefcount(self)}')
         
+    def dbg_trace(self, provider: WET_PROVIDER, message: str = '', trace_id: int = -1, level: int = WET_LEVEL_INFO):
+        dbg_trace(provider, message, getattr(self, '_trace_id', -1) if trace_id == -1 else trace_id, level)
+        
 class CUnknownMTA(CUnknown):
     _mta_ = True
         
@@ -260,7 +263,7 @@ class CComObject(CUnknownMTA):
     _unk_outer: IUnknown
     
     def __init__(self, *args):
-        dbg_trace(provider, f'TraceID {CUnknown._trace_id_next_}')
+        self.dbg_trace(provider, trace_id=CUnknown._trace_id_next_)
         super().__init__()
         
         self.implement(self.QueryInterface)
@@ -269,22 +272,22 @@ class CComObject(CUnknownMTA):
         iid = piid.contents
         
         if self._unk_outer and iid == IUnknown._iid_: 
-            dbg_trace(provider, f'TraceID {self._trace_id} QueryInterface forwarded to outer IUnknown')
+            self.dbg_trace(provider, f'QueryInterface forwarded to outer IUnknown')
             return self._unk_outer.QueryInterface(iid, ppv)
         
         if iid == IUnknown.iid():
-            dbg_trace(provider, f'TraceID {self._trace_id} IUnknown')
+            self.dbg_trace(provider, f'IUnknown')
             return QI_SetInterface(self, ppv, self.virtual_table)
         elif iid == self.iid():
-            dbg_trace(provider, f'TraceID {self._trace_id} {self.__class__.__name__}')
+            self.dbg_trace(provider, f'{self.__class__.__name__}')
             return QI_SetInterface(self, ppv, self.virtual_table)
         
         for ci, virtual_table in self._com_map_:
             if iid == ci.iid():
-                dbg_trace(provider, f'TraceID {self._trace_id} {virtual_table.name}')
+                self.dbg_trace(provider, f'{virtual_table.name}')
                 return QI_SetInterface(self, ppv, virtual_table)
             
-        dbg_trace(provider, f'TraceID {self._trace_id} No interface {iid}')
+        self.dbg_trace(provider, f'No interface {iid}')
         i_cast(ppv, PLPVOID).contents.value = NULL
         return E_NOINTERFACE
 
@@ -333,7 +336,7 @@ class CFactory(CComObject, IClassFactory):
     g_cRefs: ClassVar[int] = 0
     
     def __init__(self):
-        dbg_trace(provider, f'TraceID {self._trace_id_next_}')
+        self.dbg_trace(provider, trace_id=CUnknown._trace_id_next_)
         super().__init__()
         
         # IClassFactory
@@ -345,6 +348,7 @@ class CFactory(CComObject, IClassFactory):
             self.__class__.g_cRefs += 1
             
     def Cleanup(self):
+        super()
         with self._lock:
             self.__class__.g_cRefs -= 1
     
