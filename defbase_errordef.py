@@ -55,4 +55,8 @@ class WinException(OSError):
     def __init__(self, error_code: Optional[int] = None):
         if error_code is None:
             error_code = GetLastError()
-        super().__init__(win_errors[error_code])
+        error = win_errors[error_code]
+        if error == '':
+            super().__init__(format_hex(error_code & 0xffffffff, 8))
+        else:
+            super().__init__(error)
