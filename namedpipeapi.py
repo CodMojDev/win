@@ -26,7 +26,7 @@ if cpreproc.pragma_once("_NAMEDPIPE_H_"):
     CreateNamedPipe = unicode(CreateNamedPipeW, CreateNamedPipeA)
     WaitNamedPipeA = declare(kernel32.WaitNamedPipeA, BOOL, LPCSTR, DWORD)
     WaitNamedPipeW = declare(kernel32.WaitNamedPipeW, BOOL, LPCWSTR, DWORD)
-    WaitNamedPipe = unicode(WaitNamedPipeA)
+    WaitNamedPipe = unicode(WaitNamedPipeA, WaitNamedPipeW)
     if cpreproc.getdef("_WINVER") >= 0x0600:
         GetNamedPipeClientComputerNameA = declare(kernel32.GetNamedPipeClientComputerNameA, BOOL, HANDLE, LPSTR, ULONG)
         GetNamedPipeClientComputerNameW = declare(kernel32.GetNamedPipeClientComputerNameW, BOOL, HANDLE, LPWSTR, ULONG)

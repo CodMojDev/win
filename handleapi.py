@@ -19,7 +19,7 @@ if cpreproc.pragma_once("_APISETHANDLE_"):
     #
     # Constants
     #
-    INVALID_HANDLE_VALUE = HANDLE(-1)
+    INVALID_HANDLE_VALUE = HANDLE(-1).value
 
     # REGION *** Application Family or OneCore Family or Games Family ***
 

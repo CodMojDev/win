@@ -20,15 +20,20 @@ class WinErrors:
     _LANGUAGE = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT)
     _FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x100
     _FORMAT_MESSAGE_IGNORE_INSERTS = 0x200
+    _FORMAT_MESSAGE_FROM_HMODULE = 0x800
     _FORMAT_MESSAGE_FROM_SYSTEM = 0x1000
-    _FLAGS = _FORMAT_MESSAGE_ALLOCATE_BUFFER | \
-             _FORMAT_MESSAGE_FROM_SYSTEM | \
-             _FORMAT_MESSAGE_IGNORE_INSERTS
     
     _cached: Dict[int, str]
+    _handle: int
     
-    def __init__(self):
+    def __init__(self, handle: Optional[int] = NULL):
         self._cached = {}
+        self._flags = self._FORMAT_MESSAGE_ALLOCATE_BUFFER | self._FORMAT_MESSAGE_IGNORE_INSERTS
+        self._handle = handle
+        if handle is NULL:
+            self._flags |= self._FORMAT_MESSAGE_FROM_SYSTEM
+        else:
+            self._flags |= self._FORMAT_MESSAGE_FROM_HMODULE
     
     def __getitem__(self, error_id: int) -> str:
         if not isinstance(error_id, int):
@@ -38,11 +43,11 @@ class WinErrors:
             return self._cached[error_id]
         
         message_buffer = LPTSTR(NULL)
-        size: int = self._FormatMessage(self._FLAGS, NULL, error_id, self._LANGUAGE,
+        size: int = self._FormatMessage(self._flags, self._handle, error_id, self._LANGUAGE,
                                         i_cast(byref(message_buffer), LPWSTR), 0)
         
         if size > 0:
-            result = message_buffer.value
+            result = message_buffer.value.rstrip('\r\n')
             self._cached[error_id] = result
             self._LocalFree(message_buffer)
             return result
@@ -52,10 +57,12 @@ class WinErrors:
 win_errors: WinErrors = WinErrors()
 
 class WinException(OSError):
+    _win_errors_ = win_errors
+    
     def __init__(self, error_code: Optional[int] = None):
         if error_code is None:
             error_code = GetLastError()
-        error = win_errors[error_code]
+        error = self._win_errors_[error_code]
         if error == '':
             super().__init__(format_hex(error_code & 0xffffffff, 8))
         else:

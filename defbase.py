@@ -1897,6 +1897,8 @@ if TYPE_CHECKING:
         
         Recommended to use instead of ctypes cast(...).
         """
+       
+import ctypes
         
 if not TYPE_CHECKING:
     if _WT_UNSTABLE_API:
@@ -1913,7 +1915,7 @@ if not TYPE_CHECKING:
             return result
     else: # optimize, if CByref is not exists then the i_cast doesn't handle it.
         def i_cast(obj: Any, typ: Type[IPointer[WT]]) -> IPointer[WT]:
-            return cast(obj, typ)
+            return ctypes.cast(obj, typ)
 
 # needed to fix the typing, i_cast2 with overloading is breaks the typing interface system
 # so i don't know how to add `value` show support into casting system.
