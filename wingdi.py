@@ -3155,8 +3155,8 @@ if cpreproc.pragma_once("_WINGDI_"):
         GCP_RESULTSW = tagGCP_RESULTSW
         LPGCP_RESULTSW = POINTER(GCP_RESULTSW)
 
-        GCP_RESULT = unicode(GCP_RESULTSW, GCP_RESULTSA)
-        LPGCP_RESULT = unicode(LPGCP_RESULTSW, LPGCP_RESULTSA)
+        GCP_RESULTS = unicode(GCP_RESULTSW, GCP_RESULTSA)
+        LPGCP_RESULTS = unicode(LPGCP_RESULTSW, LPGCP_RESULTSA)
 
         # REGION ***
                                

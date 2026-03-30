@@ -82,7 +82,7 @@ elif sys.version_info >= (3, 12) and sys.version_info < (3, 15):
                     ('unusedPtr2', c_void_p)
                 ]
             _fields_ = fields_extra + [
-                ('unusedInt64', c_int64),
+                ('unusedInt64', c_ssize_t),
                 ('_ob_type', c_void_p)
             ]
             
@@ -287,6 +287,20 @@ class PyMemberDef(Structure):
     
 PyMemberDef_PTR = POINTER(PyMemberDef)
 
+getter = CFUNCTYPE(c_void_p, PyObject_PTR, c_void_p)
+setter = CFUNCTYPE(c_int, PyObject_PTR, PyObject_PTR, c_void_p)
+
+class PyGetSetDef(Structure):
+    _fields_ = [
+        ('name', c_char_p),
+        ('getter', getter),
+        ('setter', setter),
+        ('doc', c_char_p),
+        ('closure', c_void_p)
+    ]
+    
+PyGetSetDef_PTR = POINTER(PyGetSetDef)
+
 # Types
 Py_T_SHORT     = 0
 Py_T_INT       = 1
@@ -436,12 +450,17 @@ class PyTypeObject(PyVarObject[_CWT]):
         ('tp_flags', c_ulong),
         ('unusedPtrs2', c_void_p * 8),
         ('tp_members', PyMemberDef_PTR),
-        ('unusedPtrs3', c_void_p * 2),
+        ('tp_getset', PyGetSetDef_PTR),
+        ('_tp_base', c_void_p),
         ('tp_dict', PyMappingProxyObject_PTR)
     ]
     
-    tp_dict: IPointer[MProxy[dict]]
+    @property 
+    def tp_base(self) -> IPointer['PyTypeObject']:
+        return cast(self._tp_base, PyTypeObject_PTR)
+    
     tp_members: IPointer[PyMemberDef]
+    tp_dict: IPointer[MProxy[dict]]
     tp_dealloc: c_void_p
     tp_basicsize: int
     tp_flags: int
@@ -677,9 +696,8 @@ def PyObject_GC_New(typ: type[_CWT], typeobj: IPointer[PyTypeObject]) -> IPointe
 pythonapi.PyObject_GC_Track.argtypes = [c_void_p]
 pythonapi.PyObject_GC_Track.restype = None
 
-def PyObject_GC_Track(obj: IPointer[PyObject]): ...
-
-PyObject_GC_Track = pythonapi.PyObject_GC_Track
+def PyObject_GC_Track(obj):
+    pythonapi.PyObject_GC_Track(id(obj))
 
 pythonapi.PyType_Ready.argtypes = [PyTypeObject_PTR]
 pythonapi.PyType_Ready.restype = c_int
@@ -701,7 +719,7 @@ pythonapi.PyObject_GC_UnTrack.argtypes = [c_void_p]
 pythonapi.PyObject_GC_UnTrack.restype = None
 
 def PyObject_GC_UnTrack(obj):
-    pythonapi.PyObject_GC_UnTrack(PyType_CAST(obj))
+    pythonapi.PyObject_GC_UnTrack(id(obj))
         
 class ICArgObject: ...
 
@@ -880,6 +898,10 @@ def Init():
     t_codetype = PyType_CAST_DEREF(type(HasTPFLAG.__code__))
     for member in t_codetype.members:
         member.readonly = False
+        
+    #t_frametype = PyType_CAST_DEREF(type(sys._getframe()))
+    #for member in t_frametype.members:
+    #    member.readonly = False
     
 """
 from types import MappingProxyType

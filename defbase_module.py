@@ -77,6 +77,9 @@ class CModule:
         # remote handle
         return f'<CModule handle={self.handle}, process.pid={self.process.pid}, name={self.name}>'
     
+    def open_local(self):
+        self.local = CModule(self.name)
+    
     @property
     def name(self) -> str:
         if self._name is None:
@@ -138,6 +141,20 @@ class CModule:
         if not GetModuleInformation(GetCurrentProcess(), self.handle, modInfo.ref(), modInfo.size()):
             return -1
         return modInfo.SizeOfImage
+    
+    def format_address(self, address: WT_ADDRLIKE) -> Optional[str]:
+        if not isinstance(address, int):
+            address = PtrUtil.get_address(address)
+        
+        start = self.handle
+        end = start + self.size
+        
+        if start < address and end > address:
+            offset = address - start
+            name = os.path.basename(self.name)
+            return f'{name}+{hex(offset)}'
+        
+        return None
             
     def __del__(self):
         self.close()

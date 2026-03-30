@@ -193,6 +193,9 @@ def dbg_trace(provider: WET_PROVIDER | str, message: str = '', trace_id: int = -
     Debug trace.
     """
     
+    if not provider._consumers:
+        return # optimization
+    
     caller = get_py_frame(1 + up_stack)
     cls = None
     
@@ -413,3 +416,11 @@ def RestoreStdStreams():
     """
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
+    
+def ConfigureDefbProvider():
+    from ..defbase import _defb_state
+    defb_provider = getattr(_defb_state, '_provider', None)
+    if defb_provider is None:
+        _defb_state._provider = WET_PROVIDER('DEFB')
+        from . import trace
+        _defb_state._wet_trace = trace

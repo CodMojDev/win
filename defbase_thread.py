@@ -85,6 +85,14 @@ class CThread:
         self.is_wow64 = is_wow64
         self.tid = tid
         
+    @classmethod
+    def from_hwnd(cls, hwnd: int) -> Self:
+        if not IsWindow(hwnd):
+            raise OSError('Invalid HWND.')
+        
+        dwThreadID = GetWindowThreadProcessId(hwnd, NULL)
+        return cls(dwThreadID)
+        
     def suspend(self):
         if self.is_wow64:
             result = Wow64SuspendThread(self.handle)

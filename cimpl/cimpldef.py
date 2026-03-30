@@ -128,7 +128,6 @@ class CImplFunction:
                 have_invokes = True
                 break
         
-        
         if context.win64 and have_invokes:
             if have_invokes:
                 context.add_line(f'sub rsp, {self.function_space}')
@@ -310,17 +309,42 @@ class CImplFunction:
         if self.has_ret:
             context.add_line('ret')
             
-class CImplAssembly: 
+class CImplAssembly:
+    _KS_CACHE: ClassVar[dict[int, ks.Ks]] = {}
+    _KS_CACHE_ARCH_X86 = 0
+    _KS_CACHE_MODE_32 = 1
+    _KS_CACHE_MODE_64 = 2
+    
     assembly: CAssembly
     ks_instance: ks.Ks
     
     def __init__(self, is_32: bool = cpreproc.defined('_WIN32'), 
                  allocator: IAllocator = CLocalAllocator()):
         if is_32:
-            self.ks_instance = ks.Ks(ks.KS_ARCH_X86, ks.KS_MODE_32)
+            self._initialize_ks(self._KS_CACHE_ARCH_X86 | self._KS_CACHE_MODE_32)
         else:
-            self.ks_instance = ks.Ks(ks.KS_ARCH_X86, ks.KS_MODE_64)
+            self._initialize_ks(self._KS_CACHE_ARCH_X86 | self._KS_CACHE_MODE_64)
         self.assembly = CAssembly(allocator)
+    
+    def _initialize_ks(self, cache_flags: int):
+        ks_instance = self._KS_CACHE.get(cache_flags, None)
+        
+        if ks_instance is not None:
+            self.ks_instance = ks_instance
+            return
+        
+        if cache_flags & self._KS_CACHE_ARCH_X86:
+            arch = ks.KS_ARCH_X86
+        
+        if cache_flags & self._KS_CACHE_MODE_32:
+            mode = ks.KS_MODE_32
+        elif cache_flags & self._KS_CACHE_MODE_64:
+            mode = ks.KS_MODE_64
+        
+        ks_instance = ks.Ks(arch, mode)
+        self.ks_instance = ks_instance
+        
+        self._KS_CACHE[cache_flags] = ks_instance
     
     def apply_context(self, context: CImplContext):
         machine_code, _ = self.ks_instance.asm(context.code, as_bytes=True)

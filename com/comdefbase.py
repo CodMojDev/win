@@ -154,6 +154,8 @@ def CheckCOMInitialized():
         if FAILED(CoInitialize(NULL)):
             raise RuntimeError('COM cannot initialize')
 
+from .errors import _StdErrorInfoProvider
+
 # Initialize functions
 @ole_foreign(LPVOID, intermediate_method=True)
 def CoInitialize(pvReserved: LPVOID, **kwargs) -> int:
@@ -166,6 +168,7 @@ def CoInitialize(pvReserved: LPVOID, **kwargs) -> int:
     hr = delegate(pvReserved)
     if SUCCEEDED(hr):
         com_state.initialized = True
+        register_error_info_provider(_StdErrorInfoProvider())
     return hr
     
 @ole_foreign(LPVOID, DWORD, intermediate_method=True)

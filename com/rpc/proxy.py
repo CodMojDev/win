@@ -1,4 +1,5 @@
 from ..objinterfacedef import *
+from .ndr import *
 
 class IRpcStubBufferVtbl(CStructure):
     _fields_ = []
@@ -97,3 +98,72 @@ PRPC_STUB_FUNCTION = WINAPI(VOID, IRpcStubBuffer.PTR(),
                             IRpcChannelBuffer.PTR(),
                             PRPC_MESSAGE,
                             PDWORD)
+
+class CInterfaceStubHeader(CStructure):
+    _fields_ = [
+        ('piid', LPIID),
+        ('pServerInfo', PMIDL_SERVER_INFO),
+        ('DispatchTableCount', ULONG),
+        ('pDispatchTable', PTR(PRPC_STUB_FUNCTION))
+    ]
+    
+    pServerInfo: IPointer[MIDL_SERVER_INFO]
+    pDispatchTable: IPointer[FARPROC]
+    DispatchTableCount: int
+    piid: IPointer[IID]
+    
+IInspectableNdrStubCall2CommonStubListTag = i_cast(-1, PRPC_STUB_FUNCTION)
+IInspectableNdrStubCall3CommonStubListTag = i_cast(-2, PRPC_STUB_FUNCTION)
+
+class CInterfaceStubVtbl(CStructure):
+    _fields_ = [
+        ('header', CInterfaceStubHeader),
+        ('Vtbl', IRpcStubBufferVtbl)
+    ]
+    
+    header: CInterfaceStubHeader
+    Vtbl: IRpcStubBufferVtbl
+    
+def RPCPROXY_GET_STUB_HEADER(StubVtblListEntry: IPointer[CInterfaceStubVtbl]) -> IPointer[CInterfaceStubHeader]:
+    return i_cast(StubVtblListEntry, CInterfaceStubHeader.PTR())
+
+class CInterfaceStubVtblTag(CStructure):
+    _fields_ = [
+        ('header', CInterfaceStubHeader),
+        ('tag', PVOID)
+    ]
+    
+    header: CInterfaceStubHeader
+    tag: int
+    
+class CStdStubBuffer(CStructure):
+    _fields_ = [
+        ('lpVtbl', IRpcStubBufferVtbl.PTR()), # Points to Vtbl field in CInterfaceStubVtbl
+        ('RefCount', LONG),
+        ('pvServerObject', LPUNKNOWN),
+        ('pCallFactoryVtbl', ICallFactoryVtbl.PTR()),
+        ('pAsyncIID', PIID),
+        ('pPSFactory', IPSFactoryBuffer.PTR()),
+        ('pRMBVtbl', IReleaseMarshalBuffersVtbl.PTR())
+    ]
+    
+    pRMBVtbl: IPointer[IReleaseMarshalBuffersVtbl]
+    pCallFactoryVtbl: IPointer[ICallFactoryVtbl]
+    pPSFactory: IPointer[IPSFactoryBuffer]
+    lpVtbl: IPointer[IRpcStubBufferVtbl]
+    pvServerObject: IPointer[IUnknown]
+    pAsyncIID: IPointer[IID]
+    RefCount: int
+    
+class CStdPSFactoryBuffer(CStructure):
+    _fields_ = [
+        ('lpVtbl', IPSFactoryBufferVtbl.PTR()),
+        ('RefCount', LONG),
+        ('pProxyFileList', ProxyFileInfo.DOUBLE_PTR()),
+        ('Filler1', LONG)
+    ]
+    
+    pProxyFileList: IPointer[ProxyFileInfo]
+    lpVtbl: IPointer[IPSFactoryBufferVtbl]
+    RefCount: int
+    Filler1: int

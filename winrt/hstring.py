@@ -47,7 +47,7 @@ class HSTRING(HANDLE):
         return WindowsGetStringLen(self)
     
     def __str__(self) -> str:
-        return WindowsGetStringRawBuffer(self, NULL).value
+        return WindowsGetStringRawBuffer(self, NULL)
     
     def __del__(self): 
         if self._allocated:

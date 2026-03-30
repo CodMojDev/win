@@ -154,9 +154,70 @@ class Dispatch:
         
     def __del__(self):
         self._disp.Release()
+
+class IVariantBool(IAliasable, ICustomizable, bool):
+    _alias_ = VARIANT_BOOL
+    _custom_ = bool
+
+class SafeArray(SAFEARRAY, IAliasableGenericWithPayload[WT],
+                IReferenceable):
+    _type_cache_: ClassVar[dict[type, type['SafeArray']]] = {}
+    _item_type_: ClassVar[type[WT]]
+
+    @classmethod
+    def typed(cls, item_type: type) -> type['SafeArray']:
+        SafeArrayTyped = cls._type_cache_.get(item_type, None)
+        if SafeArrayTyped is not None:
+            return SafeArrayTyped
         
-class SafeArray(SAFEARRAY):
-    _item_type_: ClassVar[type]
+        class SafeArrayTyped(SafeArray):
+            _item_type_ = item_type
+        
+        if isinstance(item_type, DelayedTypeStorage):
+            name = 'DelayedType'
+        else:
+            name = item_type.__name__
+        SafeArrayTyped.__qualname__ += f'_{name}'
+        cls._type_cache_[item_type] = SafeArrayTyped
+            
+        return SafeArrayTyped
+    
+    @classmethod # support for @CStructure.make type resolution system
+    def _get_alias_(cls, **kwargs) -> type['SafeArray']:
+        genericalias = cls.get_genericalias()
+        item_type = genericalias_single_type(genericalias)
+        
+        if is_genericalias(item_type):
+            item_type = resolve_genericalias(item_type)
+        else:
+            item_type = resolve_type(item_type)
+            
+        return cls.typed(item_type)
+    
+    def allow_other_type(self, typ):
+        return issubclass(typ, SAFEARRAY)
+    
+    def get_reference(self):
+        return self.ref()
+    
+    @classmethod
+    def allow_reference(self, value):
+        return True
+    
+    def __len__(self) -> int:
+        dimensions = self.dimensions
+        
+        if dimensions == 0: return 0
+        if self.dimensions != 1:
+            raise ValueError('Tried to get length of non-1-dimensional array.')
+        
+        return self.get_size(1)
+    
+    def __getitem__(self, index: int):
+        if self.dimensions != 1:
+            raise ValueError('Tried to index non-1-dimensional array.')
+    
+        return self.get_data(self.get_size(1))[index]
     
     @property
     def dimensions(self) -> int:
@@ -181,23 +242,95 @@ class SafeArray(SAFEARRAY):
     def get_size(self, dimension: int) -> int:
         return self.get_ubound(dimension) - self.get_lbound(dimension) + 1
     
-    def to_python(self):
+    @property
+    def value(self) -> list[WT]:
         dimensions = self.dimensions
         
         match dimensions:
             case 0:
                 return ()
-            case 1: ...
+            case 1: 
+                size = self.get_size(1)
+                return self.get_data(size)
+            case _:
+                psaThis = self.ref()
+                lbounds = []
+                ubounds = []
+                
+                for dimension in range(1, dimensions + 1):
+                    lbound = LONG()
+                    hr = SafeArrayGetLBound(psaThis, dimension, byref(lbound))
+                    if FAILED(hr): raise COMError(hr)
+                    lbounds.append(lbound.value)
+                
+                for dimension in range(1, dimensions + 1):
+                    ubound = LONG()
+                    hr = SafeArrayGetUBound(psaThis, dimension, byref(ubound))
+                    if FAILED(hr): raise COMError(hr)
+                    ubounds.append(ubound.value)
+                
+                indices = (LONG * dimensions)(*lbounds)
+                row = self.get_row(psaThis, 0, indices, ubounds)
+                return row
+            
+    def get_type(self):
+        item_type = self._item_type_
+        if isinstance(item_type, DelayedTypeStorage):
+            item_type = item_type.storaged_type
+        if issubclass(item_type, IUnknown):
+            return PTR(item_type)
+        elif issubclass(item_type, VARIANT):
+            return Variant
+        return item_type
             
     def get_data(self, size: int):
-        array_pointer = PTR(self._item_type_)()
-        SafeArrayAccessData(self.ref(), byref(array_pointer))
+        item_type = self.get_type()
+        psaThis = self.ref()
+            
+        array_pointer = PTR(item_type)()
+        hr = SafeArrayAccessData(psaThis, byref(array_pointer))
+        if FAILED(hr): raise COMError(hr)
+        result = tuple(array_pointer[:size])
         
-        if issubclass(self._item_type_, Variant):
-            variant: Variant
-            return (variant.value for variant in array_pointer[size:])
-        elif issubclass(self._item_type_, VARIANT):
-            ...
+        if issubclass(item_type, Variant):
+            result = tuple(variant.value for variant in result)
+        elif issubclass(item_type, VARIANT_BOOL):
+            result = tuple(VARIANT_BOOL_ToBool(value) for value in result)
+        elif issubclass(self._item_type_, IUnknown) and not self._item_type_ is IDispatch:
+            result = tuple(itf.contents for itf in result)
+        elif issubclass(self._item_type_, IDispatch):
+            result = tuple(Dispatch(disp) for disp in result)
+            
+        hr = SafeArrayUnaccessData(psaThis)
+        if FAILED(hr): raise COMError(hr)
+        return result
+    
+    def get_row(self, psaThis: IPointer[SAFEARRAY],
+                dimension: int, indices: IArray[int], 
+                ubounds: list[int]):
+        restore = indices[dimension]
+        item_type = self.get_type()
+        obj = item_type()
+        is_variant = issubclass(item_type, Variant)
+        pObj = byref(obj)
+        result = []
+        
+        if dimension + 1 == len(indices):
+            for i in range(indices[dimension], ubounds[dimension] + 1):
+                indices[dimension] = i
+                hr = SafeArrayGetElement(psaThis, indices, pObj)
+                if FAILED(hr): raise COMError(hr)
+                if is_variant:
+                    result.append(obj.value)
+                else:
+                    result.append(obj)
+        else:
+            for i in range(indices[dimension], ubounds[dimension] + 1):
+                indices[dimension] = i
+                result.append(self.get_row(psaThis, dimension + 1, indices, ubounds))
+        
+        indices[dimension] = restore
+        return tuple(result)
             
 class Variant(VARIANT):
     @property
@@ -217,21 +350,8 @@ class Variant(VARIANT):
         VariantCopy(newVariant.ref(), self.ref())
         return newVariant
     
-def safearray_ubound(sa: SAFEARRAY | IPointer[SAFEARRAY], dim: int):
-    if isinstance(sa, SAFEARRAY):
-        sa = sa.ref()
-    
-    SafeArrayGetUBound(sa, dim, )
-        
-def safearray_unpack(sa: SAFEARRAY | IPointer[SAFEARRAY]):
-    if isinstance(sa, SAFEARRAY):
-        sa = sa.ref()
-    dim = SafeArrayGetDim(sa)
-    
-    if dim == 0:
-        return ()
-    elif dim == 1:
-        ...
+    def clear(self):
+        VariantClear(self.ref())
         
 def variant_get_value(var: VARIANT):
     vt = var.vt
@@ -322,7 +442,9 @@ def variant_get_value(var: VARIANT):
     raise NotImplementedError(f'VARTYPE: {hex(vt)}')
     
 def variant_set_value(var: VARIANT, value):
+    vt = var.vt
     VariantClear(var.ref())
+    var.vt = vt
     
     if isinstance(value, VARIANT):
         VariantCopy(var.ref(), value.ref())
@@ -340,34 +462,100 @@ def variant_set_value(var: VARIANT, value):
         var.vt = VT_BSTR
         var.boolVal = -1 if value else 0
     elif isinstance(value, int):
-        vt = VT_I1
-        if -(2**7) > value or (2**7-1) < value:
-            if value >= 0:
-                vt = VT_UI2
-            else: vt = VT_I2
-        if -(2**15) > value or (2**15-1) < value:
-            if value >= 0:
-                vt = VT_UI4
-            else: vt = VT_I4
-        if -(2**31) > value or (2**31-1) < value:
-            if value >= 0:
-                vt = VT_UI8
-            else: vt = VT_I8
+        vt_defined = var.vt in (
+            VT_I1, VT_UI1, 
+            VT_I2, VT_UI2,
+            VT_I4, VT_UI4,
+            VT_I8, VT_UI8)
+        
+        if not vt_defined:
+            vt = VT_I1
         else:
-            raise OverflowError(value)
-        var.vt = vt
-        var.int64Val = value
+            vt = var.vt
+        
+        if not vt_defined:
+            if -(2**7) < value and (2**7-1) > value:
+                if value >= 0:
+                    var.bVal = value
+                    vt = VT_UI1
+                else:
+                    var.cVal = value
+                    vt = VT_I1
+            else:
+                success = False
+                    
+                if -(2**63) > value or (2**63-1) < value:
+                    raise OverflowError(value)
+                    
+                if -(2**31) > value or (2**31-1) < value:
+                    if value >= 0:
+                        var.ulVal = value
+                        vt = VT_UI8
+                    else: 
+                        var.lVal = value
+                        vt = VT_I8
+                    success = True
+                    
+                if -(2**15) > value or (2**15-1) < value:
+                    if value >= 0:
+                        var.ulVal = value
+                        vt = VT_UI4
+                    else: 
+                        var.lVal = value
+                        vt = VT_I4
+                    success = True
+                    
+                if not success:
+                    if value >= 0:
+                        var.uiVal = value
+                        vt = VT_UI2
+                    else: 
+                        var.iVal = value
+                        vt = VT_I2
+        
+        if vt_defined:
+            if vt in (VT_I1, VT_UI1):
+                if -(2**7) > value or (2**7-1) < value:
+                    raise OverflowError(value)
+                if vt == VT_I1:
+                    var.cVal = value
+                else:
+                    var.bVal = value
+            elif vt in (VT_I2, VT_UI2):
+                if -(2**15) > value or (2**15-1) < value:
+                    raise OverflowError(value)
+                if vt == VT_I2:
+                    var.iVal = value
+                else:
+                    var.uiVal = value
+            elif vt in (VT_I4, VT_UI4):
+                if -(2**31) > value or (2**31-1) < value:
+                    raise OverflowError(value)
+                if vt == VT_I4:
+                    var.lVal = value
+                else:
+                    var.ulVal = value
+            elif vt in (VT_I8, VT_UI8):
+                if -(2**63) > value or (2**63-1) < value:
+                    raise OverflowError(value)
+                if vt == VT_I8:
+                    var.llVal = value
+                else:
+                    var.ullVal = value
+        else: 
+            var.vt = vt
+        
     elif isinstance(value, (float, c_double)):
         var.vt = VT_R8
         var.dblVal = value
-    elif isinstance(value, IUnknown):
-        var.vt = VT_UNKNOWN
-        var.punkVal = value.ref()
     elif isinstance(value, IDispatch):
         var.vt = VT_DISPATCH
-        var.pdispVal = value.ref()
+        var.byref = PtrUtil.get_address(value.ptr())
+    elif isinstance(value, IUnknown):
+        var.vt = VT_UNKNOWN
+        var.byref = PtrUtil.get_address(value.ptr())
     elif isinstance(value, Dispatch):
         var.vt = VT_DISPATCH
-        var.pdispVal = value._disp.ref()
-    
-    raise NotImplementedError(f'{value}')
+        var.byref = PtrUtil.get_address(value._disp.ptr())
+    else:
+        raise NotImplementedError(f'{value}')

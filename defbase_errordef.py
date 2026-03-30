@@ -58,10 +58,12 @@ win_errors: WinErrors = WinErrors()
 
 class WinException(OSError):
     _win_errors_ = win_errors
+    error_code: int
     
     def __init__(self, error_code: Optional[int] = None):
         if error_code is None:
             error_code = GetLastError()
+        self.error_code = error_code
         error = self._win_errors_[error_code]
         if error == '':
             super().__init__(format_hex(error_code & 0xffffffff, 8))

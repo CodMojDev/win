@@ -278,6 +278,9 @@ class IMoniker(IPersistStream):
     @virtual_table.com_function(POINTER(IBindCtx), PVOID, PVOID)
     def IsRunning(self, pbc: IPointer[IBindCtx], pmkToLeft: IPointer['IMoniker'], pmkNewlyRunning: IPointer['IMoniker']) -> int: ...
 
+    @virtual_table.com_function(LPBINDCTX, PVOID, PFILETIME)
+    def GetTimeOfLastChange(self, pbc: IPointer[IBindCtx], pmkToLeft: IPointer['IMoniker'], pFileTime: IPointer[FILETIME]) -> int: ...
+
     @virtual_table.com_function(PVOID)
     def Inverse(self, ppmk: IDoublePtr['IMoniker']) -> int: ...
 

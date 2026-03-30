@@ -117,7 +117,28 @@ __all__ = [
     "ICharArray", "IWideCharArray",
     "WT_HANDLE", "flexible_array", 
     "LI",
-    "IWideCharArrayFixedSize", "ICharArrayFixedSize"
+    "IWideCharArrayFixedSize", "ICharArrayFixedSize",
+    "add_annotation", "remove_annotations",
+    "size_annotations",
+    "IVoidPtrT",
+    "field_typed",
+    "is_null",
+    "DelayedMarshaller",
+    "call_variadic",
+    "resolve_type", "resolve_genericalias",
+    "ipointer_to_pointer",
+    "is_genericalias",
+    "genericalias_single_type",
+    "genericalias_types",
+    "IGenericAlias",
+    "is_IFunction",
+    "is_IFunctionType",
+    "DelayedTypeStorage",
+    "i_cast_structure",
+    "IMarshallable",
+    "IReferenceable",
+    "IUnpackable",
+    "IMarshaller"
 ]
 
 from . import cpreproc
@@ -130,12 +151,15 @@ if _WT_UNSTABLE_API:
         'CVoidP'
     ])
 
-def format_hex(value: int, zeros: int) -> str:
+def format_hex(value: int, zeros: int = -1) -> str:
     """
     Format the hexadecimal value with leading `zeros`.
     """
+    if zeros == -1:
+        return hex(value)
     return '0x' + (hex(value)[2:].zfill(zeros))
 
+# Core generic functionality
 WT = TypeVar('_WT')
 WT2 = TypeVar('_WT2')
 
@@ -172,26 +196,19 @@ class INamespace:
     
     @interface_abstract_method
     def __init__(self): ...
-    
-class IFunctionType(IInterface):
+
+# IFunctionType is now migrated to `IFunction`, 
+# `is_IFunctionType` left because no function to check
+# is object an `ctypes` function type.
+
+def is_IFunctionType(cls: type) -> bool:
     """
-    Type-safe interface over
-    ctypes library function type
+    Check the `cls` function type is IFunctionType-compatible.
     """
-    
-    _argtypes_: List[type]
-    _restype_: type
-    _flags_: int
-    
-    @staticmethod
-    def is_self(cls: type) -> bool:
-        """
-        Check the `cls` function type is IFunctionType-compatible.
-        """
-        return (isinstance(cls, type) and 
-                hasattr(cls, '_argtypes_') and 
-                hasattr(cls, '_restype_') and
-                hasattr(cls, '_flags_'))
+    return (isinstance(cls, type) and 
+            hasattr(cls, '_argtypes_') and 
+            hasattr(cls, '_restype_') and
+            hasattr(cls, '_flags_'))
     
 class IFunction(IInterface):
     """
@@ -199,21 +216,162 @@ class IFunction(IInterface):
     ctypes library function.
     """
     
-    def __call__(*args: Any, **kwargs: Any): ...
+    def __call__(*args: Any, **kwargs: Any): 
+        """
+        Call the `IFunction`.
+        """
     
+    # IFunction
     argtypes: List[type]
     restype: type
     flags: type
     
-    @staticmethod
-    def is_self(instance: Any) -> bool:
-        """
-        Check the `instance` function type is IFunction-compatible.
-        """
-        return (not isinstance(instance, type) and 
-                hasattr(instance, 'argtypes') and 
-                hasattr(instance, 'restype'))
+    # IFunctionType-migrated
+    _argtypes_: ClassVar[List[type]]
+    _restype_: ClassVar[type]
+    _flags_: ClassVar[int]
     
+def is_IFunction(instance: Any) -> bool:
+    """
+    Check the `instance` function type is IFunction-compatible.
+    """
+    return (not isinstance(instance, type) and 
+            hasattr(instance, 'argtypes') and 
+            hasattr(instance, 'restype'))
+
+class IMarshallable(IInterface):
+    """
+    Interface to represent the marshalling-allowed object.
+    """
+    
+    @interface_abstract_method
+    def marshal(self, typ: type | IMarshaller) -> Any: 
+        """
+        Marshal object to given type.
+        """
+    
+class IUnpackable(IInterface):
+    """
+    Interface to represent the object can be unpacked to another object.
+    """
+    
+    @interface_abstract_method
+    def unpack(self) -> Any: 
+        """
+        Unpack object to another object.
+        """
+
+class IMarshaller(IInterface):
+    """
+    Interface to represent the object can be marshaller.
+    """
+    
+    @interface_abstract_method
+    def marshal(self, value: Any) -> Any: 
+        """
+        Marshal given value into type.
+        """
+        
+    @classmethod
+    def is_marshaller(self, marshaller: Callable | IMarshaller | Any) -> bool:
+        """
+        Check given value is marshaller-compatible. Must not be overriden.
+        """
+        return isinstance(marshaller, IMarshaller) or callable(marshaller)
+        
+    @classmethod
+    def call_marshaller(self, value: Any, marshaller: Callable | IMarshaller) -> Any:
+        """
+        Call the given marshaller on type. Must not be overriden.
+        """
+        if isinstance(marshaller, IMarshaller):
+            return marshaller.marshal(value)
+        elif callable(marshaller):
+            return marshaller(value)
+        raise TypeError(type(marshaller))
+    
+class IReferenceable(IInterface):
+    """
+    Interface to represent the object that can putted 
+    by pure object in function, that is waiting reference.
+    """
+    
+    # Object side
+    @interface_abstract_method
+    def get_reference(self) -> Any: 
+        """
+        Get reference to object.
+        """
+    
+    @interface_abstract_method
+    def allow_other_type(self, typ: type) -> bool: 
+        """
+        Is allowed to reference the object if
+        receiving type is not `IReferenceable`.
+        """
+    
+    # Type side
+    @interface_abstract_method
+    @classmethod
+    def allow_reference(self, value) -> bool: 
+        """
+        Is type allowing value to be referenced.
+        Must be implemented if used as type, otherwise not.
+        """
+
+class DelayedMarshaller(IMarshaller):
+    """
+    Delayed Marshaller for marshal schemes.
+    Lazely initialized by caller.
+    """
+    marshal_func: Callable
+    
+    def __init__(self):
+        self.marshal_func = None
+    
+    def __call__(self, *args) -> Any:
+        return self.marshal_func(*args)
+    
+    def marshal(cls, value: Any) -> Any:
+        return self.marshal_func(value)
+
+class DelayedTypeStorage(IUnpackable):
+    """
+    Delayed Type Storage.
+    Lazely initialized by caller.
+    """
+    storaged_type: type[WT]
+    
+    def __init__(self):
+        self.storaged_type = None
+        
+    def __call__(self, *args, **kwargs) -> Any:
+        return self.storaged_type(*args, **kwargs)
+    
+    def unpack(self) -> type[WT]:
+        return self.storaged_type
+
+def call_variadic(function: IFunction, full_marshal_scheme: list[type], *args) -> Any:
+    """
+    Call variadic function with provided full marshal scheme.
+    """
+    
+    old_argtypes = function.argtypes
+    argtypes = []
+    
+    for i in enumerate(full_marshal_scheme):
+        typ = full_marshal_scheme[i]
+        if typ is None:
+            argtypes.append(old_argtypes[i])
+        else:
+            argtypes.append(typ)
+    
+    function.argtypes = argtypes
+    result = function(*args)
+    function.argtypes = old_argtypes
+    
+    return result
+
 import sys
     
 def frame_versioning(noframe_impl: Callable) -> Callable:
@@ -292,7 +450,42 @@ class IVoidPtr(IInterface):
     """
     
     value: int
+    
+class IVoidPtrT(IInterface, int):
+    """
+    Type-safe interface over
+    typed (unmarshalled) ctypes
+    void* pointer.
+    """
+    
+def define_extended_type(cls):
+    """
+    Define extended type with support of `__static_cast__`.
+    """
+    
+    @staticmethod
+    def from_param(param):
+        static_cast = getattr(param, '__static_cast__', None)
+        
+        if static_cast is None:
+            return super(cls, cls).from_param(param)
+        
+        result = static_cast(cls)
+        
+        if result is NotImplemented:
+            return super(cls, cls).from_param(param)
+        
+        return result
+    
+    cls.from_param = from_param
+    
+    return cls
 
+# # # # # # # # # # # # # # # # # # #
+# CPython-Specific part begins !!!  #
+# # # # # # # # # # # # # # # # # # #
+
+# initialize DefbCI
 from . import _defbase_ctypinit
 
 _defbase_ctypinit.Init()
@@ -308,7 +501,6 @@ if _WT_UNSTABLE_API:
         _objects: Mapping[Any, int] | None
         def __buffer__(self, flags: int, /) -> memoryview: ...
         def __ctypes_from_outparam__(self, /) -> Self: ...
-
 
     # don't know how to bypass ctypes check
     # for only _CArgObject type and not its
@@ -404,6 +596,10 @@ if _WT_UNSTABLE_API:
             return f'<CVoidP address={format_hex(PtrUtil.get_address(self), sizeof(c_void_p))}>'
     
     # c_void_p = CVoidP
+    
+# # # # # # # # # # # # # # # # # # #
+# CPython-Specific part ends !!!    #
+# # # # # # # # # # # # # # # # # # #
 
 def PTR(typ: Type[WT]) -> Type[IPointer[WT]]:
     """
@@ -426,6 +622,7 @@ def DOUBLE_PTR(typ: Type[WT]) -> Type[IDoublePtr[WT]]:
     """
     return PTR(PTR(typ))
 
+# alias (for compatibility) instead of dumb `ctypes.POINTER`
 POINTER = PTR
 
 from ctypes import WINFUNCTYPE
@@ -468,11 +665,13 @@ class VirtualTable:
         """
         VirtualTable.func_ptr = func_ptr
         
+    # make sure name is not overriding important fields in vtable structure
     def _pack_name(self, name: str) -> str:
         if name.startswith('__'):
             return '_P_' + name
         return name
     
+    # add vtable entry
     def _add(self, name: str):
         self.fields.append((name, c_void_p))
         
@@ -512,36 +711,54 @@ class VirtualTable:
                  ret: type, 
                  *args: type, 
                  exists: bool = False,
-                 result_function: Optional[Callable] = None,
-                 intermediate_method: bool = False) -> Callable:
+                 result_function: Optional[Callable | IMarshaller] = None,
+                 intermediate_method: bool = False,
+                 marshal_scheme: list[tuple[int, Callable]] = []) -> Callable:
         """
         Virtual function decorator.
         """
+        
+        # bypass ctypes T* treated as invalid (bug)
+        ret_ptr = None
+        if _is_ptr(ret):
+            ret_ptr = ret
+            ret = c_void_p
+        
         def _function(f: Callable) -> Callable:
             name = self._pack_name(f.__name__)
             if not exists:
                 self._add(name)
             
             def _virtual_wrapper(f_self, *f_args, **kwargs) -> Callable: 
-                callback = getattr(f, 'callback', None)
-                if callback is None:
-                    field_name = self.field_name
-                    get_vtable = getattr(f_self, f'__get_{self.name}__', None)
-                    if get_vtable is not None:
-                        field_name = get_vtable()
-                    vtable = i_cast(getattr(f_self, field_name), 
-                                    POINTER(self.VType))
-                    address = getattr(vtable.contents, name)
-                    callback = VirtualTable.func_ptr(address)
-                    callback.restype = ret
-                    callback.argtypes = (THIS, *args)
-                    # setattr(f, 'callback', callback)
+                # field name dispatcherization
+                field_name = self.field_name
+                get_vtable = getattr(f_self, f'__get_{self.name}__', None)
                 
+                if get_vtable is not None:
+                    field_name = get_vtable()
+                
+                # get vtable in memory and method address
+                vtable = i_cast(getattr(f_self, field_name), 
+                                POINTER(self.VType))
+                address = getattr(vtable.contents, name)
+                
+                # set callback access
+                callback = VirtualTable.func_ptr(address)
+                callback.restype = ret
+                callback.argtypes = (THIS, *args)
+                
+                # call method in THISCALL notation
                 result = callback(byref(f_self), *f_args)
-                if callable(result_function):
-                    return result_function(result)
+                
+                if IMarshaller.is_marshaller(result_function):
+                    return IMarshaller.call_marshaller(result, result_function)
+                
+                if ret_ptr is not None: # if pointer swapped to void*, swap again to T*
+                    result = i_cast(result, ret_ptr)
+                
                 return result
             
+            # Intermediate Methods support
             if not intermediate_method:
                 _virtual_wrapper = wraps(f)(_virtual_wrapper)
             else:
@@ -549,18 +766,73 @@ class VirtualTable:
                 def _intermediate(*args, **kwargs):
                     return f(*args, **kwargs, function=_virtual_wrapper)
                 
+            # write virtual method metadata
+            
             if intermediate_method:
                 setattr(_intermediate, 'proto', WINFUNCTYPE(ret, THIS, *args))
                 setattr(_intermediate, 'f', f)
+                setattr(_intermediate, 'result_function', result_function)
+                setattr(_intermediate, 'marshal_scheme', marshal_scheme)
                 
                 return _intermediate
             
             setattr(_virtual_wrapper, 'proto', WINFUNCTYPE(ret, THIS, *args))
+            setattr(_virtual_wrapper, 'arguments', (ret, THIS, *args))
+            setattr(_virtual_wrapper, 'result_function', result_function)
+            setattr(_virtual_wrapper, 'marshal_scheme', marshal_scheme)
             setattr(_virtual_wrapper, 'f', f)
             
             return _virtual_wrapper
         
         return _function
+    
+    def override(self, self_class, function: Callable):
+        """
+        Override the given function.
+        Name declaring contract: `<function name>_Impl`.
+        """
+        function_name = function.__name__
+        
+        # thunk between C and Python, garbages unused `this` pointer and uses closured `self`
+        def thunk(this, *args, **kwargs):
+            function = getattr(self_class, function_name + '_Impl')
+            marshal_scheme = getattr(function, 'marshal_scheme', None)
+            
+            # if marshal scheme provided, marshal the input arguments
+            if marshal_scheme:
+                args = list(args)
+                
+                for arg_no, arg in enumerate(args):
+                    for marshalled_no, marshal_function in marshal_scheme:
+                        if arg_no == marshalled_no:
+                            arg = IMarshaller.call_marshaller(arg, marshal_function)
+                            break
+                        
+                    args.append(arg)
+                
+            return function(*args, **kwargs)
+        
+        # prototype the function and make callback, then write into vtable entry
+        proto = getattr(function, 'proto')
+        callback = proto(thunk)
+        self.stub(self_class, function, callback)
+        
+        # hold the ref for virtual table keeping
+        registry = getattr(self, '_registry', None)
+        
+        if registry is None:
+            registry = []
+            self._registry = registry
+            
+        registry.append(callback)
+        
+    def stub(self, self_class, function: Callable, stub: WINFUNCTYPE):
+        """
+        Implement the given function as a stub
+        (or implement a function bypassing the naming contract).
+        """
+        setattr(i_cast(getattr(self_class, self.field_name), 
+                       PTR(self.VType)).contents, function.__name__, i_cast(stub, c_void_p))
     
     def copy(self) -> Self:
         """
@@ -581,6 +853,12 @@ class WinWarning(Warning):
     """
     Windows Warning
     """
+
+def is_null(function: IFunction) -> bool:
+    """
+    Check the exported function from `W_CDLL` is NULL.
+    """
+    return isinstance(function, _NullFunction)
 
 class _NullFunction:
     __slots__ = ('library', '_name')
@@ -729,6 +1007,12 @@ def declare(func: IFunction, ret: type, *args: type) -> IFunction:
 
     return func
 
+def format_qualname(qualname: str) -> str:
+    qualname = qualname.replace('.', '::')
+    if qualname.endswith('__init__'):
+        return 'new ' + qualname[:-10]
+    return qualname
+
 def foreign_optimized(ret: type,
                       *args: type,
                       library: CDLL = None,
@@ -767,6 +1051,18 @@ def foreign_optimized(ret: type,
         function = declare(function, ret, *args)
         
         def _function(*args, **kwargs):
+            if (name is None or name not in ('IsDebuggerPresent', 'OutputDebugStringW')):
+                wet_trace = getattr(_defb_state, '_wet_trace', None)
+                if wet_trace is None:
+                    from .wet import trace as wet_trace
+                    _defb_state._wet_trace = wet_trace
+                    _defb_state._provider = wet_trace.WET_PROVIDER('DEFB')
+                if ordinal is None:
+                    message = f'Called [{name}]'
+                else:
+                    message = f'Called [{format_qualname(f.__qualname__)}] [#{ordinal}]'
+                wet_trace.dbg_trace(_defb_state._provider, message, up_stack=(1 + (3 if intermediate_method else 0)))
+            
             if class_method:
                 result = function(pointer(args[0]), *(args[1:]))
             else:
@@ -870,26 +1166,6 @@ def filter_self(args_tuple: tuple, typ: type) -> tuple:
     return args_tuple
     
 from typing import TYPE_CHECKING
-
-"""
-def dbg_trace(message: str = ''):
-    \"""
-    Debug trace.
-    \"""
-    if _defb_state._dbgtrace:
-        caller = get_caller_frame()
-        name = caller.f_code.co_qualname.replace('.', '::')
-        if name.endswith('_Impl'):
-            name = name[:-5]
-        elif name.endswith('__init__'):
-            name = f'new {name[:-10]}'
-        
-        if _defb_state._dbgtrace_file_name:
-            _defb_state._dbgtrace_file.write(f'{name}() {message}\n')
-            _defb_state._dbgtrace_file.flush()
-        else:
-            print(f'{name}() {message}')
-"""
     
 class Template(Generic[WT]):
     """
@@ -961,11 +1237,11 @@ def get_template() -> Template:
     """
     return get_caller_frame().f_locals['kwargs']['template']
 
-from ctypes import sizeof
+from ctypes import sizeof, c_char_p, c_wchar_p
 
 class PtrUtil:
     def get_address(ptr: IPointer[WT]) -> int:
-        return i_cast2(ptr, c_void_p).value
+        return i_cast(ptr, c_void_p).value
     
     def get_type(ptr: IPointer[WT]) -> WT:
         """
@@ -978,6 +1254,36 @@ class PtrUtil:
         Check object is pointer.
         """
         return _is_ptr(ptr)
+    
+    def to_char_p(ptr: IPointer[WT]) -> c_char_p:
+        """
+        Convert pointer to char* pointer.
+        """
+        return i_cast(ptr, c_char_p)
+    
+    def to_str(ptr: IPointer[WT]) -> bytes:
+        """
+        Convert pointer to char* pointer and dereference its .value property.
+        """
+        return i_cast(ptr, c_char_p).value
+    
+    def to_wchar_p(ptr: IPointer[WT]) -> c_char_p:
+        """
+        Convert pointer to wchar_t* pointer.
+        """
+        return i_cast(ptr, c_wchar_p)
+    
+    def to_wstr(ptr: IPointer[WT]) -> str:
+        """
+        Convert pointer to wchar_t* pointer and dereference its .value property.
+        """
+        return i_cast(ptr, c_wchar_p).value
+    
+    def is_pointer_type(ptr_type: type[IPointer[WT]] | Any) -> bool:
+        """
+        Check object is pointer type.
+        """
+        return _is_ptr_type(ptr_type)
     
 class PtrArithmetic:
     @staticmethod
@@ -1013,12 +1319,16 @@ class PtrArithmetic:
         return PtrUtil.get_address(ptr) >= PtrUtil.get_address(other)
     
     @staticmethod
-    def lesser_equals(ptr: IPointer, other: IPointer) -> bool:
+    def lesser_equal(ptr: IPointer, other: IPointer) -> bool:
         return PtrUtil.get_address(ptr) <= PtrUtil.get_address(other)
     
     @staticmethod
     def equals(ptr: IPointer, other: IPointer) -> bool:
         return PtrUtil.get_address(ptr) == PtrUtil.get_address(other)
+    
+    @staticmethod
+    def size_bytes(typ: type, count: int = 1) -> int:
+        return sizeof(typ) * count
 
 from ctypes import Union, c_wchar_p, c_int
 from .cpreproc import _CPreprocState
@@ -1098,8 +1408,29 @@ from typing import Self
 GenericAlias = type(Generic[WT])
 
 class IGenericAlias(IInterface):
+    """
+    Type-safe interface, describing GenericAlias type.
+    """
     __origin__: type
     __args__: list
+    
+def is_genericalias(obj) -> bool:
+    """
+    Check given object is `GenericAlias`.
+    """
+    return isinstance(obj, GenericAlias)
+    
+def genericalias_single_type(generic_alias: IGenericAlias) -> Any:
+    """
+    Get the single type of generic alias.
+    """
+    return generic_alias.__args__[0]
+
+def genericalias_types(generic_alias: IGenericAlias) -> list[Any]:
+    """
+    Get the full types provided to generic alias.
+    """
+    return generic_alias.__args__
     
 def reset_annotations():
     """
@@ -1110,6 +1441,29 @@ def reset_annotations():
     `@CStructure.make`/`@CUnion.make` handling.
     """
     get_caller_frame().f_locals['__annotations__'] = {}
+    
+def add_annotation(name: str, v: Any):
+    """
+    Explicitly add the annotation to internal dictionary.
+    Used to bypass the stupid IDE static checks on validity of annotation.
+    """
+    get_caller_frame().f_locals['__annotations__'][name] = v
+    
+def remove_annotations(*names: str):
+    """
+    Explicitly remove the annotations from internal dictionary.
+    """
+    annotations = get_caller_frame().f_locals['__annotations__']
+    for name in names:
+        del annotations[name]
+    
+def size_annotations(*pairs: tuple[str, int]):
+    """
+    Add the size to the annotations in pairs (name, size).
+    """
+    annotations = get_caller_frame().f_locals['__annotations__']
+    for name, size in annotations:
+        annotations[name]._size = size
     
 def _make_internal(cls: type) -> type:
     fields_customed = []
@@ -1129,15 +1483,19 @@ def _make_internal(cls: type) -> type:
                 pack, = generic_alias.__args__
                 continue
             
+        size = getattr(typ, '_size', None)
         if isinstance(typ, GenericAlias):
             generic_alias = typ
-            typ = _resolve_genericalias(generic_alias)
+            typ = resolve_genericalias(generic_alias)
         else:
             if isinstance(typ, type) and issubclass(typ, ICustomizable):
                 fields_customed.append((field, typ._custom_))
                 field = '_' + field
-            typ = _resolve_type(typ)
-        fields.append((field, typ))
+            typ = resolve_type(typ)
+        if size is None:
+            fields.append((field, typ))
+        else:
+            fields.append((field, typ, size))
         
     dictionary = {'_fields_': fields, '_anonymous_': anonymous}
     if pack is not None:
@@ -1326,11 +1684,15 @@ class CStructure(Structure):
         """
         return _make_internal(cls)
 
-def _resolve_genericalias(generic_alias: IGenericAlias) -> type:
+def resolve_genericalias(generic_alias: IGenericAlias) -> type:
+    """
+    Resolve the Type System generic alias to
+    standard ctypes type.
+    """
     origin = generic_alias.__origin__
     
     if origin is IPointer:
-        return _ipointer_to_pointer(generic_alias)
+        return ipointer_to_pointer(generic_alias)
     elif issubclass(origin, IAliasableGeneric):
         return generic_alias.__args__[0]
     elif issubclass(origin, IWideCharArrayFixedSize):
@@ -1342,8 +1704,8 @@ def _resolve_genericalias(generic_alias: IGenericAlias) -> type:
     elif issubclass(origin, IArrayFixedSize):
         typ, size = generic_alias.__args__
         if isinstance(typ, GenericAlias): 
-            return _resolve_genericalias(typ) * size
-        return _resolve_type(typ) * size
+            return resolve_genericalias(typ) * size
+        return resolve_type(typ) * size
     elif issubclass(origin, IAliasableGenericWithPayload):
         return origin._get_alias_(generic_alias=generic_alias)
 
@@ -1636,7 +1998,7 @@ if not TYPE_CHECKING:
         IDwordPtr = IUInt64
     else:
         IIntPtr = IInt
-        IUnsignedPtr = IUIntPtr = IUintPtr = IUInt
+        IUnsignedIntPtr = IUIntPtr = IUintPtr = IUInt
         ILongPtr = ILong
         IUnsignedLongPtr = IULongPtr = IUlongPtr = IUlong
         IUnsignedHalfPtr = IUHalfPtr = IUhalfPtr = IUlong
@@ -1646,8 +2008,13 @@ if not TYPE_CHECKING:
 IHandle = IVoidPtr
 WT_HANDLE = WT_ADDRLIKE
     
-def _resolve_type(typ: type) -> type:
+def resolve_type(typ: type) -> type:
+    """
+    Resolve the Type System type to 
+    standard ctypes type.
+    """
     if typ is IVoidPtr: return c_void_p
+    if typ is IVoidPtrT: return c_void_p
     if typ is bytes: return c_char_p
     if typ is str: return c_wchar_p
     if typ is int: return c_int
@@ -1660,7 +2027,12 @@ def _resolve_type(typ: type) -> type:
 
 from typing import ForwardRef
     
-def _ipointer_to_pointer(ipointer: IGenericAlias):
+def ipointer_to_pointer(ipointer: IGenericAlias) -> type:
+    """
+    Convert `IPointer[...]` declaration to 
+    ctypes pointer type representation.
+    """
+    
     typ = ipointer.__args__[0]
     
     if isinstance(typ, GenericAlias):
@@ -1668,14 +2040,14 @@ def _ipointer_to_pointer(ipointer: IGenericAlias):
         origin = generic_alias.__origin__
         
         if origin is IPointer:
-            typ = PTR(_ipointer_to_pointer(generic_alias))
+            typ = PTR(ipointer_to_pointer(generic_alias))
         elif issubclass(origin, IAliasableGeneric):
             typ = PTR(generic_alias.__args__[0])
     else:
         if isinstance(typ, (ForwardRef, str)):
             typ = c_void_p
         else:
-            typ = _resolve_type(typ)
+            typ = resolve_type(typ)
             typ = PTR(typ)
     
     return typ
@@ -1706,8 +2078,6 @@ def field_typed(cls: Type[CStructure], field: str, field_real: str, result: WT):
     setattr(cls, field, getter_prop)
     setattr(cls, field, setter_prop)
     
-from ctypes import CFUNCTYPE
-    
 class CUnion(Union):
     """
     Enhanced union type builded over
@@ -1716,6 +2086,9 @@ class CUnion(Union):
     
     @staticmethod
     def make(cls: Type[WT]) -> Type[WT]:
+        """
+        Make the CUnion fields from field type annotations.
+        """
         return _make_internal(cls)
     
     @classmethod
@@ -1804,8 +2177,14 @@ class CClass(CStructure):
     _friend_classes: ClassVar[List[str]] = []
     _protected: ClassVar[List[str]] = []
     _private: ClassVar[List[str]] = []
+    
+    _access_cache: ClassVar[Dict[str, bool]]
             
     def _check_access(self, name: str):
+        access_cache = super().__getattribute__('_access_cache')
+        cached_access = access_cache.get(name, False)
+        if cached_access: return
+        
         is_protected = name in super().__getattribute__('_protected')
         is_private = name in super().__getattribute__('_private')
         
@@ -1814,6 +2193,7 @@ class CClass(CStructure):
                                 f'field "{name}" is protected and private at once.')
         
         if not (is_protected or is_private):
+            access_cache[name] = True
             return # public
         
         caller = get_py_frame(2)
@@ -1888,6 +2268,14 @@ class CClass(CStructure):
         friend_classes.append(friend.__qualname__)
    
 from typing import overload
+
+WT_STRUCTURE = TypeVar('_WT_STRUCTURE', bound=CStructure)
+
+def i_cast_structure(obj: CStructure, typ: Type[WT_STRUCTURE2]) -> WT_STRUCTURE2:
+    """
+    Cast the given structure to another structure.
+    """
+    return i_cast(pointer(obj), PTR(typ)).contents
 
 if TYPE_CHECKING:
     def i_cast(obj: Any, typ: Type[IPointer[WT]]) -> IPointer[WT]:
@@ -1976,8 +2364,13 @@ _ctypes_types = {
     'z': c_char_p
 }
         
+PyCPointerType = type(PTR(c_int))
+        
 def _is_ptr(ptr_like) -> bool:
-    return (hasattr(ptr_like, '_obj') or hasattr(ptr_like, '_type_')) and isinstance(_ptr_to_type(ptr_like), type)
+    return (hasattr(ptr_like, '_obj') or isinstance(ptr_like, _defbase_ctypinit.CArgObject)) and isinstance(_ptr_to_type(ptr_like), type)
+        
+def _is_ptr_type(ptr_type_like) -> bool:
+    return isinstance(ptr_type_like, PyCPointerType)
         
 def _has_function(obj, func_name) -> bool:
     return hasattr(obj, func_name) and callable(getattr(obj, func_name))
@@ -2243,15 +2636,11 @@ LI = TypeVar('LI', bound=CDLL)
 class _DEFB_STATE: # internal global state
     __slots__  = ['_linked_libraries', '_defbase_process', 
                   '_defbase_module', '_interfacedef', '_unknwn',
-                  '_dbgtrace', '_dbgtrace_file', '_dbgtrace_file_name']
+                  '_provider', '_wet_trace']
     _linked_libraries: Dict[str, LI]
     
     def __init__(self):
         self._linked_libraries = {}
-        self._dbgtrace = cpreproc.defined('DBGTRACE')
-        self._dbgtrace_file_name = cpreproc.getdef('DBGTRACE_FILE')
-        if self._dbgtrace and self._dbgtrace_file_name:
-            self._dbgtrace_file = open(self._dbgtrace_file_name, 'w')
     
 _defb_state: _DEFB_STATE = _DEFB_STATE()
 

@@ -5,6 +5,8 @@ from ..winnt import (
 )
 from ..defbase import *
 
+from ..defbase_errordef import *
+
 kernel32 = W_WinDLL('kernel32.dll')
 
 @kernel32.foreign(HLOCAL, HLOCAL)
@@ -18,23 +20,28 @@ FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x100
 FORMAT_MESSAGE_IGNORE_INSERTS = 0x200
 FORMAT_MESSAGE_FROM_SYSTEM = 0x1000
 
+class IErrorInfoProvider:
+    _win_errors_list_: list[WinErrors] = []
+    
+    @interface_abstract_method
+    def get_win_errors_list(self) -> list[WinErrors]: ...
+
+_ErrorInfoProviders = []
+
+def _RegisterErrorInfoProvider(provider):
+    global _ErrorInfoProviders
+    _ErrorInfoProviders.append(provider)
+
 def GetErrorMessage(hr: int) -> str:
-    flags: int = (FORMAT_MESSAGE_ALLOCATE_BUFFER | 
-                  FORMAT_MESSAGE_FROM_SYSTEM | 
-                  FORMAT_MESSAGE_IGNORE_INSERTS)
-    message: LPCWSTR = i_cast(NULL, LPCWSTR)
-    length: int = FormatMessageW(
-        flags,
-        NULL,
-        hr,
-        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-        i_cast(byref(message), LPWSTR),
-        0
-    )
+    for provider in _ErrorInfoProviders:
+        win_errors_list = provider._win_errors_list_
+        
+        if win_errors_list is None:
+            win_errors_list = provider.get_win_errors_list()
+            
+        for win_errors in win_errors_list:
+            error = win_errors[hr]
+            if error:
+                return error
     
-    if length > 0:
-        result = message.value
-        LocalFree(message)
-        return result
-    
-    return None
+    return format_hex(ULONG(hr).value, sizeof(HRESULT))

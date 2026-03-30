@@ -16,16 +16,16 @@ if cpreproc.pragma_once("_WINNT_"):
     LPCWCH = PWCHAR
     PCWCH = PWCHAR
     
-    NWPSTR = PWCHAR
-    PWSTR = PWCHAR
+    PWSTR = LPWSTR
+    NWPSTR = PWSTR
     
     PZPWSTR = PWSTR
     PCZPWSTR = PWSTR
     
-    LPUWSTR = PWCHAR
-    PUWSTR = PWCHAR
+    LPUWSTR = PWSTR
+    PUWSTR = PWSTR
     
-    PCWSTR = PWCHAR
+    PCWSTR = PWSTR
     
     PZPCWSTR = PCWSTR
     

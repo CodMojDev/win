@@ -6,7 +6,7 @@
 # Generated from ICL: ivehandler.icl
 #
 
-from ..com.unknwn import *
+from ..com.autointerfacedef import *
 
 @CStructure.make
 class _VerError(CStructure):

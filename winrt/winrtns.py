@@ -4,9 +4,11 @@
 # WinRT Namespaces definition.
 #
 
+from .roparameterizediid import *
 from .robuffer import *
 from .roapi import *
 
+from . import roparameterizediid
 from . import robuffer
 
 class Windows(INamespace):
@@ -82,7 +84,7 @@ class Windows(INamespace):
         # real implementation
         @TemplateFunction[IT]
         def GetActivationFactory(activatableClassId: HSTRING,
-                                 factory: IDoublePtr[IT]) -> int:
+                                 factory: IDoublePtr[IT], **kwargs) -> int:
             template: Template[IT] = get_template()
             return RoGetActivationFactory(activatableClassId, 
                                           template.get_single_type().iid(),

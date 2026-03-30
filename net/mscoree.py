@@ -109,7 +109,7 @@ def CorBindToRuntimeEx(pwszVersion: LPCWSTR, pwszBuildFlavor: LPCWSTR, startupFl
 def CorBindToRuntimeByCfg(pCfgStream: IPointer[IStream], reserved: int, startupFlags: int, clsid: CLSID, iid: IID, ppv: IPointer[PVOID], **kwargs) -> int:
     return delegate(pCfgStream, reserved, startupFlags, clsid.ref(), iid.ref(), ppv)
 
-@mscoree.foreign(HRESULT, LPCWSTR, LPCWSTR, LPCLSID, LPIID, PVOID, PVOID, intermediate_method = True)
+@mscoree.foreign(HRESULT, LPCWSTR, LPCWSTR, LPCLSID, LPIID, PVOID, intermediate_method = True)
 def CorBindToRuntime(pwszVersion: LPCWSTR, pwszBuildFlavor: LPCWSTR, clsid: CLSID, iid: IID, ppv: IPointer[PVOID], **kwargs) -> int:
     return delegate(pwszVersion, pwszBuildFlavor, clsid.ref(), iid.ref(), ppv)
 
@@ -133,7 +133,7 @@ def LoadLibraryShim(szDllName: LPCWSTR, szVersion: LPCWSTR, pvReserved: PVOID, p
 @mscoree.foreign(HRESULT, LPCWSTR, LPCSTR, PVOID, PVOID, LPCWSTR, PVOID)
 def CallFunctionShim(szDllName: LPCWSTR, szFunctionName: LPCSTR, lpvArgument1: PVOID, lpvArgument2: PVOID, szVersion: LPCWSTR, pvReserved: PVOID) -> int: ...
 
-@mscoree.foreign(HRESULT, LPSTR, PVOID, PVOID)
+@mscoree.foreign(HRESULT, LPSTR, PVOID)
 def GetRealProcAddress(pwszProcName: LPSTR, ppv: IPointer[PVOID]) -> int: ...
 
 @mscoree.foreign(VOID, INT)
@@ -230,10 +230,10 @@ class IGCThreadControl(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{F31D1788-C397-4725-87A5-6AF3472C2791}")
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def ThreadIsBlockingForSuspension(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def SuspensionStarting(self) -> int: ...
 
     @virtual_table.com_function(DWORD)
@@ -295,10 +295,10 @@ class IDebuggerThreadControl(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{23D86786-0BB5-4774-8FB5-E3522ADD6246}")
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def ThreadIsBlockingForDebugger(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def ReleaseAllRuntimeThreads(self) -> int: ...
 
     @virtual_table.com_function(DWORD)
@@ -338,10 +338,10 @@ class ICorRuntimeHost(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{CB2F6722-AB3A-11d2-9C40-00C04FA30A3E}")
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def CreateLogicalThreadState(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def DeleteLogicalThreadState(self) -> int: ...
 
     @virtual_table.com_function(PDWORD)
@@ -359,40 +359,40 @@ class ICorRuntimeHost(IUnknown):
     @virtual_table.com_function(DOUBLE_PTR(ICorConfiguration))
     def GetConfiguration(self, pConfiguration: IDoublePtr[ICorConfiguration]) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Start(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Stop(self) -> int: ...
 
-    @virtual_table.com_function(LPCWSTR, LPUNKNOWN, PTR(LPUNKNOWN))
+    @virtual_table.com_function(LPCWSTR, LPUNKNOWN, PVOID)
     def CreateDomain(self, pwzFriendlyName: LPCWSTR, pIdentityArray: IPointer[IUnknown], pAppDomain: IDoublePtr[IUnknown]) -> int: ...
 
-    @virtual_table.com_function(PTR(LPUNKNOWN))
+    @virtual_table.com_function(PVOID)
     def GetDefaultDomain(self, pAppDomain: IDoublePtr[IUnknown]) -> int: ...
 
     @virtual_table.com_function(PTR(HDOMAINENUM))
     def EnumDomains(self, hEnum: IPointer[HDOMAINENUM]) -> int: ...
 
-    @virtual_table.com_function(HDOMAINENUM, PTR(LPUNKNOWN))
+    @virtual_table.com_function(HDOMAINENUM, PVOID)
     def NextDomain(self, hEnum: HDOMAINENUM, pAppDomain: IDoublePtr[IUnknown]) -> int: ...
 
     @virtual_table.com_function(HDOMAINENUM)
     def CloseEnum(self, hEnum: HDOMAINENUM) -> int: ...
 
-    @virtual_table.com_function(LPCWSTR, LPUNKNOWN, LPUNKNOWN, PTR(LPUNKNOWN))
+    @virtual_table.com_function(LPCWSTR, LPUNKNOWN, LPUNKNOWN, PVOID)
     def CreateDomainEx(self, pwzFriendlyName: LPCWSTR, pSetup: IPointer[IUnknown], pEvidence: IPointer[IUnknown], pAppDomain: IDoublePtr[IUnknown]) -> int: ...
 
-    @virtual_table.com_function(PTR(LPUNKNOWN))
+    @virtual_table.com_function(PVOID)
     def CreateDomainSetup(self, pAppDomainSetup: IDoublePtr[IUnknown]) -> int: ...
 
-    @virtual_table.com_function(PTR(LPUNKNOWN))
+    @virtual_table.com_function(PVOID)
     def CreateEvidence(self, pEvidence: IDoublePtr[IUnknown]) -> int: ...
 
     @virtual_table.com_function(LPUNKNOWN)
     def UnloadDomain(self, pAppDomain: IPointer[IUnknown]) -> int: ...
 
-    @virtual_table.com_function(PTR(LPUNKNOWN))
+    @virtual_table.com_function(PVOID)
     def CurrentDomain(self, pAppDomain: IDoublePtr[IUnknown]) -> int: ...
 
     virtual_table.build()
@@ -486,7 +486,7 @@ class ICLRTask(IUnknown):
     @virtual_table.com_function(HANDLE)
     def SwitchIn(self, threadHandle: HANDLE) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def SwitchOut(self) -> int: ...
 
     @virtual_table.com_function(PTR(COR_GC_THREAD_STATS))
@@ -495,19 +495,19 @@ class ICLRTask(IUnknown):
     @virtual_table.com_function(BOOL)
     def Reset(self, fFull: bool) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def ExitTask(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Abort(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def RudeAbort(self) -> int: ...
 
     @virtual_table.com_function(PBOOL)
     def NeedsPriorityScheduling(self, pbNeedsPriorityScheduling: PBOOL) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def YieldTask(self) -> int: ...
 
     @virtual_table.com_function(PSIZE_T)
@@ -522,10 +522,10 @@ class ICLRTask2(ICLRTask):
     virtual_table = COMVirtualTable.from_ancestor(ICLRTask)
     _iid_ = IID("{28E66A4A-9906-4225-B231-9187C3EB8612}")
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def BeginPreventAsyncAbort(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def EndPreventAsyncAbort(self) -> int: ...
 
     virtual_table.build()
@@ -534,10 +534,10 @@ class IHostTask(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{C2275828-C4B1-4B55-82C9-92135F74DF1A}")
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Start(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Alert(self) -> int: ...
 
     @virtual_table.com_function(DWORD, DWORD)
@@ -616,25 +616,25 @@ class IHostTaskManager(IUnknown):
     @virtual_table.com_function(SIZE_T)
     def LeaveRuntime(self, target: int) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def EnterRuntime(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def ReverseLeaveRuntime(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def ReverseEnterRuntime(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def BeginDelayAbort(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def EndDelayAbort(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def BeginThreadAffinity(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def EndThreadAffinity(self) -> int: ...
 
     @virtual_table.com_function(ULONG)
@@ -801,7 +801,7 @@ class ICLRErrorReportingManager(IUnknown):
     @virtual_table.com_function(ECustomDumpFlavor, DWORD, PTR(CustomDumpItem), DWORD)
     def BeginCustomDump(self, dwFlavor: int, dwNumItems: int, items: IPointer[CustomDumpItem], dwReserved: int) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def EndCustomDump(self) -> int: ...
 
     virtual_table.build()
@@ -813,7 +813,7 @@ class IHostCrst(IUnknown):
     @virtual_table.com_function(DWORD)
     def Enter(self, option: int) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Leave(self) -> int: ...
 
     @virtual_table.com_function(DWORD, PBOOL)
@@ -831,7 +831,7 @@ class IHostAutoEvent(IUnknown):
     @virtual_table.com_function(DWORD, DWORD)
     def Wait(self, dwMilliseconds: int, option: int) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Set(self) -> int: ...
 
     virtual_table.build()
@@ -843,10 +843,10 @@ class IHostManualEvent(IUnknown):
     @virtual_table.com_function(DWORD, DWORD)
     def Wait(self, dwMilliseconds: int, option: int) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Reset(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Set(self) -> int: ...
 
     virtual_table.build()
@@ -1038,10 +1038,10 @@ class IHostGCManager(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{5D4EC34E-F248-457B-B603-255FAABA0D21}")
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def ThreadIsBlockingForSuspension(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def SuspensionStarting(self) -> int: ...
 
     @virtual_table.com_function(DWORD)
@@ -1235,10 +1235,10 @@ class ICLRRuntimeHost(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{90F1A06C-7712-4762-86B5-7A5EBA6BDB02}")
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Start(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Stop(self) -> int: ...
 
     @virtual_table.com_function(PTR(IHostControl))
@@ -1284,7 +1284,7 @@ class ICLRHostProtectionManager(IUnknown):
     @virtual_table.com_function(EApiCategories)
     def SetProtectedCategories(self, categories: int) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def SetEagerSerializeGrantSets(self) -> int: ...
 
     virtual_table.build()
@@ -1336,28 +1336,28 @@ class ITypeNameBuilder(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{B81FF171-20F3-11d2-8DCC-00A0C9B00523}")
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def OpenGenericArguments(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def CloseGenericArguments(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def OpenGenericArgument(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def CloseGenericArgument(self) -> int: ...
 
     @virtual_table.com_function(LPCWSTR)
     def AddName(self, szName: LPCWSTR) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def AddPointer(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def AddByRef(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def AddSzArray(self) -> int: ...
 
     @virtual_table.com_function(DWORD)
@@ -1369,7 +1369,7 @@ class ITypeNameBuilder(IUnknown):
     @virtual_table.com_function(LPBSTR)
     def ToString(self, pszStringRepresentation: IPointer[BSTR]) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Clear(self) -> int: ...
 
     virtual_table.build()
@@ -1411,10 +1411,10 @@ class ICatalogServices(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{04C6BE1E-1DB1-4058-AB7A-700CCCFBF254}")
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def Autodone(self) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def NotAutodone(self) -> int: ...
 
     virtual_table.build()
@@ -1454,7 +1454,7 @@ class IHostSecurityManager(IUnknown):
     @virtual_table.com_function(HANDLE)
     def ImpersonateLoggedOnUser(self, hToken: HANDLE) -> int: ...
 
-    @virtual_table.com_function
+    @virtual_table.com_function()
     def RevertToSelf(self) -> int: ...
 
     @virtual_table.com_function(DWORD, BOOL, PHANDLE)

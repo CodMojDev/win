@@ -734,7 +734,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
 
     HDM_GETIMAGELIST = (HDM_FIRST + 9)
 
-    def eader_GetImageList(hwnd):
+    def Header_GetImageList(hwnd):
         return SendMessage(hwnd, HDM_GETIMAGELIST, HDSIL_NORMAL, 0)
     
     def Header_GetStateImageList(hwnd):

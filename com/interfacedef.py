@@ -4,6 +4,7 @@
 
 from typing import ClassVar
 from functools import wraps
+from ..wtypes import *
 from .comdefbase import *
 from .guid import *
 
@@ -19,12 +20,33 @@ def RetVal_GetValue(retval):
     return retval.value
 
 def RetVal_Dereference(retval: IPointer[WT]) -> WT:
+    if not retval:
+        return None
     return retval.contents
 
 def RetVal_FILETIMEToDatetime(retval: FILETIME) -> datetime:
     int64 = i_cast2(retval.ref(), PINT64).contents.value
     microseconds = (int64 - 116444736000000000) // 10
     return datetime(1970, 1, 1) + timedelta(microseconds=microseconds)
+
+if TYPE_CHECKING:
+    from . import dispatch as _dispatch
+    from .dispatch import Dispatch
+else:
+    _dispatch = None
+
+def RetVal_Dispatch(retval) -> 'Dispatch':
+    global _dispatch
+    
+    dispatch = _dispatch
+    if dispatch is None:
+        from . import dispatch
+        _dispatch = dispatch
+        
+    return dispatch.Dispatch(retval.contents)
+
+def RetVal_Bool(retval) -> bool:
+    return retval.value == -1
 
 class COMVirtualTable(VirtualTable):
     """
@@ -46,8 +68,8 @@ class COMVirtualTable(VirtualTable):
         virtual_table.fields.extend(ancestor.fields)
         return virtual_table
     
-    def __del__(self):
-        print(f'DELETE {self.name}Vtbl!!!')
+    #def __del__(self):
+    #    dbg_trace('COM-TL', f'DELETE {self.name}Vtbl!!!')
     
     def with_fieldname(self, field_name: str):
         """
@@ -69,7 +91,7 @@ class COMVirtualTable(VirtualTable):
         """
         Declare COM function in VB style (Visual Basic).
         """
-        from .dispatch import VARIANT, variant_get_value, variant_set_value
+        from .dispatch import VARIANT, variant_get_value, variant_set_value, SAFEARRAY
         
         def _com_function_vbstyle(f: Callable):
             name = self._pack_name(f.__name__)
@@ -77,35 +99,46 @@ class COMVirtualTable(VirtualTable):
                 self._add(name)
             
             def _virtual_wrapper(f_self, *f_args, **kwargs) -> Callable: 
-                callback = getattr(f, 'callback', None)
-                if callback is None:
-                    field_name = self.field_name
-                    get_vtable = getattr(f_self, f'__get_{self.name}__', None)
-                    if get_vtable is not None:
-                        field_name = get_vtable()
-                    vtable = i_cast(getattr(f_self, field_name), 
-                                    POINTER(self.VType))
-                    address = getattr(vtable.contents, name)
-                    callback = VirtualTable.func_ptr(PtrUtil.get_address(address))
-                    callback.restype = HRESULT
-                    
-                    if retval_index != -1:
-                        list_args = list(args)
-                        list_args.insert(retval_index, PTR(retval_type))
-                        callback.argtypes = (THIS, *list_args)
-                    else:
-                        callback.argtypes = (THIS, *args)
-                        
-                    setattr(f, 'callback', callback)
+                field_name = self.field_name
+                get_vtable = getattr(f_self, f'__get_{self.name}__', None)
+                if get_vtable is not None:
+                    field_name = get_vtable()
+                vtable = i_cast(getattr(f_self, field_name), 
+                                POINTER(self.VType))
+                address = getattr(vtable.contents, name)
+                callback = VirtualTable.func_ptr(PtrUtil.get_address(address))
+                callback.restype = HRESULT
+                
+                if retval_index != -1:
+                    list_args = list(args)
+                    list_args.insert(retval_index, PTR(retval_type))
+                    callback.argtypes = (THIS, *list_args)
+                else:
+                    list_args = list(args)
+                    callback.argtypes = (THIS, *args)
                 
                 list_f_args = list(f_args)
                 if retval_index != -1:
                     retval = retval_type()
                     list_f_args.insert(retval_index, byref(retval))
                 list_f_args_result = []
+                
                 for i, f_arg in enumerate(list_f_args):
                     if issubclass(list_args[i], VARIANT):
-                        f_arg = variant_set_value(VARIANT(), f_arg)
+                        if not isinstance(f_arg, VARIANT):
+                            var = VARIANT()
+                            variant_set_value(var, f_arg)
+                            f_arg = var
+                    elif issubclass(list_args[i], VARIANT_BOOL):
+                        f_arg = VARIANT_TRUE if f_arg else VARIANT_FALSE
+                    elif PtrUtil.is_pointer_type(list_args[i]):
+                        ptr_type = PtrUtil.get_type(list_args[i])
+                        
+                        if issubclass(ptr_type, COMInterface) and isinstance(f_arg, COMInterface):
+                            f_arg = f_arg.ref()
+                        elif issubclass(ptr_type, SAFEARRAY):
+                            if isinstance(f_arg, SAFEARRAY):
+                                f_arg = f_arg.ref()
                     list_f_args_result.append(f_arg)
                     
                 hr = callback(byref(f_self), *list_f_args_result)
@@ -222,6 +255,7 @@ class COMInterface(CStructure):
     _iid_: ClassVar[IID]
     
     _virtual_table_on_ctx: COMVirtualTable
+    _registry: list
     
     @classmethod
     def iid(self) -> IID:
@@ -248,7 +282,13 @@ class COMInterface(CStructure):
             dbg_trace(dbgplus_provider, f'UnusedThis={this}, This={self.virtual_table.name}')
             return getattr(self, function_name + '_Impl')(*args)
         
-        self.stub(function, getattr(function, 'proto')(thunk))
+        callback = getattr(function, 'proto')(thunk)
+        self.stub(function, callback)
+        registry = getattr(self, '_registry', None)
+        if registry is None:
+            registry = []
+            self._registry = registry
+        registry.append(callback)
         
     def stub(self, function: Callable, stub: WINFUNCTYPE):
         """

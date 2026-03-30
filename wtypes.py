@@ -502,7 +502,8 @@ if cpreproc.pragma_once():
     # BSTR definition in win.com.bstr
     
     # 0 == FALSE, -1 == TRUE
-    VARIANT_BOOL = SHORT
+    class VARIANT_BOOL(SHORT): ...
+    
     def VARIANT_BOOL_ToBool(boolVal: int) -> bool:
         return boolVal == -1
     

@@ -1,7 +1,9 @@
 from .processthreadsapi import *
+from .defbase_errordef import *
 from .wow64apiset import *
 from .handleapi import *
 from .memoryapi import *
+from .winuser import *
 from .psapi import *
 from .winnt import *
 
@@ -176,7 +178,7 @@ class IPointer32(IPointer[WT], IAliasableGenericWithPayload[WT]):
     @classmethod
     def _get_alias_(cls, **kwargs):
         generic_alias = cls.get_genericalias()
-        typ, = generic_alias.__args__
+        typ = genericalias_single_type(generic_alias)
         return PTR32(typ)
         
 # pure implementation
@@ -260,13 +262,20 @@ class CProcess:
     handle: int
     pid: int
     
-    def __init__(self, pid: int = None):
+    def __init__(self, pid: int = None, flags: int = PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION):
+        if pid == -1:
+            self.is_current = False
+            self.handle = None
+            self.pid = -1
+            
+            return
+        
         if pid is None:
             self.handle = GetCurrentProcess()
             handle = HANDLE()
             if not DuplicateHandle(self.handle, self.handle, self.handle,
                             byref(handle), 0, FALSE, DUPLICATE_SAME_ACCESS):
-                raise OSError('Cannot duplicate handle for current process.')
+                raise WinException()
             self.handle = handle.value
             
             self.pid = GetCurrentProcessId()
@@ -274,13 +283,56 @@ class CProcess:
             
             return
         
-        self.handle = OpenProcess(PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION, 
-                                  False, pid)
+        self.handle = OpenProcess(flags, False, pid)
         self.is_current = False
         self.pid = pid
         
         if not self.handle:
-            raise OSError(f'Cannot open {self} (for Read/Write).')
+            raise WinException()
+        
+    def open(self, flags: int = PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION):
+        self.handle = OpenProcess(flags, False, self.pid)
+        
+        if not self.handle:
+            raise WinException()
+        
+    @classmethod
+    def enum_processes(cls) -> list['CProcess']:
+        processes: list[CProcess] = []
+        nPids = 2048
+        
+        cbPids = PtrArithmetic.size_bytes(DWORD, nPids)
+        pids: IArray[int] = (DWORD * nPids)()
+        
+        cbNeeded = DWORD()
+        if not EnumProcesses(pids, cbPids, byref(cbNeeded)):
+            raise WinException()
+        
+        currentProcessId = GetCurrentProcessId()
+        
+        for i in range(cbNeeded.value // sizeof(DWORD)):
+            pid = pids[i]
+            if pid == 0: continue
+            
+            process = CProcess(-1)
+            process.pid = pid
+            
+            if pid == currentProcessId:
+                process.is_current = True
+                
+            processes.append(process)
+            
+        return processes
+        
+    @classmethod
+    def from_hwnd(cls, hwnd: int) -> 'CProcess':
+        if not IsWindow(hwnd):
+            raise OSError('Invalid HWND.')
+        
+        dwProcessID = DWORD()
+        GetWindowThreadProcessId(hwnd, byref(dwProcessID))
+        
+        return cls(dwProcessID.value)
         
     def __str__(self) -> str:
         return f'Process PID {self.pid}'
@@ -302,7 +354,7 @@ class CProcess:
         written = SIZE_T()
         if not WriteProcessMemory(self.handle, remote_address,
                            local_buffer, size, byref(written)):
-            raise OSError(f'Cannot write to memory of {self}.')
+            raise WinException()
         
         return written.value
     
@@ -314,7 +366,7 @@ class CProcess:
         read = SIZE_T()
         if not ReadProcessMemory(self.handle, remote_address,
                                  local_buffer, size, byref(read)):
-            raise OSError(f'Cannot read memory of {self}.')
+            raise WinException()
         
         return read.value
     
@@ -323,9 +375,12 @@ class CProcess:
             raise OSError(f'Cannot terminate {self}.')
         
         if not TerminateProcess(self.handle, exit_code):
-            raise OSError(f'Cannot terminate {self}.')
+            raise WinException()
         
     def enum_modules(self) -> list['CModule']: 
+        if not self.handle:
+            raise OSError(f'Cannot enumerate modules for {self}.')
+        
         defbase_module = getattr(defb._defb_state, '_defbase_module', None)
         
         if defbase_module is None:
@@ -366,12 +421,8 @@ class CProcess:
             address = PtrUtil.get_address(address)
             
         for module in self.enum_modules():
-            start = module.handle
-            end = start + module.size
-            
-            if start < address and end > address:
-                offset = address - start
-                name = os.path.basename(module.name)
-                return f'{name}+{hex(offset)}'
+            module_address = module.format_address(address)
+            if module_address is None: continue
+            return module_address
             
         return format_hex(address, sizeof(PVOID))
