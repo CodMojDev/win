@@ -687,11 +687,16 @@ class PyCDataObject_HEADLESS(PyObject):
     
 PyCDataObject_HEADLESS_PTR = POINTER(PyCDataObject_HEADLESS)
     
-pythonapi._PyObject_GC_New.argtypes = [PyTypeObject_PTR]
+pythonapi._PyObject_GC_New.argtypes = [c_void_p]
 pythonapi._PyObject_GC_New.restype = PyObject_PTR
         
-def PyObject_GC_New(typ: type[_CWT], typeobj: IPointer[PyTypeObject]) -> IPointer[_CWT]:
-    return cast(pythonapi._PyObject_GC_New(typeobj), POINTER(typ))
+def PyObject_GC_New(typ: type[_CWT], typeobj) -> IPointer[_CWT]:
+    return cast(pythonapi._PyObject_GC_New(id(typeobj)), POINTER(typ))
+
+def NewObject(typeobj: type[_CWT]) -> _CWT:
+    obj = cast(pythonapi._PyObject_GC_New(id(typeobj)), py_object).value
+    PyObject_GC_Track(obj)
+    return obj
         
 pythonapi.PyObject_GC_Track.argtypes = [c_void_p]
 pythonapi.PyObject_GC_Track.restype = None
@@ -735,7 +740,7 @@ class ICData:
 ICARG_CWT = TypeVar('ICARG_CWT', bound=ICArgObject)
 
 def New_PyCArgObject(t: type[ICARG_CWT]) -> Optional[IPointer[PyCArgObject[ICARG_CWT]]]:
-    p = PyObject_GC_New(PyCArgObject, cast(id(t), PyTypeObject_PTR))
+    p = PyObject_GC_New(PyCArgObject, PyTypeObject_PTR)
     if not p: return None
     
     p.contents.pffi_type = None

@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import List, Dict, Iterable
 from .errors import *
 
 from ..winnt import LOCALE_USER_DEFAULT
@@ -158,14 +158,107 @@ class Dispatch:
 class IVariantBool(IAliasable, ICustomizable, bool):
     _alias_ = VARIANT_BOOL
     _custom_ = bool
+            
+class Variant(VARIANT):
+    @property
+    def value(self):
+        return variant_get_value(self)
+    
+    @value.setter
+    def value(self, value):
+        return variant_set_value(self, value)
+    
+    def __init__(self, initialize: bool = True):
+        if initialize:
+            VariantInit(self.ref())
+        
+    def copy(self) -> 'Variant':
+        newVariant = Variant(initialize=False)
+        VariantCopy(newVariant.ref(), self.ref())
+        return newVariant
+    
+    def clear(self):
+        VariantClear(self.ref())
+
+if TYPE_CHECKING:
+    from win.defbase import ICData
+
+class _Ctype2VT(dict):
+    def __getitem__(self, type_obj: type) -> type:
+        try:
+            return super().__getitem__(type_obj)
+        except KeyError:
+            for base in type_obj.__bases__:
+                return self[base]
+            return None
+        
+ctype_to_vt: Dict[Type['ICData'], int] = _Ctype2VT({
+    byte: VT_I1,
+    BYTE: VT_UI1,
+    SHORT: VT_I2,
+    USHORT: VT_UI2,
+    LONG: VT_I4,
+    ULONG: VT_UI4,
+    FLOAT: VT_R4,
+    DOUBLE: VT_R8,
+    LONGLONG: VT_I8,
+    ULONGLONG: VT_UI8,
+    VARIANT_BOOL: VT_BOOL,
+    BSTR: VT_BSTR,
+    HRESULT: VT_HRESULT,
+    VARIANT: VT_VARIANT,
+    Variant: VT_VARIANT,
+    LPVARIANT: VT_BYREF | VT_VARIANT,
+    LPBSTR: VT_BYREF | VT_BSTR
+})
 
 class SafeArray(SAFEARRAY, IAliasableGenericWithPayload[WT],
                 IReferenceable):
+    _delayed_execution: ClassVar[list[tuple['SafeArray', DelayedTypeStorage]]] = []
     _type_cache_: ClassVar[dict[type, type['SafeArray']]] = {}
     _item_type_: ClassVar[type[WT]]
+    _extra_: Any = NULL
+    _vt_: int
 
     @classmethod
-    def typed(cls, item_type: type) -> type['SafeArray']:
+    def from_psa(cls, psa: IPointer[SAFEARRAY]) -> 'SafeArray':
+        return i_cast(psa, PTR(cls)).contents
+
+    @classmethod
+    def _setup(cls, item_type: type, vt: int = None):
+        if vt is not None:
+            cls._vt_ = vt
+        else:
+            if isinstance(item_type, type):
+                vt = ctype_to_vt[item_type]
+                
+                if vt is not None:
+                    cls._vt_ = vt
+                else:
+                    if issubclass(item_type, IUnknown):
+                        unk_type: type[IUnknown] = item_type
+                        
+                        if issubclass(item_type, IDispatch):
+                            cls._vt_ = VT_DISPATCH
+                        else:
+                            cls._vt_ = VT_UNKNOWN
+                        
+                        cls._extra_ = pointer(unk_type.iid())
+                    elif issubclass(item_type, CStructure):
+                        cls._vt_ = VT_RECORD
+                    
+                    vt = cls._vt_
+                        
+            elif isinstance(item_type, DelayedTypeStorage):
+                SafeArray._delayed_execution.append((cls, item_type))
+                cls._vt_ = 0
+                vt = 0
+        
+        if vt == VT_HRESULT:
+            raise TypeError('Cannot create SafeArray with type VT_HRESULT.')
+
+    @classmethod
+    def typed(cls, item_type: type, vt: int = None) -> type['SafeArray']:
         SafeArrayTyped = cls._type_cache_.get(item_type, None)
         if SafeArrayTyped is not None:
             return SafeArrayTyped
@@ -177,10 +270,18 @@ class SafeArray(SAFEARRAY, IAliasableGenericWithPayload[WT],
             name = 'DelayedType'
         else:
             name = item_type.__name__
+        
         SafeArrayTyped.__qualname__ += f'_{name}'
         cls._type_cache_[item_type] = SafeArrayTyped
+        
+        SafeArrayTyped._setup(item_type, vt)
             
         return SafeArrayTyped
+    
+    @staticmethod
+    def release_delay_execution():
+        for cls, delayed in SafeArray._delayed_execution:
+            cls._setup(delayed.unpack())
     
     @classmethod # support for @CStructure.make type resolution system
     def _get_alias_(cls, **kwargs) -> type['SafeArray']:
@@ -193,6 +294,30 @@ class SafeArray(SAFEARRAY, IAliasableGenericWithPayload[WT],
             item_type = resolve_type(item_type)
             
         return cls.typed(item_type)
+    
+    @classmethod
+    def create(cls, value: Iterable, extra=None) -> 'SafeArray[WT]':
+        if extra is None:
+            extra = cls._extra_
+            
+        psaNew = SafeArrayCreateVectorEx(cls._vt_, 0, len(value), extra)
+        
+        if not psaNew:
+            raise RuntimeError('SafeArrayCreateVectorEx failed.')
+        
+        psaNew = i_cast(psaNew, cls.PTR())
+        pData = PTR(cls._item_type_)()
+        
+        hr = SafeArrayAccessData(psaNew, byref(pData))
+        if FAILED(hr): raise COMError(hr)
+        
+        for index, item in enumerate(value):
+            pData[index] = item
+        
+        hr = SafeArrayUnaccessData(psaNew)
+        if FAILED(hr): raise COMError(hr)
+        
+        return psaNew.contents
     
     def allow_other_type(self, typ):
         return issubclass(typ, SAFEARRAY)
@@ -331,27 +456,6 @@ class SafeArray(SAFEARRAY, IAliasableGenericWithPayload[WT],
         
         indices[dimension] = restore
         return tuple(result)
-            
-class Variant(VARIANT):
-    @property
-    def value(self):
-        return variant_get_value(self)
-    
-    @value.setter
-    def value(self, value):
-        return variant_set_value(self, value)
-    
-    def __init__(self, initialize: bool = True):
-        if initialize:
-            VariantInit(self.ref())
-        
-    def copy(self) -> 'Variant':
-        newVariant = Variant(initialize=False)
-        VariantCopy(newVariant.ref(), self.ref())
-        return newVariant
-    
-    def clear(self):
-        VariantClear(self.ref())
         
 def variant_get_value(var: VARIANT):
     vt = var.vt
@@ -436,6 +540,12 @@ def variant_get_value(var: VARIANT):
         return var.parray
     elif vt == (VT_ARRAY | VT_BYREF):
         return var.pparray
+    elif vt & VT_ARRAY:
+        vt &= ~VT_ARRAY
+        if vt == VT_UNKNOWN:
+            return SafeArray.typed(IUnknown, vt).from_psa(var.parray)
+        elif vt == VT_VARIANT:
+            return SafeArray.typed(VARIANT, vt).from_psa(var.parray)
     elif vt == VT_BYREF:
         return var.byref
     
@@ -454,13 +564,17 @@ def variant_set_value(var: VARIANT, value):
         var.vt = VT_NULL
     elif isinstance(value, str):
         var.vt = VT_BSTR
-        var.bstrVal = BSTR.new(value)
+        var._keepRef = BSTR.new(value)
+        var.bstrVal = var._keepRef
     elif isinstance(value, BSTR):
         var.vt = VT_BSTR
         var.bstrVal = value
     elif isinstance(value, bool):
-        var.vt = VT_BSTR
+        var.vt = VT_BOOL
         var.boolVal = -1 if value else 0
+    elif isinstance(value, SafeArray):
+        var.vt = VT_ARRAY | value._vt_
+        var.parray = i_cast(pointer(value), LPSAFEARRAY)
     elif isinstance(value, int):
         vt_defined = var.vt in (
             VT_I1, VT_UI1, 

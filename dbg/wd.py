@@ -83,7 +83,9 @@ def _WD_DebugRoutine():
                 else:
                     DebugBreak()
             else:
-                print(eval(input_data))
+                result = eval(input_data)
+                if result is not None:
+                    print(result)
         except (EOFError, KeyboardInterrupt):
             print()
             continue
@@ -159,7 +161,7 @@ def WD_Breakpoint(*args, **kwargs):
         
 def WD_Disable():
     sys.breakpointhook = _wd_state._prev_breakpointhook
-    WD_DisableTrace(**kwargs)
+    WD_DisableTrace()
     
 def WD_Enable():
     _wd_state._prev_breakpointhook = sys.breakpointhook

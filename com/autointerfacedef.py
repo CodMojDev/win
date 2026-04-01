@@ -277,7 +277,7 @@ class wireSAFEARRAY(CStructure):
 array_after_structure(wireSAFEARRAY, 'rgsaBound', SAFEARRAYBOUND)
 wirePSAFEARRAY = wireSAFEARRAY.PTR()
 
-class SAFEARRAY(CStructure):
+class SAFEARRAY(CStructure, IReferenceable):
     _fields_ = [
         ('cDims', USHORT),
         ('fFeatures', USHORT),
@@ -292,6 +292,16 @@ class SAFEARRAY(CStructure):
     pvData: PVOID
     cLocks: int
     cDims: int
+    
+    def get_reference(self):
+        return self.ref()
+     
+    def allow_other_type(self, typ):
+        return False
+    
+    @classmethod
+    def allow_reference(cls, value):
+        return isinstance(value, cls)
     
 array_after_structure(SAFEARRAY, 'rgsaBound', SAFEARRAYBOUND)
 

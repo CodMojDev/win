@@ -14,6 +14,7 @@ else:
 
 class COMError(OSError):
     _errisolated = None
+    hresult: int
     
     @classmethod
     def _acquire_errisolated(cls):
@@ -22,6 +23,7 @@ class COMError(OSError):
             cls._errisolated = errisolated
     
     def __init__(self, hr: int):
+        self.hresult = hr
         self._acquire_errisolated()
         super().__init__(self._errisolated.GetErrorMessage(hr))
         

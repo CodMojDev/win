@@ -194,7 +194,29 @@ def TlWritePvToPpv(pvPpv: int, Pv: int):
     """
     Indirectly write generic address to `void**`-like argument.
     """
-    i_cast(pvPpv, PLPVOID).contents.value = Pv
+    ppv = i_cast(pvPpv, PLPVOID)
+    ppv.contents.value = Pv
+    
+def TlAccessPpv(pvPpv: int, type_object: type[WT]) -> WT:
+    """
+    Access the `void**`-like argument and get the accessable object.
+    """
+    return i_cast(pvPpv, PTR(type_object)).contents
+
+if TYPE_CHECKING:
+    from .unknown import CUnknown
+
+def TlNullPtrCheck(*pointers, pointer_names: list[str] = [], provider: WET_PROVIDER = None, comobj: 'CUnknown' = None) -> bool:
+    """
+    Check the pointers non-null.
+    """
+    for pointer_no, pointer in enumerate(pointers):
+        if not pointer:
+            if provider is None: return True
+            pointer_name = pointer_names[pointer_no]
+            comobj.dbg_trace(provider, f'{pointer_name} == NULL!')
+            return True
+    return False
     
 def TlGetRef(obj: CStructure):
     """
@@ -312,7 +334,15 @@ def TlQueryInterfacePtr(unk: IT, itf: type[IT2]) -> IPointer[IT2]:
     hr = unk.QueryInterface(itf, byref(itf_instance))
     if FAILED(hr): raise COMError(hr)
     return itf_instance
-    
+
+def TlAccessOAStringAndFree(bstr: BSTR) -> str:
+    """
+    Access OLE Automation string and free it.
+    """
+    string = bstr.value
+    SysFreeString(bstr)
+    return string
+
 #
 # COM TL Context utilities
 #

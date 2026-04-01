@@ -502,7 +502,20 @@ if cpreproc.pragma_once():
     # BSTR definition in win.com.bstr
     
     # 0 == FALSE, -1 == TRUE
-    class VARIANT_BOOL(SHORT): ...
+    class VARIANT_BOOL(SHORT, IMarshallable, IMarshaller, IUnpackable): 
+        def marshal(self, typ: type[bool] | Any):
+            if not isinstance(typ, type):
+                return NotImplemented
+            if issubclass(typ, bool):
+                return self.value == -1
+            return NotImplemented
+        
+        @classmethod
+        def static_marshal_value(cls, value: bool) -> int:
+            return VARIANT_TRUE if value else VARIANT_FALSE
+        
+        def unpack(self) -> bool:
+            return self.marshal(bool)
     
     def VARIANT_BOOL_ToBool(boolVal: int) -> bool:
         return boolVal == -1

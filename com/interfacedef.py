@@ -4,9 +4,9 @@
 
 from typing import ClassVar
 from functools import wraps
-from ..wtypes import *
 from .comdefbase import *
 from .guid import *
+from ..wtypes import *
 
 from datetime import datetime, timedelta
 
@@ -124,21 +124,28 @@ class COMVirtualTable(VirtualTable):
                 list_f_args_result = []
                 
                 for i, f_arg in enumerate(list_f_args):
-                    if issubclass(list_args[i], VARIANT):
+                    arg_type = list_args[i]
+                    
+                    if issubclass(arg_type, VARIANT):
                         if not isinstance(f_arg, VARIANT):
                             var = VARIANT()
                             variant_set_value(var, f_arg)
                             f_arg = var
-                    elif issubclass(list_args[i], VARIANT_BOOL):
-                        f_arg = VARIANT_TRUE if f_arg else VARIANT_FALSE
+                    
+                    elif issubclass(arg_type, IMarshaller):
+                        f_arg = arg_type.static_marshal_value(f_arg)
+                        
                     elif PtrUtil.is_pointer_type(list_args[i]):
                         ptr_type = PtrUtil.get_type(list_args[i])
                         
-                        if issubclass(ptr_type, COMInterface) and isinstance(f_arg, COMInterface):
-                            f_arg = f_arg.ref()
-                        elif issubclass(ptr_type, SAFEARRAY):
-                            if isinstance(f_arg, SAFEARRAY):
-                                f_arg = f_arg.ref()
+                        if isinstance(f_arg, IReferenceable):
+                            if issubclass(ptr_type, IReferenceable):
+                                if ptr_type.allow_reference(f_arg):
+                                    f_arg = f_arg.get_reference()
+                            else:
+                                if f_arg.allow_other_type(ptr_type):
+                                    f_arg = f_arg.get_reference()
+                                    
                     list_f_args_result.append(f_arg)
                     
                 hr = callback(byref(f_self), *list_f_args_result)
@@ -147,6 +154,8 @@ class COMVirtualTable(VirtualTable):
                 if retval_index != -1:
                     if isinstance(retval, VARIANT):
                         return variant_get_value(retval)
+                    if isinstance(retval, IUnpackable):
+                        retval = retval.unpack()
                     if callable(retval_function):
                         return retval_function(retval)
                     return retval
@@ -215,6 +224,12 @@ class COMVirtualTable(VirtualTable):
                 if FAILED(hr): raise COMError(hr)
                 
                 if retval_index != -1:
+                    if isinstance(retval_type, IReferenceable):
+                        retval = retval_type.dereference(retval)
+                    if PtrUtil.is_pointer(retval_type):
+                        ptr_type = PtrUtil.get_type(retval_type)
+                        if issubclass(ptr_type, IReferenceable):
+                            retval = ptr_type.dereference(retval.contents if retval else NULL)
                     if callable(retval_function):
                         return retval_function(retval)
                     return retval
@@ -246,7 +261,7 @@ from ..wet.trace import *
 
 dbgplus_provider = WET_PROVIDER('DbgPlus')
 
-class COMInterface(CStructure):
+class COMInterface(CStructure, IReferenceable, IUnpackable):
     """
     Class representing a COM Interface.
     """
@@ -316,6 +331,21 @@ class COMInterface(CStructure):
         resolve what virtual table needed to use.
         """
         self._virtual_table_on_ctx = virtual_table
+        
+    def get_reference(self):
+        return self.ref()
+    
+    def allow_other_type(self, typ):
+        return False
+    
+    @classmethod
+    def allow_reference(cls, value):
+        return isinstance(value, cls)
+    
+    @classmethod
+    def dereference(cls, reference):
+        if not reference: return NULL
+        return i_cast(reference, PTR(cls)).contents
     
 class COMLibrary:
     """

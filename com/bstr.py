@@ -36,11 +36,6 @@ class BSTR(LPOLESTR):
             bstr = SysAllocString(string)
         bstr._allocated = False
         return bstr
-        
-    def __del__(self):
-        if getattr(self, '_allocated', True):
-            SysFreeString(self)
-            self._allocated = False
             
     def __bool__(self) -> bool:
         return self._allocated and bool(self.value)
@@ -50,7 +45,9 @@ class BSTR(LPOLESTR):
         return '<NULL>'
     
     def __repr__(self) -> str:
-        address = hex(PtrUtil.get_address(self))
+        address = format_hex(PtrUtil.get_address(self))
+        if address == '0x0':
+            return f'<NULL>'
         value = str(self)
         if len(value) > 25:
             value = value[:25] + '...'

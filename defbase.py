@@ -25,7 +25,6 @@ __all__ = [
     "foreign",
     "link_library",
     "IInterface",
-    "IFunctionType",
     "THIS",
     "AccessError",
     "W_WinDLL",
@@ -58,7 +57,6 @@ __all__ = [
     "TUnion",
     "get_py_frame",
     "get_caller_frame",
-    "frame_versioning",
     "IArray",
     "INamespace",
     "get_library",
@@ -138,7 +136,8 @@ __all__ = [
     "IMarshallable",
     "IReferenceable",
     "IUnpackable",
-    "IMarshaller"
+    "IMarshaller",
+    "get_current_frame"
 ]
 
 from . import cpreproc
@@ -155,6 +154,10 @@ def format_hex(value: int, zeros: int = -1) -> str:
     """
     Format the hexadecimal value with leading `zeros`.
     """
+    if value is None:
+        if zeros == -1:
+            return '0x0'
+        return '0x' + '0'.zfill(zeros)
     if zeros == -1:
         return hex(value)
     return '0x' + (hex(value)[2:].zfill(zeros))
@@ -239,6 +242,42 @@ def is_IFunction(instance: Any) -> bool:
             hasattr(instance, 'argtypes') and 
             hasattr(instance, 'restype'))
 
+class IMarshaller(IInterface):
+    """
+    Interface to represent the object can be marshaller.
+    """
+    
+    @interface_abstract_method
+    def marshal_value(self, value: Any) -> Any: 
+        """
+        Marshal given value into type.
+        """
+        
+    @interface_abstract_method
+    @classmethod
+    def static_marshal_value(self, value: Any) -> Any:
+        """
+        Marshal given value into type. Static version of method.
+        """
+        
+    @classmethod
+    def is_marshaller(self, marshaller: Callable | 'IMarshaller' | Any) -> bool:
+        """
+        Check given value is marshaller-compatible. Must not be overriden.
+        """
+        return isinstance(marshaller, IMarshaller) or callable(marshaller)
+        
+    @classmethod
+    def call_marshaller(self, value: Any, marshaller: Callable | 'IMarshaller') -> Any:
+        """
+        Call the given marshaller on type. Must not be overriden.
+        """
+        if isinstance(marshaller, IMarshaller):
+            return marshaller.marshal_value(value)
+        elif callable(marshaller):
+            return marshaller(value)
+        raise TypeError(type(marshaller))
+    
 class IMarshallable(IInterface):
     """
     Interface to represent the marshalling-allowed object.
@@ -260,35 +299,6 @@ class IUnpackable(IInterface):
         """
         Unpack object to another object.
         """
-
-class IMarshaller(IInterface):
-    """
-    Interface to represent the object can be marshaller.
-    """
-    
-    @interface_abstract_method
-    def marshal(self, value: Any) -> Any: 
-        """
-        Marshal given value into type.
-        """
-        
-    @classmethod
-    def is_marshaller(self, marshaller: Callable | IMarshaller | Any) -> bool:
-        """
-        Check given value is marshaller-compatible. Must not be overriden.
-        """
-        return isinstance(marshaller, IMarshaller) or callable(marshaller)
-        
-    @classmethod
-    def call_marshaller(self, value: Any, marshaller: Callable | IMarshaller) -> Any:
-        """
-        Call the given marshaller on type. Must not be overriden.
-        """
-        if isinstance(marshaller, IMarshaller):
-            return marshaller.marshal(value)
-        elif callable(marshaller):
-            return marshaller(value)
-        raise TypeError(type(marshaller))
     
 class IReferenceable(IInterface):
     """
@@ -318,6 +328,13 @@ class IReferenceable(IInterface):
         Is type allowing value to be referenced.
         Must be implemented if used as type, otherwise not.
         """
+    
+    @interface_abstract_method
+    @classmethod
+    def dereference(cls, reference: 'IPointer') -> Any:
+        """
+        Dereference the given reference.
+        """
 
 class DelayedMarshaller(IMarshaller):
     """
@@ -332,7 +349,7 @@ class DelayedMarshaller(IMarshaller):
     def __call__(self, *args) -> Any:
         return self.marshal_func(*args)
     
-    def marshal(cls, value: Any) -> Any:
+    def marshal(self, value: Any) -> Any:
         return self.marshal_func(value)
 
 class DelayedTypeStorage(IUnpackable):
@@ -373,34 +390,11 @@ def call_variadic(function: IFunction, full_marshal_scheme: list[type], *args) -
     return result
 
 import sys
-    
-def frame_versioning(noframe_impl: Callable) -> Callable:
-    """
-    Version the two implementations: function original and no-frame stub.
-    
-    Use in the Python interpreter versions which don't have `sys._getframe`.
-    """
-    def _frame_versioning(f):
-        if hasattr(sys, '_getframe'):
-            return f
-        else:
-            @wraps(f)
-            def _function(*args, **kwargs):
-                warnings.warn('Cannot get Python frame, '
-                              f'Implementation of {f.__name__} '
-                              'is inaccessible', category=WinWarning,
-                              stacklevel=1)
-                return noframe_impl(*args, **kwargs)
-            return _function
-    return _frame_versioning
 
-def _frame_getter_throw(*args):
-    raise RuntimeError('Cannot get Python frame object.')
+def get_current_frame(): return sys._getframe(1)
 
-@frame_versioning(noframe_impl=_frame_getter_throw)
 def get_py_frame(depth: int): return sys._getframe(depth+1)
-    
-@frame_versioning(noframe_impl=_frame_getter_throw)
+
 def get_caller_frame(): return sys._getframe(2)
     
 from ctypes import Structure, byref, POINTER as _POINTER, pointer, c_int, c_void_p
@@ -1382,8 +1376,7 @@ def _ASSERT_NoFrame(expr: bool):
                     'cannot get caller frame.',
                     category=WinWarning, stacklevel=1)
     assert expr
-    
-@frame_versioning(noframe_impl=_ASSERT_NoFrame)
+
 def ASSERT(expr: bool):
     """
     Assert the given expression to True.
@@ -2271,7 +2264,7 @@ from typing import overload
 
 WT_STRUCTURE = TypeVar('_WT_STRUCTURE', bound=CStructure)
 
-def i_cast_structure(obj: CStructure, typ: Type[WT_STRUCTURE2]) -> WT_STRUCTURE2:
+def i_cast_structure(obj: CStructure, typ: Type[WT_STRUCTURE]) -> WT_STRUCTURE:
     """
     Cast the given structure to another structure.
     """
@@ -2367,7 +2360,7 @@ _ctypes_types = {
 PyCPointerType = type(PTR(c_int))
         
 def _is_ptr(ptr_like) -> bool:
-    return (hasattr(ptr_like, '_obj') or isinstance(ptr_like, _defbase_ctypinit.CArgObject)) and isinstance(_ptr_to_type(ptr_like), type)
+    return (isinstance(ptr_like, _defbase_ctypinit.CArgObject) or _is_ptr_type(type(ptr_like))) and isinstance(_ptr_to_type(ptr_like), type)
         
 def _is_ptr_type(ptr_type_like) -> bool:
     return isinstance(ptr_type_like, PyCPointerType)
@@ -2684,7 +2677,7 @@ def using_namespace(namespace: Type[object]) -> None:
     analogue in library
     """
     
-    global_namespace: Dict[str, Any] = globals()
+    global_namespace: Dict[str, Any] = get_caller_frame().f_globals
     for name in dir(namespace):
         if not name.startswith('_'):
             global_namespace[name] = getattr(namespace, name)
