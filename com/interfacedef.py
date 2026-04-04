@@ -8,7 +8,12 @@ from .comdefbase import *
 from .guid import *
 from ..wtypes import *
 
+from ..wet.trace import *
+
+dbgplus = WET_PROVIDER('DbgPlus')
+
 from datetime import datetime, timedelta
+
 
 REGDB_E_CLASSNOTREG = 0x80040154
 
@@ -23,6 +28,11 @@ def RetVal_Dereference(retval: IPointer[WT]) -> WT:
     if not retval:
         return None
     return retval.contents
+
+def RetVal_DoubleDereference(retval: IDoublePtr[WT]) -> WT:
+    if not retval:
+        return None
+    return retval.contents.contents
 
 def RetVal_FILETIMEToDatetime(retval: FILETIME) -> datetime:
     int64 = i_cast2(retval.ref(), PINT64).contents.value
@@ -148,6 +158,11 @@ class COMVirtualTable(VirtualTable):
                                     
                     list_f_args_result.append(f_arg)
                     
+                if intermediate_method:
+                    up_stack = 2
+                else:
+                    up_stack = 1
+                dbg_trace(dbgplus, f'{f.__qualname__.replace(".", "::")}() [Vtable {self.name}]', up_stack=up_stack)
                 hr = callback(byref(f_self), *list_f_args_result)
                 if FAILED(hr): raise COMError(hr)
                 

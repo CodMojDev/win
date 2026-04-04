@@ -84,9 +84,9 @@ class Code:
         end = '\n' if not not_breakline else ''
         
         if len(comment) != 0:
-            self.file.write(f'# {comment}{end}')
+            self.file.write(f'{self.make_indents()}# {comment}{end}')
         else:
-            self.file.write(f'#{end}')
+            self.file.write(f'{self.make_indents()}#{end}')
         
     def append_virtdelegate(self, args: List[str]):
         assert self.file and not self.file.closed

@@ -1,12 +1,20 @@
+from typing import Sequence
+
+from win.defbase import *
+
+suppress_WinWarning()
+
+import win.com.dispatch
+
 from ..com.ctlinterfacedef import *
 from ..com.dispatch import *
 from .mscoree import *
 from ..com.comtl import *
 from ..dbg.wd import *
 
-import builtins
+unsuppress_WinWarning()
 
-WD_Enable() # enable Win Debugger
+import builtins
 
 provider = WET_PROVIDER('NET-Interop')
 
@@ -20,8 +28,7 @@ class _Object(IDispatch):
     def ToString(self) -> BSTR: ...
     
     @virtual_table.com_function_vbstyle(
-        VARIANT, retval_index=1, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        VARIANT, retval_index=1, retval_type=VARIANT_BOOL)
     def Equals(self, obj) -> bool: ...
     
     @virtual_table.com_function_vbstyle(
@@ -205,15 +212,14 @@ class _MemberInfo(_Object):
                             inherit: bool) -> SafeArray[Any]: ...
     
     @virtual_table.com_function_vbstyle(
-        VARIANT_BOOL, retval_index=2, 
+        VARIANT_BOOL, retval_index=1, 
         retval_type=PTR(SafeArray.typed(VARIANT)),
         retval_function=RetVal_Dereference)
     def GetCustomAttributes_2(self, inherit: bool) -> SafeArray[Any]: ...
     
     @virtual_table.com_function_vbstyle(
         PVOID, VARIANT_BOOL, retval_index=2,
-        retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_type=VARIANT_BOOL)
     def IsDefined(self, attributeType: '_Type',
                   inherit: bool) -> bool: ...
     
@@ -262,80 +268,67 @@ class _MethodBase(_MemberInfo):
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsPublic(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsPrivate(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsFamily(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsAssembly(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsFamilyAndAssembly(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsFamilyOrAssembly(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsStatic(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsFinal(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsVirtual(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsHideBySig(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsAbstract(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsSpecialName(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsConstructor(self) -> bool: ...
     
     @virtual_table.com_function_vbstyle(
@@ -364,7 +357,6 @@ class ICustomAttributeProvider(IDispatch):
     @virtual_table.com_function_vbstyle(
         PVOID, VARIANT_BOOL, retval_index=2,
         retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool,
         intermediate_method=True)
     def IsDefined(self, attributeType: '_Type',
                   inherit: bool, **kwargs) -> bool:
@@ -436,6 +428,7 @@ class _PropertyInfo(_MemberInfo):
         retval_type=PTR(SafeArray.typed(_MethodInfo)),
         retval_function=RetVal_Dereference)
     def GetAccessors(self, nonPublic: bool) -> SafeArray[_MethodInfo]: ...
+    
     @virtual_table.com_function_vbstyle(
         VARIANT_BOOL, retval_index=1,
         retval_type=_MethodInfo.PTR(),
@@ -455,14 +448,12 @@ class _PropertyInfo(_MemberInfo):
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def CanRead(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def CanWrite(self) -> bool: ...
     
     @virtual_table.com_function_vbstyle(
@@ -482,8 +473,7 @@ class _PropertyInfo(_MemberInfo):
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsSpecialName(self) -> bool: ...
     
     virtual_table.build()
@@ -552,74 +542,62 @@ class _FieldInfo(_MemberInfo):
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsPublic(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsPrivate(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsFamily(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsAssembly(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsFamilyAndAssembly(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsFamilyOrAssembly(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsStatic(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsInitOnly(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsLiteral(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsNotSerialized(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsSpecialName(self) -> bool: ...
     
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def IsPinvokeImpl(self) -> bool: ...
     
     virtual_table.build()
@@ -674,6 +652,39 @@ class InterfaceMapping(CStructure):
     interfaceType: IPointer['_Type']
     TargetMethods: SafeArray[_MethodInfo]
     InterfaceMethods: SafeArray[_MethodInfo]
+   
+class TypeAttributes(INT): 
+    VisibilityMask = 7
+    NotPublic = 0
+    Public = 1
+    NestedPublic = 2
+    NestedPrivate = 3
+    NestedFamily = 4
+    NestedAssembly = 5
+    NestedFamANDAssem = 6
+    NestedFamORAssem = 7
+    LayoutMask = 24
+    AutoLayout = 0
+    SequentialLayout = 8
+    ExplicitLayout = 16
+    ClassSemanticsMask = 32
+    Class = 0
+    Interface = 32
+    Abstract = 128
+    Sealed = 256
+    SpecialName = 1024
+    Import = 4096
+    Serializable = 8192
+    StringFormatMask = 0x00030000
+    AnsiClass = 0
+    UnicodeClass = 0x00010000
+    AutoClass = 0x00020000
+    CustomFormatClass = 0x00030000
+    CustomFormatMask = 0x00c00000
+    BeforeFieldInit = 0x00100000
+    ReservedMask = 0x00040800
+    RTSpecialName = 2048
+    TypeAttributes_HasSecurity = 0x00040000
     
 class _Type(_MemberInfo):
     virtual_table = COMVirtualTable.from_ancestor(_MemberInfo)
@@ -781,18 +792,15 @@ class _Type(_MemberInfo):
     def GetElementType(self) -> '_Type': ...
     
     @virtual_table.com_function_vbstyle(
-        PVOID, retval_index=1, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        PVOID, retval_index=1, retval_type=VARIANT_BOOL)
     def IsSubclassOf(self, c: '_Type') -> bool: ...
     
     @virtual_table.com_function_vbstyle(
-        VARIANT, retval_index=1, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        VARIANT, retval_index=1, retval_type=VARIANT_BOOL)
     def IsInstanceOfType(self, o) -> bool: ...
     
     @virtual_table.com_function_vbstyle(
-        PVOID, retval_index=1, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        PVOID, retval_index=1, retval_type=VARIANT_BOOL)
     def IsAssignableFrom(self, c: '_Type', **kwargs) -> bool: ...
     
     @virtual_table.com_function_vbstyle(
@@ -927,6 +935,186 @@ class _Type(_MemberInfo):
         retval_index=0, retval_type=PTR(SafeArray.typed(_FieldInfo)),
         retval_function=RetVal_Dereference)
     def GetFields_2(self) -> SafeArray[_FieldInfo]: ...
+    
+    # overload of GetEvent and 5 overloads of GetProperty
+    virtual_table.skip_count(7)
+    
+    # overload of GetProperties
+    virtual_table.skip()
+    
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=PTR(SafeArray.typed(_TypeStorage)),
+        retval_function=RetVal_Dereference)
+    def GetNestedTypes_2(self) -> SafeArray['_Type']: ...
+    
+    # 1 overload of GetNestedType and GetMember
+    virtual_table.skip_count(2)
+    
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=PTR(SafeArray.typed(_MemberInfo)),
+        retval_function=RetVal_Dereference)
+    def GetMembers_2(self) -> SafeArray[_MemberInfo]: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=TypeAttributes,
+        retval_function=RetVal_GetValue)
+    def Attributes(self) -> int: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsNotPublic(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsPublic(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsNestedPublic(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsNestedPrivate(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsNestedFamily(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsNestedAssembly(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsNestedFamANDAssem(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsNestedFamORAssem(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsAutoLayout(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsLayoutSequential(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsExplicitLayout(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsClass(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsInterface(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsValueType(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsAbstract(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsSealed(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsEnum(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsSpecialName(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsImport(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsSerializable(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsAnsiClass(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsUnicodeClass(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsAutoClass(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsArray(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsByRef(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsPointer(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsPrimitive(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsCOMObject(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def HasElementType(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsContextful(self) -> bool: ...
+    
+    @property
+    @virtual_table.com_function_vbstyle(
+        retval_index=0, retval_type=VARIANT_BOOL)
+    def IsMarshalByRef(self) -> bool: ...
     
     virtual_table.build()
 
@@ -1132,8 +1320,7 @@ class _Assembly(_Object):
     
     @virtual_table.com_function_vbstyle(
         PVOID, VARIANT_BOOL, retval_index=2,
-        retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_type=VARIANT_BOOL)
     def IsDefined(self, attributeType: '_Type',
                   inherit: bool) -> bool: ...
     
@@ -1226,8 +1413,7 @@ class _Assembly(_Object):
 
     @property
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def GlobalAssemblyCache(self) -> bool: ...
 
     virtual_table.build()
@@ -1306,8 +1492,7 @@ class _AppDomain(_Object):
     def RelativeSearchPath(self) -> BSTR: ...
     
     @virtual_table.com_function_vbstyle(
-        retval_index=0, retval_type=VARIANT_BOOL,
-        retval_function=RetVal_Bool)
+        retval_index=0, retval_type=VARIANT_BOOL)
     def ShadowCopyFiles(self) -> bool: ...
     
     @virtual_table.com_function_vbstyle(
@@ -1353,6 +1538,7 @@ class _AppDomain(_Object):
 
 class ObjectMeta(type):
     _properties_static: ClassVar[dict[str, set[_PropertyInfo] | _PropertyInfo]] = {}
+    _indexers_static: ClassVar[dict[str, set[_PropertyInfo] | _PropertyInfo]] = {}
     _methods_static: ClassVar[dict[str, set[_MethodInfo] | _MethodInfo]] = {}
     _fields_static: ClassVar[dict[str, set[_FieldInfo] | _FieldInfo]] = {}
     _properties: ClassVar[dict[str, set[_PropertyInfo] | _PropertyInfo]] = {}
@@ -1371,6 +1557,11 @@ class ObjectMeta(type):
                 raise MethodEngine.COMError_to_NET_exception(ce) from None
             return MarshalEngine.marshal_value(value)
         
+        property_info = cls._indexers_static.get(name, None)
+        
+        if property_info is not None:
+            return MethodEngine.PropertyIndexer(property_info, cls._type)
+        
         property_info = cls._properties_static.get(name, None)
         
         if property_info is not None:
@@ -1387,7 +1578,53 @@ class ObjectMeta(type):
         
         raise AttributeError(name)
 
+CData = c_int.__base__.__base__
+
 class MarshalEngine:
+    class Record(win.com.dispatch.Record):
+        def __getattr__(self, name: str) -> Any:
+            return MarshalEngine.marshal_value(super().__getattr__(name))
+        
+        def __setattr__(self, name: str, value: Any) -> Any:
+            super().__setattr__(name, MarshalEngine.python_to_variant(value))
+            
+        def __str__(self) -> str:
+            mscorlib = Object._ensure_mscorlib()
+            return mscorlib.Convert.ToString(self)
+        
+        @classmethod
+        def construct(cls, record_info: IRecordInfo) -> 'Record':
+            guid = Record.guid_from_record(record_info)
+            cached_record = Record._record_cache.get(guid, None)
+            
+            if guid is not None:
+                return cached_record
+            
+            class RecordExt(MarshalEngine.Record):
+                _fields_ = Record.fields_from_record(record_info)
+                _size_ = Record.size_from_record(record_info)
+                _record_info_ = record_info
+                _guid_ = guid
+            
+            RecordExt.__name__ = Record.name_from_record(record_info)
+            Record._record_cache[guid] = RecordExt
+            
+            return RecordExt
+    
+    @classmethod
+    def deallocate_safearray(cls, sa: SafeArray):
+        for value in sa.value:
+            if isinstance(value, BSTR):
+                SysFreeString(value)
+            elif isinstance(value, VARIANT):
+                if value.vt == VT_BSTR:
+                    SysFreeString(value.bstrVal)
+                elif value.vt == VT_ARRAY:
+                    variant_get_value(value)
+            elif isinstance(value, SafeArray):
+                cls.deallocate_safearray(value)
+        SafeArrayDestroy(sa.ref())
+    
     @classmethod
     def python_to_variant(cls, obj: Any) -> VARIANT:
         obj_new = obj
@@ -1397,6 +1634,9 @@ class MarshalEngine:
                         
             if isinstance(obj, Object):
                 obj_new.value = obj._object
+                obj_new.vt = VT_UNKNOWN
+            elif isinstance(obj, type) and issubclass(obj, Object):
+                obj_new.value = obj._type
                 obj_new.vt = VT_UNKNOWN
             elif isinstance(obj, IUnknown):
                 obj_new.value = obj
@@ -1425,6 +1665,31 @@ class MarshalEngine:
         return cls.MAP_TYPE_TO_FUNCTION.get(type_str, lambda Val: Val)(value)
 
     @classmethod
+    def python_to_safearray(cls, iterable: Sequence[Any]) -> SafeArray:
+        if not iterable: return NULL
+        first = iterable[0]
+        
+        if isinstance(first, (int, INT)):
+            item_type = c_int
+        elif isinstance(first, CData):
+            item_type = type(first)
+        elif isinstance(first, str):
+            item_type = BSTR
+        else:
+            raise TypeError(type(first))
+        
+        result_iterable = []
+        
+        for value in iterable:
+            if item_type is BSTR:
+                result_iterable.append(BSTR.new(value))
+            else:
+                result_iterable.append(value)
+            
+        sa = SafeArray.typed(item_type).create(result_iterable)
+        return sa
+
+    @classmethod
     def marshal_safearray(cls, value: SafeArray[WT]) -> list:
         result_list = []
         
@@ -1439,6 +1704,14 @@ class MarshalEngine:
         return result_list
 
     @classmethod
+    def marshal_record(cls, record: win.com.dispatch.Record) -> Record:
+        return MarshalEngine.Record.construct(record._record_info_)(record.allocation_base)
+
+    @classmethod
+    def marshal_bstr(cls, bstr: BSTR) -> str:
+        return TlAccessOAStringAndFree(bstr)
+
+    @classmethod
     def marshal_value(cls, value: WT) -> Any:
         if PtrUtil.is_pointer(value):
             ptr_type = PtrUtil.get_type(value)
@@ -1450,6 +1723,13 @@ class MarshalEngine:
             return cls.marshal_dispatch(value)
         elif isinstance(value, SafeArray):
             return cls.marshal_safearray(value)
+        elif isinstance(value, Record):
+            return cls.marshal_record(value)
+        elif isinstance(value, BSTR):
+            return cls.marshal_bstr(value)
+        elif isinstance(value, VARIANT):
+            return variant_get_value(value)
+                
         return value
 
 class MethodEngine:
@@ -1519,14 +1799,20 @@ class MethodEngine:
                 method_info, type_scheme = MethodEngine.resolve_call(args, method_info)
             
             bound_object = self.bound_object
-            if bound_object:
+            if bound_object is not None:
                 bound_object = bound_object._object
             
             if args:
                 arguments = []
                 
                 for arg in args:
-                    arg_new = MarshalEngine.python_to_variant(arg)
+                    if isinstance(arg, (list, tuple)):
+                        sa = MarshalEngine.python_to_safearray(arg)
+                        arg_new = Variant()
+                        arg_new.value = sa
+                    else:
+                        arg_new = MarshalEngine.python_to_variant(arg)
+                        
                     arguments.append(arg_new)
                 
                 arguments = SafeArray.typed(VARIANT).create(arguments)
@@ -1563,9 +1849,7 @@ class MethodEngine:
                         name, binding_attr, NULL, bound_object, arguments)
                     
                     if arguments:
-                        for argument in arguments:
-                            if isinstance(argument, BSTR):
-                                SysFreeString(argument)
+                        MarshalEngine.deallocate_safearray(arguments)
                             
             except COMError as ce:
                 exc = MethodEngine.COMError_to_NET_exception(ce)
@@ -1575,6 +1859,78 @@ class MethodEngine:
                 raise exc from None
             
             return MarshalEngine.marshal_value(return_value)
+    
+    class PropertyIndexer:
+        property_info: set[_PropertyInfo] | _PropertyInfo
+        bound_object: 'Object'
+        bound_type: _Type
+        
+        def __init__(self, property_info: set[_PropertyInfo] | _PropertyInfo,
+                     bound_type: _Type, bound_object: 'Object' = None):
+            self.property_info = property_info
+            self.bound_object = bound_object
+            self.bound_type = bound_type
+            
+        def operate(self, indexes, value=None):
+            if not isinstance(indexes, (tuple, list)):
+                indexes = (indexes,)
+                
+            bound_object = self.bound_object
+            if bound_object is not None:
+                bound_object = bound_object._object
+            
+            variants = []
+            for index in indexes:
+                variant = MarshalEngine.python_to_variant(index)
+                variants.append(variant)
+            
+            property_info = self.property_info
+            if isinstance(property_info, set):
+                name = list(property_info)[0].name
+                
+                flags = BindingFlags.Public
+                
+                if bound_object is None:
+                    flags |= BindingFlags.Static
+                else:
+                    flags |= BindingFlags.Instance
+                    
+                if value is not None:
+                    variant = MarshalEngine.python_to_variant(value)
+                    variants.append(variant)
+                
+            sa = SafeArray.typed(VARIANT).create(variants)
+            
+            try:
+                if value is None:
+                    if isinstance(property_info, set):
+                        result = self.bound_type.InvokeMember_3(name, flags | BindingFlags.GetProperty, 
+                                                                NULL, bound_object, sa)
+                    else:
+                        result = property_info.GetValue(bound_object, sa)
+                else:
+                    if isinstance(property_info, set):
+                        result = self.bound_type.InvokeMember_3(name, flags | BindingFlags.SetProperty,
+                                                                NULL, bound_object, sa)
+                    else:
+                        property_info.SetValue(bound_object, value, sa)
+            except COMError as ce:
+                exc = MethodEngine.COMError_to_NET_exception(ce)
+                if isinstance(exc, Object):
+                    if exc._type_name == 'System.Reflection.TargetInvocationException':
+                        raise exc.InnerException from None
+                raise exc from None
+                
+            MarshalEngine.deallocate_safearray(sa)
+            
+            if value is None:
+                return MarshalEngine.marshal_value(result)
+        
+        def __getitem__(self, indexes: tuple[Any] | Any) -> Any:
+            return self.operate(indexes)
+        
+        def __setitem__(self, indexes: tuple[Any] | Any, value: Any):
+            self.operate(indexes, value)
     
     @classmethod
     def resolve_call(cls, args: list, methods: list[_MethodInfo]) -> tuple[_MethodInfo, list[str]]:
@@ -1647,17 +2003,26 @@ class Object(metaclass=ObjectMeta):
 # Static Fields
     _constructors: ClassVar[dict[str, set[_ConstructorInfo] | _ConstructorInfo]] = {}
     _properties_static: ClassVar[dict[str, set[_PropertyInfo] | _PropertyInfo]] = {}
-    _methods_static: ClassVar[dict[str, set[_MethodInfo] | _MethodInfo]] = {}
-    _fields_static: ClassVar[dict[str, set[_FieldInfo] | _FieldInfo]] = {}
     _properties: ClassVar[dict[str, set[_PropertyInfo] | _PropertyInfo]] = {}
+    _methods_static: ClassVar[dict[str, set[_MethodInfo] | _MethodInfo]] = {}
+    _indexers: ClassVar[dict[str, set[_PropertyInfo] | _PropertyInfo]] = {}
+    _fields_static: ClassVar[dict[str, set[_FieldInfo] | _FieldInfo]] = {}
     _methods: ClassVar[dict[str, set[_MethodInfo] | _MethodInfo]] = {}
     _fields: ClassVar[dict[str, set[_FieldInfo] | _FieldInfo]] = {}
     _saved_mscorlib_for_interop: ClassVar['Assembly'] = None
+    _saved_assembly_for_interop: ClassVar['Assembly'] = None
+    _saved_system_for_interop: ClassVar['Assembly'] = None
     
     _registered_types: dict[str, type['Object']] = {}
     _constructor_info: dict[str, ]
     _type: ClassVar[_Type] = None
+    _is_collection: bool = False
+    _is_dictionary: bool = False
+    _is_enumerator: bool = False
+    _is_enumerable: bool = False
     _is_exception: bool = False
+    _is_delegate: bool = False
+    _is_list: bool = False
     _type_name: str = ''
     
 # Class Fields
@@ -1670,12 +2035,20 @@ class Object(metaclass=ObjectMeta):
         name = TlAccessOAStringAndFree(netType.FullName)
         
         registered_types = cls._registered_types
-        Object_NET = registered_types.get(netType, None)
+        Object_NET = registered_types.get(name, None)
         
         if Object_NET is not None:
             return Object_NET
         
+        is_collection = not not netType.GetInterface('System.Collections.ICollection', False)
+        is_dictionary = not not netType.GetInterface('System.Collections.IDictionary', False)
+        is_enumerator = not not netType.GetInterface('System.Collections.IEnumerator', False)
+        is_enumerable = not not netType.GetInterface('System.Collections.IEnumerable', False)
+        is_list = not not netType.GetInterface('System.Collections.IList', False)
+        
         is_exception = _lightweight_issubclass(netType, 'System.Exception')
+        is_delegate = _lightweight_issubclass(netType, 'System.Delegate')
+        
         extra_ancestors = []
         
         if is_exception:
@@ -1693,9 +2066,15 @@ class Object(metaclass=ObjectMeta):
             _fields_static = {}
             _fields = {}
             
+            _is_collection = is_collection
+            _is_dictionary = is_dictionary
+            _is_enumerable = is_enumerable
+            _is_enumerator = is_enumerator
             _is_exception = is_exception
-            _type_name = name
+            _is_delegate = is_delegate
+            _is_list = is_list
             
+            _type_name = name
             _type = None
         
         Object_NET.__qualname__ = name
@@ -1705,6 +2084,99 @@ class Object(metaclass=ObjectMeta):
         
         return Object_NET
 
+    def __iter__(self):
+        if self._is_enumerator:
+            return self
+        if self._is_enumerable:
+            return iter(self.GetEnumerator())
+        raise TypeError(self._type_name)
+    
+    def __next__(self):
+        if not self._is_enumerator:
+            raise TypeError(self._type_name)
+        
+        if not self.MoveNext():
+            raise StopIteration
+        
+        return self.Current
+    
+    def __getitem__(self, obj):
+        if 'Item' not in self._indexers:
+            raise NotImplementedError()
+        
+        return self.Item[obj]
+    
+    def __contains__(self, obj) -> bool:
+        if not self._is_list and not self._is_dictionary:
+            raise NotImplementedError()
+        
+        return self.Contains(obj)
+    
+    def __delitem__(self, obj):
+        if self._is_list:
+            self.RemoveAt(obj)
+        elif self._is_dictionary:
+            self.Remove(obj)
+            
+        raise NotImplementedError()
+        
+    def __setitem__(self, obj, value):
+        if 'Item' not in self._indexers:
+            raise NotImplementedError()
+        
+        self.Item[obj] = value
+        
+    def __len__(self) -> int:
+        if not self._is_collection:
+            raise NotImplementedError()
+    
+        return self.Count
+    
+    def __bool__(self) -> bool:
+        if self._is_collection:
+            return not not len(self)
+        return True
+    
+    def __add__(self, obj) -> Any:
+        if self._is_delegate:
+            mscorlib = self._ensure_mscorlib()
+            if isinstance(obj, CFuncPtr):
+                obj = mscorlib.System.Runtime.InteropServices.GetDelegateForFunctionPointer(PtrUtil.get_address(obj), self._type)
+            return mscorlib.System.Delegate.Combine(self, obj)
+        return self.op_Addition(obj)
+    
+    def __sub__(self, obj) -> Any:
+        if self._is_delegate:
+            mscorlib = self._ensure_mscorlib()
+            if isinstance(obj, CFuncPtr):
+                obj = mscorlib.System.Runtime.InteropServices.GetDelegateForFunctionPointer(PtrUtil.get_address(obj), self._type)
+            return mscorlib.System.Delegate.Remove(self, obj)
+        return self.op_Subtraction(obj)
+    
+    def __mul__(self, obj) -> Any:
+        return self.op_Multiply(obj)
+    
+    def __truediv__(self, obj) -> Any:
+        return self.op_Division(obj)
+    
+    def __mod__(self, obj) -> Any:
+        return self.op_Modulus(obj)
+    
+    def __and__(self, obj) -> Any:
+        return self.op_BitwiseAnd(obj)
+    
+    def __or__(self, obj) -> Any:
+        return self.op_BitwiseOr(obj)
+    
+    def __xor__(self, obj) -> Any:
+        return self.op_BitwiseXor(obj)
+    
+    def __lshift__(self, obj) -> Any:
+        return self.op_LeftShift(obj)
+    
+    def __rshift__(self, obj) -> Any:
+        return self.op_RightShift(obj)
+    
     @classmethod
     def _ensure_mscorlib(cls, message: str = None) -> 'Assembly':
         mscorlib = cls._saved_mscorlib_for_interop
@@ -1768,27 +2240,53 @@ class Object(metaclass=ObjectMeta):
             cls._build_reflection_list(properties, '_properties')
     
     @classmethod
+    def _add_to_reflection_list(cls, dictionary: dict[str, set[_MemberInfo] | _MemberInfo], 
+                                name: str, member: _MemberInfo):
+        value = dictionary.get(name, None)
+        # add member to reflection list
+        if value is None:
+            dictionary[name] = member
+        elif isinstance(value, set):
+            value.add(member)
+        else:
+            dictionary[name] = {value, member}
+    
+    @classmethod
     def _build_reflection_list(cls, reflection_list: list[_MemberInfo],
                                dictionary_attr: str):
+        dictionary: dict[str, set[_MemberInfo] | _MemberInfo] = getattr(cls, dictionary_attr)
+        
         for member in reflection_list:
             # get the member name
             name = TlAccessOAStringAndFree(member.name)
             typename = TlAccessOAStringAndFree(member.ReflectedType.FullName)
             
             if typename != cls._type_name:
-                print('herovo', cls._type_name, typename)
                 continue
             
-            dictionary: dict[str, set[_MemberInfo] | _MemberInfo] = getattr(cls, dictionary_attr)
-            value = dictionary.get(name, None)
+            if member.MemberType == MemberTypes.Property:
+                property_info: _PropertyInfo = member
+                
+                index_parameters = property_info.GetIndexParameters()
+                
+                if index_parameters.dimensions == 1:
+                    is_supporting_indexer = not not len(index_parameters)
+                else:
+                    is_supporting_indexer = False
+                    
+                if is_supporting_indexer:
+                    indexers_attr = '_indexers'
+                    if dictionary_attr.endswith('_static'):
+                        indexers_attr += '_static'
+                        
+                    dictionary_indexers = getattr(cls, indexers_attr)
+                    
+                    cls._add_to_reflection_list(
+                        dictionary_indexers, name, member)
+                    
+                    continue
             
-            # add member to reflection list
-            if value is None:
-                dictionary[name] = member
-            elif isinstance(value, set):
-                value.add(member)
-            else:
-                dictionary[name] = {value, member}
+            cls._add_to_reflection_list(dictionary, name, member)
             
     def __new__(cls, *args):
         if cls._type is None:
@@ -1798,8 +2296,12 @@ class Object(metaclass=ObjectMeta):
         
         cls._ensure_type()
         
-        assembly = cls._type.Assembly
+        if cls._is_delegate and args and isinstance(args[0], CFuncPtr):
+            mscorlib = cls._ensure_mscorlib()
+            return mscorlib.System.Runtime.InteropServices.GetDelegateForFunctionPointer(PtrUtil.get_address(obj), cls)
         
+        assembly = cls._type.Assembly
+            
         if not args:
             try:
                 instance = assembly.CreateInstance(cls._type_name)
@@ -1821,10 +2323,17 @@ class Object(metaclass=ObjectMeta):
     
 # String & Repr
     def __str__(self) -> str:
-        if self._is_exception:
-            string = str(self._object)
-            return string.replace(f'{self._type_name}: ', '')
-        return str(self._object)
+        try:
+            if self._is_exception:
+                string = str(self._object)
+                return string.replace(f'{self._type_name}: ', '')
+            return str(self._object)
+        except COMError as ce:
+            exc = MethodEngine.COMError_to_NET_exception(ce)
+            if isinstance(exc, Object):
+                if exc._type_name == 'System.Reflection.TargetInvocationException':
+                    raise exc.InnerException from None
+            raise exc from None
     
     def __repr__(self) -> str:
         return repr(self._object)
@@ -1852,6 +2361,8 @@ class Object(metaclass=ObjectMeta):
         builtins.object.__setattr__(self, info_attr, {})
         
     def Release(self):
+        dbg_trace(provider, f'Released {self}')
+        
         self._object.Release()
         self._type.Release()
         builtins.object.__setattr__(self, '_released', True)
@@ -1863,6 +2374,7 @@ class Object(metaclass=ObjectMeta):
         self._release_info('_fields_static')
         self._release_info('_properties')
         self._release_info('_properties_static')
+        self._release_info('_indexers')
     
 # Type System checks
     @classmethod
@@ -1898,10 +2410,6 @@ class Object(metaclass=ObjectMeta):
             return cls._type.IsSubclassOf(value._type)
         
         return False
-
-    @classmethod
-    def GetType(cls) -> 'Object':
-        return Object.construct(cls._type.GetType()).from_object(cls._type)
     
     def __getattr__(self, name: str):
         field_info = self._fields.get(name, None)
@@ -1912,6 +2420,11 @@ class Object(metaclass=ObjectMeta):
             except COMError as ce:
                 raise MethodEngine.COMError_to_NET_exception(ce) from None
             return MarshalEngine.marshal_value(value)
+        
+        property_info = self._indexers.get(name, None)
+        
+        if property_info is not None:
+            return MethodEngine.PropertyIndexer(property_info, self._type, bound_object=self)
         
         property_info = self._properties.get(name, None)
         
@@ -1957,6 +2470,9 @@ class Object(metaclass=ObjectMeta):
         
         raise AttributeError(name)
     
+def typeof(cls) -> 'Object':
+    return Object.construct(cls._type.GetType()).from_object(cls._type)
+    
 class Assembly:
     """
     Class representing .NET assembly.
@@ -1971,7 +2487,10 @@ class Assembly:
             Object._saved_mscorlib_for_interop = self
         self._assembly = assembly
     
-    def build_namespace(self, namespace: str) -> Any:
+    def BuildNamespace(self, namespace: str) -> Any:
+        if not namespace:
+            return self
+        
         components = namespace.split('.')
         parent_storage = self
         
@@ -1989,16 +2508,19 @@ class Assembly:
                 
         return parent_storage
     
-    def initialize(self):
-        exported_types = self._assembly.GetExportedTypes().value
-        
-        for exported_type in exported_types:
-            namespace = TlAccessOAStringAndFree(exported_type.Namespace)
-            name = TlAccessOAStringAndFree(exported_type.name).replace('`', '_P')
+    def Initialize(self):
+        try:
+            exported_types = self._assembly.GetExportedTypes().value
             
-            exported_type = Object.construct(exported_type)
-            namespace = self.build_namespace(namespace)
-            setattr(namespace, name, exported_type)
+            for exported_type in exported_types:
+                namespace = TlAccessOAStringAndFree(exported_type.Namespace)
+                name = TlAccessOAStringAndFree(exported_type.name).replace('`', '_P')
+                
+                exported_type = Object.construct(exported_type)
+                namespace = self.BuildNamespace(namespace)
+                setattr(namespace, name, exported_type)
+        except COMError as ce:
+            raise MethodEngine.COMError_to_NET_exception(ce) from None
        
 class DispMap:
     dispid2method_map: dict[int, str]

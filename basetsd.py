@@ -151,6 +151,7 @@ if cpreproc.pragma_once("_BASETSD_H_"):
         PSIZE_T   = PUINT
         PSSIZE_T  = PINT
         DWORD_PTR = UINT
+        PDWORD_PTR = PUINT
         
     MAXUINT_PTR = UINT_PTR(~0).value
     MAXINT_PTR = UINT_PTR(MAXUINT_PTR >> 1).value

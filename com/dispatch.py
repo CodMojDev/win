@@ -3,9 +3,11 @@ from .errors import *
 
 from ..winnt import LOCALE_USER_DEFAULT
 
+from ..defbase_allocator import *
 from .autointerfacedef import *
 from .oleauto import *
 
+import builtins
 import datetime
 import decimal
 
@@ -212,6 +214,28 @@ ctype_to_vt: Dict[Type['ICData'], int] = _Ctype2VT({
     LPBSTR: VT_BYREF | VT_BSTR
 })
 
+vt_to_ctype: Dict[int, Type['ICData']] = _Ctype2VT({
+    VT_I1: byte,
+    VT_UI1: BYTE,
+    VT_I2: SHORT,
+    VT_UI2: USHORT,
+    VT_I4: LONG,
+    VT_UI4: ULONG,
+    VT_R4: FLOAT,
+    VT_R8: DOUBLE,
+    VT_I8: LONGLONG,
+    VT_UI8: ULONGLONG,
+    VT_BOOL: VARIANT_BOOL,
+    VT_BSTR: BSTR,
+    VT_HRESULT: HRESULT,
+    VT_VARIANT: VARIANT,
+    VT_VARIANT: Variant,
+    VT_BYREF | VT_VARIANT: LPVARIANT,
+    VT_BYREF | VT_BSTR: LPBSTR,
+    VT_UNKNOWN: IUnknown,
+    VT_DISPATCH: IDispatch
+})
+
 class SafeArray(SAFEARRAY, IAliasableGenericWithPayload[WT],
                 IReferenceable):
     _delayed_execution: ClassVar[list[tuple['SafeArray', DelayedTypeStorage]]] = []
@@ -407,9 +431,16 @@ class SafeArray(SAFEARRAY, IAliasableGenericWithPayload[WT],
         elif issubclass(item_type, VARIANT):
             return Variant
         return item_type
+    
+    def get_unptred_type(self):
+        item_type = self.get_type()
+        if PtrUtil.is_pointer_type(item_type):
+            return PtrUtil.get_type(item_type)
+        return item_type
             
     def get_data(self, size: int):
         item_type = self.get_type()
+        unptred = self.get_unptred_type()
         psaThis = self.ref()
             
         array_pointer = PTR(item_type)()
@@ -421,9 +452,9 @@ class SafeArray(SAFEARRAY, IAliasableGenericWithPayload[WT],
             result = tuple(variant.value for variant in result)
         elif issubclass(item_type, VARIANT_BOOL):
             result = tuple(VARIANT_BOOL_ToBool(value) for value in result)
-        elif issubclass(self._item_type_, IUnknown) and not self._item_type_ is IDispatch:
+        elif issubclass(unptred, IUnknown) and not unptred is IDispatch:
             result = tuple(itf.contents for itf in result)
-        elif issubclass(self._item_type_, IDispatch):
+        elif issubclass(unptred, IDispatch):
             result = tuple(Dispatch(disp) for disp in result)
             
         hr = SafeArrayUnaccessData(psaThis)
@@ -456,6 +487,125 @@ class SafeArray(SAFEARRAY, IAliasableGenericWithPayload[WT],
         
         indices[dimension] = restore
         return tuple(result)
+
+class Record:
+    _allocator_: ClassVar[IAllocator] = CLocalAllocator()
+    _record_cache: ClassVar[dict[GUID, 'Record']] = {}
+    _record_info_: ClassVar[IRecordInfo] = None
+    _guid_: ClassVar[GUID] = GUID_NULL
+    _size_: ClassVar[int] = 0
+    _fields_: list[str] = []
+    
+    allocation_base: int
+    
+    def __init__(self, allocation_base: int):
+        if allocation_base:
+            self.allocation_base = allocation_base
+        else:
+            self.allocation_base = self._allocator_.allocate(self._size_)
+    
+    def __getattr__(self, name: str) -> Any:
+        if name not in self._fields_:
+            return
+        
+        varField = VARIANT()
+        self._record_info_.GetField(self.allocation_base, name, varField.ref())
+        
+        return variant_get_value(varField)
+    
+    def __setattr__(self, name: str, value: Any) -> Any:
+        if name not in self._fields_:
+            return builtins.object.__setattr__(self, name, value)
+        
+        if isinstance(value, VARIANT):
+            var = value
+        else:
+            var = VARIANT()
+            variant_set_value(var, value)
+        
+        hr = self._record_info_.PutField(
+            INVOKE_PROPERTYPUT, self.allocation_base,
+            name, var.ref())
+        if hr == E_INVALIDARG:
+            hr = self._record_info_.PutField(
+                INVOKE_PROPERTYPUTREF, self.allocation_base,
+                name, var.ref())
+            if FAILED(hr): raise COMError(hr)
+    
+    @classmethod
+    def construct(cls, record_info: IRecordInfo) -> 'Record':
+        guid = Record.guid_from_record(record_info)
+        cached_record = Record._record_cache.get(guid, None)
+        
+        if cached_record is not None:
+            return cached_record
+        
+        class RecordExt(Record):
+            _fields_ = Record.fields_from_record(record_info)
+            _size_ = Record.size_from_record(record_info)
+            _record_info_ = record_info
+            _guid_ = guid
+        
+        RecordExt.__name__ = Record.name_from_record(record_info)
+        Record._record_cache[guid] = RecordExt
+        
+        return RecordExt
+        
+    @classmethod
+    def guid_from_record(cls, record_info: IRecordInfo) -> GUID:
+        guid = GUID()
+        
+        hr = record_info.GetGuid(guid.ref())
+        if FAILED(hr): raise COMError(hr)
+        
+        return guid
+    
+    @classmethod
+    def name_from_record(cls, record_info: IRecordInfo) -> str:
+        bstrName = BSTR()
+        
+        hr = record_info.GetName(byref(bstrName))
+        if FAILED(hr): raise COMError(hr)
+        
+        name = bstrName.value
+        SysFreeString(bstrName)
+        
+        return name
+    
+    @classmethod
+    def size_from_record(cls, record_info: IRecordInfo) -> int:
+        cbSize = ULONG()
+        
+        hr = record_info.GetSize(byref(cbSize))
+        if FAILED(hr): raise COMError(hr)
+        
+        return cbSize.value
+    
+    @classmethod
+    def fields_from_record(cls, record_info: IRecordInfo) -> list[str]:
+        cNames = ULONG()
+        hr = record_info.GetFieldNames(byref(cNames), NULL)
+        
+        if FAILED(hr): raise COMError(hr)
+        bstrNames = (BSTR * cNames.value)()
+        
+        hr = record_info.GetFieldNames(NULL, bstrNames)
+        if FAILED(hr): raise COMError(hr)
+        
+        result = []
+        
+        for bstrName in bstrNames:
+            result.append(bstrName.value)
+            SysFreeString(bstrName)
+            
+        return result
+    
+    @classmethod
+    def from_variant(cls, variant: VARIANT) -> 'Record':
+        record_info = Record.construct(variant.pRecInfo.contents)
+        return record_info(variant.byref)
+        
+OA_NULL_DATE = datetime.datetime(1899, 12, 30, 0, 0, 0)
         
 def variant_get_value(var: VARIANT):
     vt = var.vt
@@ -542,12 +692,13 @@ def variant_get_value(var: VARIANT):
         return var.pparray
     elif vt & VT_ARRAY:
         vt &= ~VT_ARRAY
-        if vt == VT_UNKNOWN:
-            return SafeArray.typed(IUnknown, vt).from_psa(var.parray)
-        elif vt == VT_VARIANT:
-            return SafeArray.typed(VARIANT, vt).from_psa(var.parray)
+        return SafeArray.typed(vt_to_ctype[vt]).from_psa(var.parray)
     elif vt == VT_BYREF:
         return var.byref
+    elif vt == VT_RECORD:
+        return Record.from_variant(var)
+    elif vt == VT_DATE:
+        return datetime.timedelta(days=var.dblVal) + OA_NULL_DATE
     
     raise NotImplementedError(f'VARTYPE: {hex(vt)}')
     
@@ -564,8 +715,7 @@ def variant_set_value(var: VARIANT, value):
         var.vt = VT_NULL
     elif isinstance(value, str):
         var.vt = VT_BSTR
-        var._keepRef = BSTR.new(value)
-        var.bstrVal = var._keepRef
+        var.bstrVal = BSTR.new(value)
     elif isinstance(value, BSTR):
         var.vt = VT_BSTR
         var.bstrVal = value
@@ -575,6 +725,30 @@ def variant_set_value(var: VARIANT, value):
     elif isinstance(value, SafeArray):
         var.vt = VT_ARRAY | value._vt_
         var.parray = i_cast(pointer(value), LPSAFEARRAY)
+    elif isinstance(value, byte):
+        var.vt = VT_I1
+        var.cVal = value.value
+    elif isinstance(value, BYTE):
+        var.vt = VT_UI1
+        var.bVal = value.value
+    elif isinstance(value, SHORT):
+        var.vt = VT_I2
+        var.iVal = value.value
+    elif isinstance(value, USHORT):
+        var.vt = VT_UI2
+        var.uiVal = value.value
+    elif isinstance(value, INT):
+        var.vt = VT_I4
+        var.lVal = value.value
+    elif isinstance(value, UINT):
+        var.vt = VT_UI4
+        var.ulVal = value.value
+    elif isinstance(value, LONGLONG):
+        var.vt = VT_I8
+        var.llVal = value.value
+    elif isinstance(value, ULONGLONG):
+        var.vt = VT_UI8
+        var.ullVal = value.value
     elif isinstance(value, int):
         vt_defined = var.vt in (
             VT_I1, VT_UI1, 
@@ -659,9 +833,15 @@ def variant_set_value(var: VARIANT, value):
         else: 
             var.vt = vt
         
-    elif isinstance(value, (float, c_double)):
+    elif isinstance(value, float):
         var.vt = VT_R8
         var.dblVal = value
+    elif isinstance(value, c_float):
+        var.vt = VT_R4
+        var.dblVal = value.value
+    elif isinstance(value, c_double):
+        var.vt = VT_R8
+        var.dblVal = value.value
     elif isinstance(value, IDispatch):
         var.vt = VT_DISPATCH
         var.byref = PtrUtil.get_address(value.ptr())
@@ -671,5 +851,12 @@ def variant_set_value(var: VARIANT, value):
     elif isinstance(value, Dispatch):
         var.vt = VT_DISPATCH
         var.byref = PtrUtil.get_address(value._disp.ptr())
+    elif isinstance(value, PVOID):
+        var.vt = VT_BYREF
+        var.byref = PtrUtil.get_address(value)
+    elif isinstance(value, Record):
+        var.vt = VT_RECORD
+        var.byref = value.allocation_base
+        var.pRecInfo = value._record_info_.ptr()
     else:
         raise NotImplementedError(f'{value}')

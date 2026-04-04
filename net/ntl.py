@@ -7,13 +7,22 @@ import atexit
 # .NET Template Library API 
 #
 
+provider = WET_PROVIDER('NTL')
+
 class NtlPolicy(int):
     Bool = 0
     Throw = 1
+    
+def _NtlPolicyIntToString(policy: int) -> str:
+    if policy == NtlPolicy.Bool:
+        return 'NtlPolicy.Bool'
+    elif policy == NtlPolicy.Throw:
+        return 'NtlPolicy.Throw'
+    return 'NtlPolicy.Unknown'
 
 class _NTL_STATE:
     __slots__ = ['_corRTHost', '_rtHostRunning', '_lastExc',
-                 '_appDomain', '_policy']
+                 '_appDomain', '_policy', '_errored']
 
     _corRTHost: ICorRuntimeHost
     _appDomain: _AppDomain
@@ -26,17 +35,22 @@ class _NTL_STATE:
         self._rtHostRunning = False
         self._corRTHost = None
         self._appDomain = None
+        self._errored = False
         self._lastExc = None
 
 _ntl_state = _NTL_STATE()
 
 def NtlHasException():
-    return _ntl_state._lastExc is not None
+    hasException = _ntl_state._lastExc is not None
+    dbg_trace(provider, 'Has exception' if hasException else "Hasn't exception")
+    return hasException
 
 def NtlSetExceptionPolicy(policy: NtlPolicy):
+    dbg_trace(provider, f'NTL Exception policy = {_NtlPolicyIntToString(policy)}')
     _ntl_state._policy = policy
 
 def NtlThrow():
+    dbg_trace(provider, level=WET_LEVEL_ERROR)
     exc = NtlException()
     NtlResetException()
     raise exc
@@ -45,10 +59,12 @@ def NtlException():
     return _ntl_state._lastExc
 
 def NtlResetException():
+    dbg_trace(provider, f'Resetted exception')
     _ntl_state._lastExc = None
 
 def _NtlSetExcHR(hr: int):
     _ntl_state._lastExc = COMError(hr)
+    _ntl_state._errored = True
 
 def NtlInitCLR(version: str = 'v4.0.30319') -> bool:
     pCorRTHost = ICorRuntimeHost.NULL()
@@ -59,9 +75,12 @@ def NtlInitCLR(version: str = 'v4.0.30319') -> bool:
         byref(pCorRTHost))
     if FAILED(hr): 
         if _ntl_state._policy == NtlPolicy.Throw:
+            _ntl_state._errored = True
+            dbg_trace(provider, 'CLR Host creation failure', level=WET_LEVEL_ERROR)
             raise COMError(hr)
         else:
             _NtlSetExcHR(hr)
+            dbg_trace(provider, f'CLR Host creation failure: "{str(_ntl_state._lastExc)}"', level=WET_LEVEL_ERROR)
             return False
     
     corRTHost = pCorRTHost.contents
@@ -71,9 +90,12 @@ def NtlInitCLR(version: str = 'v4.0.30319') -> bool:
     if FAILED(hr):
         corRTHost.Release()
         if _ntl_state._policy == NtlPolicy.Throw:
+            dbg_trace(provider, 'CLR Host startup failure', level=WET_LEVEL_ERROR)
+            _ntl_state._errored = True
             raise COMError(hr)
         else:
             _NtlSetExcHR(hr)
+            dbg_trace(provider, f'CLR Host startup failure: "{str(_ntl_state._lastExc)}"', level=WET_LEVEL_ERROR)
             return False
     
     pAppDomain = _AppDomain.NULL()
@@ -82,14 +104,18 @@ def NtlInitCLR(version: str = 'v4.0.30319') -> bool:
         corRTHost.Stop()
         corRTHost.Release()
         if _ntl_state._policy == NtlPolicy.Throw:
+            _ntl_state._errored = True
+            dbg_trace(provider, 'App Domain obtaining failure', level=WET_LEVEL_ERROR)
             raise COMError(hr)
         else:
             _NtlSetExcHR(hr)
+            dbg_trace(provider, f'App Domain obtaining failure: "{str(_ntl_state._lastExc)}"', level=WET_LEVEL_ERROR)
             return False
     
     appDomain = pAppDomain.contents
     _ntl_state._appDomain = appDomain
     _ntl_state._rtHostRunning = True
+    dbg_trace(provider, 'CLR Initialized', level=WET_LEVEL_ERROR)
     
     return True
 
@@ -97,13 +123,19 @@ def NtlUnload():
     if not _ntl_state._rtHostRunning:
         return
     
+    del Object._saved_mscorlib_for_interop
+    del Object._saved_system_for_interop
+    
     _ntl_state._appDomain.Release()
     hr = _ntl_state._corRTHost.Stop()
     if FAILED(hr): 
         if _ntl_state._policy == NtlPolicy.Throw:
             _ntl_state._corRTHost.Release()
+            _ntl_state._errored = True
+            dbg_trace(provider, 'CLR Host stopping failure', level=WET_LEVEL_ERROR)
             raise COMError(hr)
         else:
+            dbg_trace(provider, f'CLR Host stopping failure: "{str(_ntl_state._lastExc)}"', level=WET_LEVEL_ERROR)
             _NtlSetExcHR(hr)
     _ntl_state._corRTHost.Release()
 
@@ -117,8 +149,15 @@ def NtlLoadMscorlib() -> Assembly:
     if not _ntl_state._rtHostRunning:
         return None
     
+    if Object._saved_mscorlib_for_interop is not None:
+        return Object._saved_mscorlib_for_interop
+    
+    dbg_trace(provider, 'Loading MSCORLIB...')
+    
     mscorlib = Assembly(_ntl_state._appDomain.GetType().Assembly)
-    mscorlib.initialize()
+    mscorlib.Initialize()
+    
+    dbg_trace(provider, 'MSCORLIB Loaded.')
     
     return mscorlib
 
@@ -135,6 +174,16 @@ def NtlGetCLRHost() -> ICorRuntimeHost:
     return _ntl_state._corRTHost
 
 def NtlAggregate(*namespaces):
+    if provider._consumers:
+        names = [namespace.__name__ for namespace in namespaces]
+        
+        if len(namespaces) == 2:
+            logMessage = ' and '.join(names)
+        else:
+            logMessage = ', '.join(names) + ' and ' + names[-1]    
+            
+        dbg_trace(provider, logMessage)
+        
     for namespace in namespaces:
         for attr in dir(namespace):
             if attr.startswith('__'): continue

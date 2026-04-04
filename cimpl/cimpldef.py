@@ -311,9 +311,9 @@ class CImplFunction:
             
 class CImplAssembly:
     _KS_CACHE: ClassVar[dict[int, ks.Ks]] = {}
-    _KS_CACHE_ARCH_X86 = 0
-    _KS_CACHE_MODE_32 = 1
-    _KS_CACHE_MODE_64 = 2
+    _KS_CACHE_ARCH_X86 = 1
+    _KS_CACHE_MODE_32 = 2
+    _KS_CACHE_MODE_64 = 4
     
     assembly: CAssembly
     ks_instance: ks.Ks

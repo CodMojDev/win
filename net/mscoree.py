@@ -97,15 +97,15 @@ def GetRequestedRuntimeInfo(pExe: LPCWSTR, pwszVersion: LPCWSTR, pConfigurationF
 @mscoree.foreign(HRESULT, LPWSTR, LPWSTR, DWORD, PDWORD)
 def GetRequestedRuntimeVersion(pExe: LPWSTR, pVersion: LPWSTR, cchBuffer: int, dwLength: PDWORD) -> int: ...
 
-@mscoree.foreign(HRESULT, LPCWSTR, LPCWSTR, LPCWSTR, PVOID, DWORD, LPCLSID, LPIID, PVOID, PVOID, intermediate_method = True)
+@mscoree.foreign(HRESULT, LPCWSTR, LPCWSTR, LPCWSTR, PVOID, DWORD, LPCLSID, LPIID, PVOID, intermediate_method = True)
 def CorBindToRuntimeHost(pwszVersion: LPCWSTR, pwszBuildFlavor: LPCWSTR, pwszHostConfigFile: LPCWSTR, pReserved: PVOID, startupFlags: int, clsid: CLSID, iid: IID, ppv: IPointer[PVOID], **kwargs) -> int:
     return delegate(pwszVersion, pwszBuildFlavor, pwszHostConfigFile, pReserved, startupFlags, clsid.ref(), iid.ref(), ppv)
 
-@mscoree.foreign(HRESULT, LPCWSTR, LPCWSTR, DWORD, LPCLSID, LPIID, PVOID, PVOID, intermediate_method = True)
+@mscoree.foreign(HRESULT, LPCWSTR, LPCWSTR, DWORD, LPCLSID, LPIID, PVOID, intermediate_method = True)
 def CorBindToRuntimeEx(pwszVersion: LPCWSTR, pwszBuildFlavor: LPCWSTR, startupFlags: int, clsid: CLSID, iid: IID, ppv: IPointer[PVOID], **kwargs) -> int:
     return delegate(pwszVersion, pwszBuildFlavor, startupFlags, clsid.ref(), iid.ref(), ppv)
 
-@mscoree.foreign(HRESULT, LPSTREAM, DWORD, DWORD, LPCLSID, LPIID, PVOID, PVOID, intermediate_method = True)
+@mscoree.foreign(HRESULT, LPSTREAM, DWORD, DWORD, LPCLSID, LPIID, PVOID, intermediate_method = True)
 def CorBindToRuntimeByCfg(pCfgStream: IPointer[IStream], reserved: int, startupFlags: int, clsid: CLSID, iid: IID, ppv: IPointer[PVOID], **kwargs) -> int:
     return delegate(pCfgStream, reserved, startupFlags, clsid.ref(), iid.ref(), ppv)
 
@@ -113,11 +113,11 @@ def CorBindToRuntimeByCfg(pCfgStream: IPointer[IStream], reserved: int, startupF
 def CorBindToRuntime(pwszVersion: LPCWSTR, pwszBuildFlavor: LPCWSTR, clsid: CLSID, iid: IID, ppv: IPointer[PVOID], **kwargs) -> int:
     return delegate(pwszVersion, pwszBuildFlavor, clsid.ref(), iid.ref(), ppv)
 
-@mscoree.foreign(HRESULT, LPCWSTR, LPCLSID, LPIID, PVOID, PVOID, intermediate_method = True)
+@mscoree.foreign(HRESULT, LPCWSTR, LPCLSID, LPIID, PVOID, intermediate_method = True)
 def CorBindToCurrentRuntime(pwszFileName: LPCWSTR, clsid: CLSID, iid: IID, ppv: IPointer[PVOID], **kwargs) -> int:
     return delegate(pwszFileName, clsid.ref(), iid.ref(), ppv)
 
-@mscoree.foreign(HRESULT, LPCWSTR, LPIID, PVOID, PVOID, intermediate_method = True)
+@mscoree.foreign(HRESULT, LPCWSTR, LPIID, PVOID, intermediate_method = True)
 def ClrCreateManagedInstance(pTypeName: LPCWSTR, iid: IID, ppObject: IPointer[PVOID], **kwargs) -> int:
     return delegate(pTypeName, iid.ref(), ppObject)
 

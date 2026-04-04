@@ -9,7 +9,8 @@ abstraction helpers.
 
 from typing import (Callable, Any, List, 
                     Union as TUnion, Generic, TypeVar, 
-                    Type, Dict, Optional, ClassVar, Self)
+                    Type, Dict, Optional, ClassVar, Self,
+                    Protocol, overload)
 from functools import wraps
 
 import warnings
@@ -137,7 +138,16 @@ __all__ = [
     "IReferenceable",
     "IUnpackable",
     "IMarshaller",
-    "get_current_frame"
+    "get_current_frame",
+    "ITraceEntry",
+    "trace_enable",
+    "trace_disable",
+    "trace_add",
+    "trace_remove",
+    "SupportsGet", "SupportsSet",
+    "SupportsGetSet",
+    "hot_reload_module",
+    "suppress_WinWarning", "unsuppress_WinWarning"
 ]
 
 from . import cpreproc
@@ -175,6 +185,18 @@ def interface_abstract_method(f: WT) -> WT:
         raise RuntimeError(f"'{f.__qualname__}' method is abstract.")
     _interface_abstract_method._abstract = True
     return _interface_abstract_method
+
+def suppress_WinWarning():
+    """
+    Suppress the `WinWarning`.
+    """
+    _defb_state._suppress_winwarning = True
+    
+def unsuppress_WinWarning():
+    """
+    Unsuppress the `WinWarning`
+    """
+    _defb_state._suppress_winwarning
 
 class IInterface:
     """
@@ -389,6 +411,7 @@ def call_variadic(function: IFunction, full_marshal_scheme: list[type], *args) -
     
     return result
 
+import types
 import sys
 
 def get_current_frame(): return sys._getframe(1)
@@ -396,6 +419,51 @@ def get_current_frame(): return sys._getframe(1)
 def get_py_frame(depth: int): return sys._getframe(depth+1)
 
 def get_caller_frame(): return sys._getframe(2)
+
+class ITraceEntry(IInterface):
+    """
+    Interface for subscribing on trace calls.
+    """
+    
+    @interface_abstract_method
+    @classmethod
+    def on_event(self, frame: types.FrameType, event: str, arg: Any): 
+        """
+        Callback, called on every trace function call.
+        """
+
+def _trace_routine(frame: types.FrameType, event: str, arg: Any) -> Callable:
+    for entry in _defb_state._trace_entries:
+        entry.on_event(frame, event, arg)
+    return _trace_routine
+
+def trace_enable():
+    """
+    Enable trace.
+    """
+    _defb_state._prev_trace = sys.gettrace()
+    _defb_state._trace_enabled = True
+    sys.settrace(_trace_routine)
+    
+def trace_disable():
+    """
+    Disable trace.
+    """
+    sys.settrace(_defb_state._prev_trace)
+    _defb_state._trace_enabled = False
+    _defb_state._prev_trace = None
+    
+def trace_add(entry: type[ITraceEntry]):
+    """
+    Add the entry to trace listeners.
+    """
+    _defb_state._trace_entries.append(entry)
+    
+def trace_remove(entry: type[ITraceEntry]):
+    """
+    Remove the entry from trace listeners.
+    """
+    _defb_state._trace_entries.remove(entry)
     
 from ctypes import Structure, byref, POINTER as _POINTER, pointer, c_int, c_void_p
 from _ctypes import CFuncPtr
@@ -982,7 +1050,8 @@ def declare(func: IFunction, ret: type, *args: type) -> IFunction:
     Declare the function
     """
     if isinstance(func, _NullFunction):
-        warnings.warn(f'Function {func._name} from {func.library} is not available', category=WinWarning, stacklevel=2)
+        if not _defb_state._suppress_winwarning: 
+            warnings.warn(f'Function {func._name} from {func.library} is not available', category=WinWarning, stacklevel=2)
         return func
     
     if not args:
@@ -1199,6 +1268,15 @@ class Template(Generic[WT]):
         cls._args_global = (args,) if not isinstance(args, tuple) else args
         
         return cls
+    
+def hot_reload_module(module_name: str, import_all: bool = True) -> types.ModuleType:
+    caller_frame = get_caller_frame()
+    del sys.modules[module_name]
+    if import_all:
+        module = __import__(module_name, caller_frame.f_globals, caller_frame.f_locals, fromlist=['*'])
+    else:
+        module = __import__(module_name)
+    return module
     
 class TemplateFunction(Generic[WT]):
     """
@@ -1498,6 +1576,21 @@ def _make_internal(cls: type) -> type:
         field_typed(cls, field_customed, '_' + field_customed, custom)
     
     return cls
+
+class SupportsGet(Protocol[WT]):
+    @overload
+    def __getitem__(self, index: int) -> WT: ...
+    
+class SupportsSet(Protocol[WT]):
+    @overload
+    def __setitem__(self, index: int, value: WT) -> None: ...
+    
+class SupportsGetSet(Protocol[WT]):
+    @overload
+    def __getitem__(self, index: int) -> WT: ...
+    
+    @overload
+    def __setitem__(self, index: int, value: WT) -> None: ...
     
 from typing import TYPE_CHECKING
     
@@ -1676,6 +1769,9 @@ class CStructure(Structure):
         Make the CStructure fields from field type annotations.
         """
         return _make_internal(cls)
+    
+    def __hash__(self) -> int:
+        return hash(bytes(self))
 
 def resolve_genericalias(generic_alias: IGenericAlias) -> type:
     """
@@ -1722,7 +1818,7 @@ class ICustomizable(IInterface):
     """
     Describes the in-python customizable typing alias by `_custom_` attribute.
     """
-    _custom_: ClassVar[type]
+    _custom_: ClassVar[Callable | IMarshaller]
     
 class IAliasableGeneric(IInterface, Generic[WT]): 
     """
@@ -2052,12 +2148,12 @@ def declare_fields(cls: Type[CStructure]):
     """
     cls._fields_ = cls.fields
     
-def field_typed(cls: Type[CStructure], field: str, field_real: str, result: WT):
+def field_typed(cls: Type[CStructure], field: str, field_real: str, result: WT | IMarshaller):
     """
     Make the custom in-python field type representation for field.
     """
     def getter(self) -> WT:
-        return result(getattr(self, field_real))
+        return IMarshaller.call_marshaller(getattr(self, field_real), result)
     
     getter.__name__ = field
     getter_prop = property(getter)
@@ -2629,11 +2725,18 @@ LI = TypeVar('LI', bound=CDLL)
 class _DEFB_STATE: # internal global state
     __slots__  = ['_linked_libraries', '_defbase_process', 
                   '_defbase_module', '_interfacedef', '_unknwn',
-                  '_provider', '_wet_trace']
+                  '_provider', '_wet_trace', '_prev_trace',
+                  '_trace_enabled', '_trace_entries', '_suppress_winwarning']
+    _trace_entries: list[type[ITraceEntry]]
     _linked_libraries: Dict[str, LI]
+    _prev_trace: Any
     
     def __init__(self):
         self._linked_libraries = {}
+        self._prev_trace = None
+        self._trace_enabled = False
+        self._trace_entries = []
+        self._suppress_winwarning = False
     
 _defb_state: _DEFB_STATE = _DEFB_STATE()
 

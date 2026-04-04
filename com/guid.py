@@ -55,6 +55,8 @@ class GUID(CStructure):
         
         return IsEqualGUID(self, other)
     
+    __hash__ = CStructure.__hash__
+    
 GUID_NULL = GUID()
 REFGUID = PGUID = LPCGUID = LPGUID = GUID.PTR()
     
