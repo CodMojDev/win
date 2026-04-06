@@ -807,7 +807,11 @@ class VirtualTable:
                 # set callback access
                 callback = VirtualTable.func_ptr(address)
                 callback.restype = ret
-                callback.argtypes = (THIS, *args)
+                
+                if 'variadic' in kwargs:
+                    callback.argtypes = (THIS, *args, *kwargs['variadic'])
+                else:
+                    callback.argtypes = (THIS, *args)
                 
                 # call method in THISCALL notation
                 result = callback(byref(f_self), *f_args)

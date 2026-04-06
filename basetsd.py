@@ -27,6 +27,12 @@ from ctypes import *
 from ctypes.wintypes import *
 from .defbase import *
 
+class LPWSTR(c_wchar_p):
+    ...
+    
+class LPSTR(c_char_p):
+    ...
+
 import sys
 
 POINTER
