@@ -1675,6 +1675,8 @@ class MarshalEngine:
             item_type = type(first)
         elif isinstance(first, str):
             item_type = BSTR
+        elif isinstance(first, Object):
+            item_type = IUnknown
         else:
             raise TypeError(type(first))
         
@@ -1683,6 +1685,8 @@ class MarshalEngine:
         for value in iterable:
             if item_type is BSTR:
                 result_iterable.append(BSTR.new(value))
+            elif item_type is IUnknown:
+                result_iterable.append(value._object)
             else:
                 result_iterable.append(value)
             

@@ -147,8 +147,16 @@ __all__ = [
     "SupportsGet", "SupportsSet",
     "SupportsGetSet",
     "hot_reload_module",
-    "suppress_WinWarning", "unsuppress_WinWarning"
+    "suppress_WinWarning", "unsuppress_WinWarning",
+    "NullFunction",
+    "pcall"
 ]
+
+def pcall(f, *args, **kwargs) -> tuple[Any, BaseException]:
+    try:
+        return f(*args, **kwargs), None
+    except BaseException as be:
+        return None, be
 
 from . import cpreproc
 
@@ -924,9 +932,9 @@ def is_null(function: IFunction) -> bool:
     """
     Check the exported function from `W_CDLL` is NULL.
     """
-    return isinstance(function, _NullFunction)
+    return isinstance(function, NullFunction)
 
-class _NullFunction:
+class NullFunction:
     __slots__ = ('library', '_name')
     
     _name: TUnion[str, int]
@@ -968,7 +976,7 @@ class W_CDLL(CDLL):
                 func.__name__ = name_or_ordinal
             return func
         except Exception:
-            return _NullFunction(self._name, name_or_ordinal)
+            return NullFunction(self._name, name_or_ordinal)
     
     def foreign(self,
                 ret: type, 
@@ -1053,7 +1061,7 @@ def declare(func: IFunction, ret: type, *args: type) -> IFunction:
     """
     Declare the function
     """
-    if isinstance(func, _NullFunction):
+    if isinstance(func, NullFunction):
         if not _defb_state._suppress_winwarning: 
             warnings.warn(f'Function {func._name} from {func.library} is not available', category=WinWarning, stacklevel=2)
         return func
@@ -1403,7 +1411,7 @@ class PtrArithmetic:
         return PtrUtil.get_address(ptr) == PtrUtil.get_address(other)
     
     @staticmethod
-    def size_bytes(typ: type, count: int = 1) -> int:
+    def size(typ: type, count: int = 1) -> int:
         return sizeof(typ) * count
 
 from ctypes import Union, c_wchar_p, c_int
@@ -1597,7 +1605,10 @@ class SupportsGetSet(Protocol[WT]):
     def __setitem__(self, index: int, value: WT) -> None: ...
     
 from typing import TYPE_CHECKING
-    
+
+if TYPE_CHECKING:
+    from .defbase_allocator import IAllocator
+
 class CStructure(Structure):
     """
     Enhanced structure type builded over
@@ -1776,6 +1787,18 @@ class CStructure(Structure):
     
     def __hash__(self) -> int:
         return hash(bytes(self))
+    
+    @classmethod
+    def allocate(cls, size: int = None, allocator: 'IAllocator' = None) -> Self:
+        """
+        Allocate the structure using size (optional) and allocator (optional).
+        """
+        if allocator is None:
+            allocator = getattr(_defb_state, '_local_allocator')
+            if allocator is None:
+                from .defbase_allocator import CLocalAllocator
+                _defb_state._local_allocator = allocator = CLocalAllocator()
+        return i_cast(allocator.allocate(size), cls.PTR())
 
 def resolve_genericalias(generic_alias: IGenericAlias) -> type:
     """
@@ -2730,7 +2753,8 @@ class _DEFB_STATE: # internal global state
     __slots__  = ['_linked_libraries', '_defbase_process', 
                   '_defbase_module', '_interfacedef', '_unknwn',
                   '_provider', '_wet_trace', '_prev_trace',
-                  '_trace_enabled', '_trace_entries', '_suppress_winwarning']
+                  '_trace_enabled', '_trace_entries', '_suppress_winwarning',
+                  '_local_allocator']
     _trace_entries: list[type[ITraceEntry]]
     _linked_libraries: Dict[str, LI]
     _prev_trace: Any
@@ -2741,6 +2765,7 @@ class _DEFB_STATE: # internal global state
         self._trace_enabled = False
         self._trace_entries = []
         self._suppress_winwarning = False
+        self._local_allocator = None
     
 _defb_state: _DEFB_STATE = _DEFB_STATE()
 

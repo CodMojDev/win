@@ -335,7 +335,7 @@ class NtlGen:
                 name = '__init__'
             self.code.append_function(name, self.NET_type_to_python(return_type),
                                       arguments, LIST_EMPTY)
-#             static_method.Release()
+            static_method.Release()
         
         if gencommin:
             self.code.append_comment('Instance methods')
@@ -345,26 +345,22 @@ class NtlGen:
             return_type = method.returnType
             arguments = [SELF_ENTRY]
             parameters = self.get_parameters(method)
-            # print(name, 'bavariya')
             for parameter in parameters:
                 parameter_obj = Object.construct(PARAINFO).from_object(parameter)
                 parameter_name = parameter_obj.Name
                 parameter_type = parameter_obj.ParameterType
-                # print(parameter_name, parameter_type, 'pivnoylarek')
                 if parameter_type:
-                    # print('okayanniy')
                     parameter_python_type = self.NET_type_to_python(TlQueryInterface(parameter_type._object, _Type))
-#                     parameter_type.Release()
-                # print('obzhora')
+                    parameter_type.Release()
                 arguments.append((parameter_name, parameter_python_type))
-#                 parameter_obj.Release()
+                parameter_obj.Release()
             if instance_count[name] != 1:
                 self.code.append_decorator('overload', LIST_EMPTY, LIST_EMPTY)
             if method.IsConstructor:
                 name = '__init__'
             self.code.append_function(name, self.NET_type_to_python(return_type),
                                       arguments, LIST_EMPTY)
-#             method.Release()
+            method.Release()
         
     def get_fields(self, itf: _Type, flags: int) -> list[_FieldInfo]:
         fieldsSA = itf.GetFields(flags)
@@ -395,27 +391,16 @@ class NtlGen:
         return parameters
     
     def NET_type_to_python(self, itf: _Type) -> str:
-        # print('komarov', itf)
         if not itf: 
             return ''
         try:
-            # print('zinaida')
-            # print(format_hex(PtrUtil.get_address(itf.FullName), 8))
-            # print(itf.name.value)
             fullname = itf.FullName
-            # print('petarda')
-            # print(fullname.value)
-            # print('hokkey')
             name = TlAccessOAStringAndFree(fullname)
-            # print('kimono')
             is_array = itf.IsArray
         except:
             return ''
         
-        # print('herovo')
-        
         if name is None:
-            # print('zadneprivodniy')
             return ''
         
         py_type = NET_T_TO_PY.get(name, None)

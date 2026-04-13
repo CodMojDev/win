@@ -892,16 +892,20 @@ class ICLParser(IIMLParser):
             
         self._ifver_ie('>')
         
+    #
+    # [Under construction] VBI/VBIU, vbp
+    #
+    
     def define_vb_interface(self):
         self.context.vb_base = ''
         if self.context.tokens_length != 1:
             token = self.context.tokens[2]
             if token != 'ex':
-                self.syntax_error(f'Unknown token "{token}".', len(interface_name)+4)
+                self.syntax_error(f'Unknown token "{token}".', 4)
             
             if self.context.tokens_length == 2:
                 self.syntax_error('Incorrect declaration of VB interface base,'
-                                'missing base VB interface name.', len(interface_name)+6)
+                                'missing base VB interface name.', 6)
             
             self.context.vb_base = self.context.tokens[3]
             if not self.context.vb_base.endswith('.VB'):
@@ -921,7 +925,7 @@ class ICLParser(IIMLParser):
                 self.code.append_field('virtual_table',
                                     value=f"COMVirtualTable.from_ancestor({self.context.vb_base})")
             else:
-                self.code.append_field('virtual_table', value=f"COMVirtualTable('{interface_name}')")
+                self.code.append_field('virtual_table', value=f"COMVirtualTable('{self.context.last_defined_interface}')")
                 
     def define_vb_interface_unknown(self):
         if self.context.tokens_length == 1:

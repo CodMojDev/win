@@ -5415,6 +5415,7 @@ if cpreproc.pragma_once("_WINUSER_"):
         DI_COMPAT = 0x0004
         DI_DEFAULTSIZE = 0x0008
         DI_NOMIRROR = 0x0010
+        DrawIconEx = declare(user32.DrawIconEx, BOOL, HDC, INT, INT, HICON, INT, INT, UINT, HBRUSH, UINT)
 
         # REGION ***
 

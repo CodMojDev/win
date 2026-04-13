@@ -1,5 +1,9 @@
 from .jni import *
 
+import functools
+import struct
+import io
+
 null = NULL
 
 class JInteropMethod:
@@ -13,7 +17,7 @@ class JInteropMethod:
     
     def __init__(self, name: str, jnidescInfo: str | set[str], 
                  methodIDinfo: dict[str, jmethodID],
-                 boundJobject: TUnion[jobject, 'JInteropObject', type['JInteropObject']],
+                 boundJobject: TUnion[jobject, 'JObject', type['JObject']],
                  static: bool = False):
         self._methodIDinfo = methodIDinfo
         self._jnidescInfo = jnidescInfo
@@ -21,9 +25,9 @@ class JInteropMethod:
         self._name = name
         
         if boundJobject is not None:
-            if isinstance(boundJobject, JInteropObject):
+            if isinstance(boundJobject, JObject):
                 self._boundJobject = boundJobject._object
-            elif isinstance(boundJobject, type) and issubclass(boundJobject, JInteropObject):
+            elif isinstance(boundJobject, type) and issubclass(boundJobject, JObject):
                 self._boundJobject = boundJobject._clazz
         else:
             self._boundJobject = boundJobject
@@ -41,7 +45,7 @@ class JInteropMethod:
         variadic = []
         
         for jnidesc in jnidescInfo:
-            jnidescReprs = JInteropObject.parse_jnidesc_parameters(jnidesc)
+            jnidescReprs = JObject.parse_jnidesc_parameters(jnidesc)
             
             if len(jnidescReprs) == len(args):
                 iterationFailure = False
@@ -63,7 +67,7 @@ class JInteropMethod:
             raise ValueError('Not found method signature for providen arguments.')
         
         returnTypeJnidesc, methodID = self._methodIDinfo[self._name+jnidesc2]
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         boundJobject = self._boundJobject
         
         if self._name == '<init>':
@@ -119,9 +123,9 @@ class JInteropMethod:
                 result = env.CallStaticObjectMethod(boundJobject, methodID, *arguments, variadic=variadic)
             else:
                 result = env.CallObjectMethod(boundJobject, methodID, *arguments, variadic=variadic)
-            result = JInteropObject.construct(returnTypeJnidesc).from_object(result)
+            result = JObject.construct(returnTypeJnidesc).from_object(result)
         
-        JInteropObject.jni_check_errors()
+        JObject.jni_check_errors()
         
         for i, jnidescRepr in enumerate(jnidescReprs):
             jnidescRepr.deallocate(arguments[i])
@@ -129,10 +133,10 @@ class JInteropMethod:
         return result
 
 class JClassDescriptor:
-    def __get__(self, instance, owner: type['JInteropObject']) -> 'JInteropObject':
-        env = JInteropObject._ensureEnv()
+    def __get__(self, instance, owner: type['JObject']) -> 'JObject':
+        env = JObject._ensureEnv()
         clazz = env.GetObjectClass(owner._clazz)
-        return JInteropObject.construct('java/lang/Class').from_object(clazz)
+        return JObject.construct('java/lang/Class').from_object(clazz)
 
 class IJniDescRepr(IMarshaller):
     jnidesc: str
@@ -160,7 +164,7 @@ class JNIDescLRepr(IJniDescRepr):
         if argument is None:
             return True
         
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         jnidesc = self.jnidesc
         
         if PtrUtil.is_pointer(argument):
@@ -168,7 +172,7 @@ class JNIDescLRepr(IJniDescRepr):
             result = env.IsInstanceOf(argument, jClass)
             env.DeleteLocalRef(jClass)
             return result == JNI_TRUE
-        if isinstance(argument, JInteropObject):
+        if isinstance(argument, JObject):
             jClass = env.FindClass(jnidesc.encode('ascii'))
             result = env.IsInstanceOf(argument._object, jClass)
             env.DeleteLocalRef(jClass)
@@ -217,9 +221,9 @@ class JNIDescLRepr(IJniDescRepr):
         return False
     
     def marshal_value(self, value):
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         
-        if isinstance(value, JInteropObject):
+        if isinstance(value, JObject):
             return env.NewLocalRef(value._object)
         
         jnidesc = self.jnidesc
@@ -229,14 +233,14 @@ class JNIDescLRepr(IJniDescRepr):
         if jnidesc == 'java/lang/Boolean':
             jClass = env.FindClass(jnidesc.encode('ascii'))
             result = env.CallObjectMethod(
-                jClass, JInteropObject._interopMethodIDCache['Boolean.valueOf'], 
+                jClass, JObject._interopCache['Boolean.valueOf'], 
                 JNI_TRUE if value else JNI_FALSE, variadic=(jboolean,))
             env.DeleteLocalRef(jClass)
             return result
         if jnidesc == 'java/lang/Byte':
             jClass = env.FindClass(jnidesc.encode('ascii'))
             result = env.CallObjectMethod(
-                jClass, JInteropObject._interopMethodIDCache['Byte.valueOf'], 
+                jClass, JObject._interopCache['Byte.valueOf'], 
                 value, variadic=(jbyte,))
             env.DeleteLocalRef(jClass)
             return result
@@ -247,42 +251,42 @@ class JNIDescLRepr(IJniDescRepr):
             elif isinstance(value, bytes):
                 value = value[0]
             result = env.CallObjectMethod(
-                jClass, JInteropObject._interopMethodIDCache['Character.valueOf'], 
+                jClass, JObject._interopCache['Character.valueOf'], 
                 value, variadic=(jchar,))
             env.DeleteLocalRef(jClass)
             return result
         if jnidesc == 'java/lang/Short':
             jClass = env.FindClass(jnidesc.encode('ascii'))
             result = env.CallObjectMethod(
-                jClass, JInteropObject._interopMethodIDCache['Short.valueOf'], 
+                jClass, JObject._interopCache['Short.valueOf'], 
                 value, variadic=(jshort,))
             env.DeleteLocalRef(jClass)
             return result
         if jnidesc == 'java/lang/Integer':
             jClass = env.FindClass(jnidesc.encode('ascii'))
             result = env.CallObjectMethod(
-                jClass, JInteropObject._interopMethodIDCache['Integer.valueOf'], 
+                jClass, JObject._interopCache['Integer.valueOf'], 
                 value, variadic=(jint,))
             env.DeleteLocalRef(jClass)
             return result
         if jnidesc == 'java/lang/Long':
             jClass = env.FindClass(jnidesc.encode('ascii'))
             result = env.CallObjectMethod(
-                jClass, JInteropObject._interopMethodIDCache['Long.valueOf'], 
+                jClass, JObject._interopCache['Long.valueOf'], 
                 value, variadic=(jlong,))
             env.DeleteLocalRef(jClass)
             return result
         if jnidesc == 'java/lang/Float':
             jClass = env.FindClass(jnidesc.encode('ascii'))
             result = env.CallObjectMethod(
-                jClass, JInteropObject._interopMethodIDCache['Float.valueOf'], 
+                jClass, JObject._interopCache['Float.valueOf'], 
                 value, variadic=(jfloat,))
             env.DeleteLocalRef(jClass)
             return result
         if jnidesc == 'java/lang/Double':
             jClass = env.FindClass(jnidesc.encode('ascii'))
             result = env.CallObjectMethod(
-                jClass, JInteropObject._interopMethodIDCache['Double.valueOf'], 
+                jClass, JObject._interopCache['Double.valueOf'], 
                 value, variadic=(jdouble,))
             env.DeleteLocalRef(jClass)
             return result
@@ -290,7 +294,7 @@ class JNIDescLRepr(IJniDescRepr):
         return value
     
     def deallocate(self, value):
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         env.DeleteLocalRef(value)
         
     def get_c_type(self):
@@ -429,7 +433,7 @@ class JNIDescArrayRepr(IJniDescRepr):
         return True
     
     def marshal_value(self, value):
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         descItemType = self.descItemType
         length = len(value)
         
@@ -477,7 +481,7 @@ class JNIDescArrayRepr(IJniDescRepr):
             return array
         
         elif isinstance(descItemType, JNIDescLRepr):
-            jClass = JInteropObject.find_jni_class(descItemType.jnidesc)
+            jClass = JObject.find_jni_class(descItemType.jnidesc)
             array = env.NewObjectArray(length, jClass, NULL)
             
             for i in range(length):
@@ -488,7 +492,7 @@ class JNIDescArrayRepr(IJniDescRepr):
             env.DeleteLocalRef(jClass)
             return array
         elif isinstance(descItemType, JNIDescArrayRepr):
-            jClass = JInteropObject.find_jni_class(self.jnidesc[1:])
+            jClass = JObject.find_jni_class(self.jnidesc[1:])
             array = env.NewObjectArray(length, jClass, NULL)
             
             for i in range(length):
@@ -500,7 +504,7 @@ class JNIDescArrayRepr(IJniDescRepr):
             return array
         
     def deallocate(self, value):
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         env.DeleteLocalRef(value)
         
     def get_c_type(self):
@@ -512,10 +516,11 @@ class JInteropMeta(type):
     _staticMethods: dict[str, str | set[str]] = {}
     _classLoaders: list[jobject] = []
     
+    _nativeName: str = None
     _clazz: jclass = None
     
     def __getattr__(cls, name: str):
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         
         if name in cls._staticFieldsIDCache:
             jnidesc, fieldID = cls._staticFieldsIDCache[name]
@@ -535,10 +540,10 @@ class JInteropMeta(type):
             if jnidesc == 'F':
                 return env.GetStaticFloatField(cls._clazz, fieldID)
             if jnidesc == 'D':
-                return env.GetStaticFloatField(cls._clazz, fieldID)
+                return env.GetStaticDoubleField(cls._clazz, fieldID)
             if jnidesc[0] == 'L':
                 jObject = env.GetStaticObjectField(cls._clazz, fieldID)
-                jInteropObject = JInteropObject.construct(jnidesc).from_object(jObject)
+                jInteropObject = JObject.construct(jnidesc).from_object(jObject)
                 env.DeleteLocalRef(jObject)
                 return jInteropObject
             
@@ -546,8 +551,8 @@ class JInteropMeta(type):
             return JInteropMethod(name, cls._staticMethods[name], cls._staticMethodsIDCache, cls, True)
             
     def __setattr__(cls, name: str, value):
-        if name in JInteropObject.__annotations__: return type.__setattr__(cls, name, value)
-        env = JInteropObject._ensureEnv()
+        if name in JObject.__annotations__: return type.__setattr__(cls, name, value)
+        env = JObject._ensureEnv()
         
         if name in cls._staticFieldsIDCache:
             jnidesc, fieldID = cls._staticFieldsIDCache[name]
@@ -575,35 +580,35 @@ class JInteropMeta(type):
             if jnidesc == 'D':
                 return env.SetStaticDoubleField(cls._clazz, fieldID, value)
             if jnidesc[0] == 'L':
-                if isinstance(value, JInteropObject):
+                if isinstance(value, JObject):
                     return env.SetStaticObjectField(cls._clazz, fieldID, value._object)
                 return env.SetStaticObjectField(cls._clazz, fieldID, value)
             
     def __del__(cls):
-        env = JInteropObject._env
+        env = JObject._env
         if env:
             if cls._clazz:
                 env.DeleteGlobalRef(cls._clazz)
             if cls.__name__ == 'JInteropObject':
-                jInteropCls: type[JInteropObject] = cls
+                jInteropCls: type[JObject] = cls
                 for classLoader in jInteropCls._classLoaders:
                     env.DeleteGlobalRef(classLoader)
                 jInteropCls._classLoaders = []
 
-class JInteropObject(metaclass=JInteropMeta):
+class JObject(metaclass=JInteropMeta):
     """
     Object representing Java class.
     """
     
-    _interopMethodIDCache: dict[str, jmethodID] = {}
-    _classLoaders: list[jobject] = []
+    _interopCache: dict[str, jmethodID] = {}
+    _classLoaders: list['JObject'] = []
     
     _staticMethodsIDCache: dict[str, jmethodID] = {}
     _staticFieldsIDCache: dict[str, jfieldID] = {}
     _methodsIDCache: dict[str, jmethodID] = {}
     _fieldsIDCache: dict[str, jmethodID] = {}
     
-    _classesCache: dict[str, type['JInteropObject']] = {}
+    _classesCache: dict[str, type['JObject']] = {}
     
     _staticMethods: dict[str, str | set[str]] = {}
     _methods: dict[str, str | set[str]] = {}
@@ -626,24 +631,43 @@ class JInteropObject(metaclass=JInteropMeta):
         return env
     
     @classmethod
-    def construct(cls, nativeName: str) -> type['JInteropObject']:
-        nativeName = cls.normalize_L_jnidesc(nativeName)
-        JClass = JInteropObject._classesCache.get(nativeName, None)
+    @overload
+    def construct(cls, nativeName: str) -> type['JObject']: 
+        ...
+    
+    @classmethod
+    @overload
+    def construct(cls, interopObject: 'JObject') -> type['JObject']: 
+        ...
+    
+    @classmethod
+    def construct(cls, varObject: TUnion[str, 'JObject']) -> type['JObject']:
+        is_str = isinstance(varObject, str)
+        if is_str:
+            varObject = cls.normalize_L_jnidesc(varObject)
+            JClass = JObject._classesCache.get(varObject, None)
+        else:
+            str_value = str(varObject)
+            JClass = JObject._classesCache.get(str_value)
         
         if JClass is not None:
             return JClass
         
-        env = JInteropObject._ensureEnv()
-        clazz = JInteropObject.find_jni_class(nativeName)
+        env = JObject._ensureEnv()
+        
+        if is_str:
+            clazz = JObject.find_jni_class(varObject)
+        else:
+            clazz = varObject._object
         
         if not clazz:
-            raise ValueError(f'Not existing class "{nativeName}".')
+            raise ValueError(f'Not existing class "{varObject}".')
         
         jclass_clazz = env.NewGlobalRef(clazz)
         env.DeleteLocalRef(clazz)
         
-        class JClass(JInteropObject):
-            _nativeName = nativeName
+        class JClass(JObject):
+            _nativeName = varObject
             _methods = {}
             _methodsIDCache = {}
             _staticFieldsIDCache = {}
@@ -657,15 +681,20 @@ class JInteropObject(metaclass=JInteropMeta):
             cls = JClassDescriptor()
             clazz = JClassDescriptor()
         
-        JInteropObject._classesCache[nativeName] = JClass
-        JClass.__name__ = nativeName
+        if is_str:
+            JObject._classesCache[varObject] = JClass
+            JClass.__name__ = varObject
+        else:
+            JObject._classesCache[str_value] = JClass
+            JClass.__name__ = str_value
+        
         JClass.initialize_type()
         
         return JClass
     
     @classmethod
-    def from_object(cls, jObject: jobject) -> 'JInteropObject':
-        env = JInteropObject._ensureEnv()
+    def from_object(cls, jObject: jobject) -> 'JObject':
+        env = JObject._ensureEnv()
         
         instance = cls.__new__(cls)
         instance._object = env.NewGlobalRef(jObject)
@@ -673,50 +702,17 @@ class JInteropObject(metaclass=JInteropMeta):
         return instance
     
     @classmethod
-    def load_jar(cls, jar_path: str):
-        interopCache = JInteropObject._interopMethodIDCache
-        env = JInteropObject._ensureEnv()
-        env.ExceptionClear()
-        java_io_File = env.FindClass(b'java/io/File')
-        jJarPath = env.NewString(jar_path, len(jar_path))
-        jJarFile = env.NewObject(
-            java_io_File, interopCache['File.<init>'],
-            jJarPath, variadic=(jstring,))
-        JInteropObject.jni_check_errors()
-        env.DeleteLocalRef(jJarPath)
-        env.DeleteLocalRef(java_io_File)
-        jURI = env.CallObjectMethod(jJarFile, interopCache['File.toURI'])
-        JInteropObject.jni_check_errors()
-        env.DeleteLocalRef(jJarFile)
-        jURL = env.CallObjectMethod(jURI, interopCache['URI.toURL'])
-        JInteropObject.jni_check_errors()
-        env.DeleteLocalRef(jURI)
-        java_net_URL = env.FindClass(b'java/net/URL')
-        jUrls = env.NewObjectArray(1, java_net_URL, NULL)
-        env.SetObjectArrayElement(jUrls, 0, jURL)
-        env.DeleteLocalRef(jURL)
-        jClassLoader = env.CallObjectMethod(java_net_URL, interopCache['Class.getClassLoader'])
-        JInteropObject.jni_check_errors()
-        env.DeleteLocalRef(java_net_URL)
-        java_net_URLClassLoader = env.FindClass(b'java/net/URLClassLoader')
-        jUrlLoader = env.NewObject(
-            java_net_URLClassLoader, interopCache['URLClassLoader.<init>'],
-            jUrls, jClassLoader, variadic=(jobjectArray, jobject))
-        JInteropObject.jni_check_errors()
-        env.DeleteLocalRef(java_net_URLClassLoader)
-        env.DeleteLocalRef(jUrls)
-        env.DeleteLocalRef(jClassLoader)
-        JInteropObject._classLoaders.append(env.NewGlobalRef(jUrlLoader))
-        env.DeleteLocalRef(jUrlLoader)
+    def load_jars(cls, jar_paths: list[str]):
+        ...
     
     def __init__(self, *args):
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         jObject = JInteropMethod('<init>', self._methods['<init>'], self._methodsIDCache, self.__class__)(*args)
         self._object = env.NewGlobalRef(jObject)
         env.DeleteLocalRef(jObject)
     
     def __str__(self) -> str:
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         strObject = self.toString()
         jStrObject = strObject._object
         stringChars = env.GetStringChars(jStrObject, NULL)
@@ -725,21 +721,21 @@ class JInteropObject(metaclass=JInteropMeta):
         return string
     
     def __repr__(self) -> str:
-        env = JInteropObject._ensureEnv()
-        jString = env.CallObjectMethod(self._clazz, JInteropObject._interopMethodIDCache['Class.getName'])
+        env = JObject._ensureEnv()
+        jString = env.CallObjectMethod(self._clazz, JObject._interopCache['Class.getName'])
         stringChars = env.GetStringChars(jString, NULL)
         string = stringChars.value
         env.ReleaseStringChars(jString, stringChars)
         return f'<{string} "{str(self)}">'
     
-    def __eq__(self, other: 'JInteropObject') -> bool:
-        env = JInteropObject._ensureEnv()
+    def __eq__(self, other: 'JObject') -> bool:
+        env = JObject._ensureEnv()
         if other is None:
             return env.IsSameObject(self._object, NULL)
         return env.IsSameObject(self._object, other._object)
 
     def __getattr__(self, name: str):
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         
         if name in self._fieldsIDCache:
             jnidesc, fieldID = self._fieldsIDCache[name]
@@ -762,7 +758,7 @@ class JInteropObject(metaclass=JInteropMeta):
                 return env.GetDoubleField(self._object, fieldID)
             if jnidesc[0] == 'L':
                 jObject = env.GetObjectField(self._object, fieldID)
-                jInteropObject = JInteropObject.construct(jnidesc).from_object(jObject)
+                jInteropObject = JObject.construct(jnidesc).from_object(jObject)
                 env.DeleteLocalRef(jObject)
                 return jInteropObject
             
@@ -770,14 +766,14 @@ class JInteropObject(metaclass=JInteropMeta):
             return JInteropMethod(name, self._methods[name], self._methodsIDCache, self)
             
     def __del__(self):
-        env = JInteropObject._env
+        env = JObject._env
         if env:
             if self._object:
                 env.DeleteGlobalRef(self._object)
             
     def __setattr__(self, name: str, value):
-        if name in JInteropObject.__annotations__: return object.__setattr__(self, name, value)
-        env = JInteropObject._ensureEnv()
+        if name in JObject.__annotations__: return object.__setattr__(self, name, value)
+        env = JObject._ensureEnv()
         
         if name in self._fieldsIDCache:
             jnidesc, fieldID = self._fieldsIDCache[name]
@@ -793,7 +789,7 @@ class JInteropObject(metaclass=JInteropMeta):
                     value = ord(value)
                 elif isinstance(value, bytes):
                     value = value[0]
-                return env.SetSCharField(self._object, fieldID, value)
+                return env.SetCharField(self._object, fieldID, value)
             if jnidesc == 'S':
                 return env.SetShortField(self._object, fieldID, value)
             if jnidesc == 'I':
@@ -805,13 +801,13 @@ class JInteropObject(metaclass=JInteropMeta):
             if jnidesc == 'D':
                 return env.SetDoubleField(self._object, fieldID, value)
             if jnidesc[0] == 'L':
-                if isinstance(value, JInteropObject):
+                if isinstance(value, JObject):
                     return env.SetObjectField(self._object, fieldID, value._object)
                 return env.SetObjectField(self._object, fieldID, value)
         
     @classmethod
     def jni_check_errors(cls):
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         
         if env.ExceptionCheck():
             env.ExceptionDescribe()
@@ -820,19 +816,19 @@ class JInteropObject(metaclass=JInteropMeta):
         
     @classmethod
     def initialize_type(cls):
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         
-        interopCache = JInteropObject._interopMethodIDCache
+        interopCache = JObject._interopCache
         jMethods = env.CallObjectMethod(cls._clazz, interopCache['Class.getMethods'])
-        JInteropObject.jni_check_errors()
+        JObject.jni_check_errors()
         nMethods = env.GetArrayLength(jMethods)
         
-        JInteropObject.jni_check_errors()
+        JObject.jni_check_errors()
         
         for iMeth in range(nMethods):
             jMethod = env.GetObjectArrayElement(jMethods, iMeth)
             jParameterTypes = env.CallObjectMethod(jMethod, interopCache['Method.getParameterTypes'])
-            JInteropObject.jni_check_errors()
+            JObject.jni_check_errors()
             nParameterTypes = env.GetArrayLength(jParameterTypes)
             
             jnidesc = '('
@@ -844,20 +840,20 @@ class JInteropObject(metaclass=JInteropMeta):
             env.DeleteLocalRef(jParameterTypes)
             
             jReturnType = env.CallObjectMethod(jMethod, interopCache['Method.getReturnType'])
-            JInteropObject.jni_check_errors()
+            JObject.jni_check_errors()
             jReturnTypeJnidesc = cls.jclass_to_jnidesc(jReturnType)
             jnidesc += jReturnTypeJnidesc
             env.DeleteLocalRef(jReturnType)
             
             jMethodName = env.CallObjectMethod(jMethod, interopCache['Method.getName'])
-            JInteropObject.jni_check_errors()
+            JObject.jni_check_errors()
             methNameChars = env.GetStringChars(jMethodName, NULL)
             methodName = methNameChars.value
             env.ReleaseStringChars(jMethodName, methNameChars)
             env.DeleteLocalRef(jMethodName)
             
             jModifiers = env.CallIntMethod(jMethod, interopCache['Method.getModifiers'])
-            JInteropObject.jni_check_errors()
+            JObject.jni_check_errors()
             
             if jModifiers & JVM_ACC_STATIC:
                 methods = cls._staticMethods
@@ -883,16 +879,16 @@ class JInteropObject(metaclass=JInteropMeta):
         env.DeleteLocalRef(jMethods)
         
         jFields = env.CallObjectMethod(cls._clazz, interopCache['Class.getFields'])
-        JInteropObject.jni_check_errors()
+        JObject.jni_check_errors()
         nFields = env.GetArrayLength(jFields)
         
         for iField in range(nFields):
             jField = env.GetObjectArrayElement(jFields, iField)
             jFieldType = env.CallObjectMethod(jField, interopCache['Field.getType'])
-            JInteropObject.jni_check_errors()
+            JObject.jni_check_errors()
             jnidesc = cls.jclass_to_jnidesc(jFieldType)
             jFieldName = env.CallObjectMethod(jField, interopCache['Field.getName'])
-            JInteropObject.jni_check_errors()
+            JObject.jni_check_errors()
             fieldNameChars = env.GetStringChars(jFieldName, NULL)
             fieldName = fieldNameChars.value
             env.ReleaseStringChars(jFieldName, fieldNameChars)
@@ -900,7 +896,7 @@ class JInteropObject(metaclass=JInteropMeta):
             env.DeleteLocalRef(jFieldType)
             
             jModifiers = env.CallIntMethod(jField, interopCache['Field.getModifiers'])
-            JInteropObject.jni_check_errors()
+            JObject.jni_check_errors()
             
             if jModifiers & JVM_ACC_STATIC:
                 cls._staticFieldsIDCache[fieldName] = (jnidesc, env.GetStaticFieldID(cls._clazz, fieldName.encode('ascii'), jnidesc.encode('ascii')))
@@ -912,13 +908,13 @@ class JInteropObject(metaclass=JInteropMeta):
         env.DeleteLocalRef(jFields)
         
         jConstructors = env.CallObjectMethod(cls._clazz, interopCache['Class.getConstructors'])
-        JInteropObject.jni_check_errors()
+        JObject.jni_check_errors()
         nConstructors = env.GetArrayLength(jConstructors)
         
         for iCtor in range(nConstructors):
             jConstructor = env.GetObjectArrayElement(jConstructors, iCtor)
-            jParameterTypes = env.CallObjectMethod(jMethod, interopCache['Constructor.getParameterTypes'])
-            JInteropObject.jni_check_errors()
+            jParameterTypes = env.CallObjectMethod(jConstructor, interopCache['Constructor.getParameterTypes'])
+            JObject.jni_check_errors()
             nParameterTypes = env.GetArrayLength(jParameterTypes)
             
             jnidesc = '('
@@ -945,19 +941,19 @@ class JInteropObject(metaclass=JInteropMeta):
             
     @classmethod
     def jclass_to_jnidesc(cls, clazz: jclass) -> str:
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         
-        jName = env.CallObjectMethod(clazz, cls._interopMethodIDCache['Class.getName'])
+        jName = env.CallObjectMethod(clazz, cls._interopCache['Class.getName'])
         chars = env.GetStringChars(jName, NULL)
         name = chars.value
         env.ReleaseStringChars(jName, chars)
         env.DeleteLocalRef(jName)
         
-        JInteropObject.jni_check_errors()
+        JObject.jni_check_errors()
         
-        jIsPrimitive = env.CallBooleanMethod(clazz, cls._interopMethodIDCache['Class.isPrimitive'])
+        jIsPrimitive = env.CallBooleanMethod(clazz, cls._interopCache['Class.isPrimitive'])
         
-        JInteropObject.jni_check_errors()
+        JObject.jni_check_errors()
         
         if jIsPrimitive == JNI_TRUE:
             if name == 'boolean': return 'Z'
@@ -970,15 +966,15 @@ class JInteropObject(metaclass=JInteropMeta):
             if name == 'double': return 'D'
             if name == 'void': return 'V'
         
-        jIsArray = env.CallBooleanMethod(clazz, cls._interopMethodIDCache['Class.isArray'])
+        jIsArray = env.CallBooleanMethod(clazz, cls._interopCache['Class.isArray'])
         
-        JInteropObject.jni_check_errors()
+        JObject.jni_check_errors()
         
         if jIsArray == JNI_TRUE:
-            JInteropObject.jni_check_errors()
+            JObject.jni_check_errors()
             return name.replace('.', '/')
         
-        JInteropObject.jni_check_errors()
+        JObject.jni_check_errors()
         
         return 'L' + name.replace('.', '/') + ';'
     
@@ -1046,7 +1042,7 @@ class JInteropObject(metaclass=JInteropMeta):
     
     @classmethod
     def find_jni_class(cls, nativeName: str | bytes) -> jclass:
-        env = JInteropObject._ensureEnv()
+        env = JObject._ensureEnv()
         env.ExceptionClear()
         if isinstance(nativeName, str):
             jniNativeName = nativeName.encode('ascii')
@@ -1057,13 +1053,14 @@ class JInteropObject(metaclass=JInteropMeta):
             return jStdClass
         if isinstance(nativeName, bytes):
             raise RuntimeError(f'Class "{nativeName}" not found in JNI, providen name in bytes (only JNI).')
-        jClassName = env.NewString(nativeName, len(nativeName))
-        jClass = env.FindClass('java/lang/Class')
+        jClassName = env.NewString(nativeName.replace('/', '.'), len(nativeName))
+        jClass = env.FindClass(b'java/lang/Class')
         for classLoader in cls._classLoaders:
             clazz = env.CallStaticObjectMethod(
-                jClass, JInteropObject._interopMethodIDCache['Class.forName'],
+                jClass, JObject._interopCache['Class.forName'],
                 jClassName, JNI_TRUE, classLoader, variadic=(jstring, jboolean, jobject))
             if env.ExceptionCheck():
+                env.ExceptionDescribe()
                 env.ExceptionClear()
                 continue
             env.DeleteLocalRef(jClassName)
@@ -1072,3 +1069,426 @@ class JInteropObject(metaclass=JInteropMeta):
         env.DeleteLocalRef(jClassName)
         env.DeleteLocalRef(jClass)
         raise RuntimeError(f'Not found class {nativeName}.')
+    
+class CONSTANT:
+    Class = 7
+    Fieldref = 9
+    Methodref = 10
+    InterfaceMethodref = 11
+    String = 8
+    Integer = 3
+    Float = 4
+    Long = 5
+    Double = 6
+    NameAndType = 12
+    Utf8 = 1
+    MethodHandle = 15
+    MethodType = 16
+    InvokeDynamic = 18
+    
+class ClassBuilder:
+    nInterfaces_pos: int
+    nConstants_pos: int
+    nMethods_pos: int
+    nFields_pos: int
+    
+    def __init__(self, classfile: str | io.IOBase):
+        if isinstance(classfile, str):
+            self.classfile = open(classfile, 'wb+')
+        else:
+            self.classfile = classfile
+        self.classfile.seek(0)
+        self.classfile.truncate()
+        
+        # Java header
+        self.writeu4(0xCAFEBABE)
+        
+        # JVM Class v45.3
+        self.writeu2(3)
+        self.writeu2(45)
+        
+        self.nConstants_pos = self.classfile.tell()
+        self.writeu2(1)
+        
+    def write(self, byteValue: bytes, position: int = None):
+        if position is None:
+            previousPosition = position = self.classfile.tell()
+        else:
+            previousPosition = self.classfile.tell()
+        if previousPosition != position:
+            self.classfile.seek(position)
+        self.classfile.write(byteValue)
+        if previousPosition != position:
+            self.classfile.seek(previousPosition)
+    
+    def writeu1(self, u1: int, position: int = None):
+        self.write(struct.pack('>B', u1), position)
+    
+    def writeu2(self, u2: int, position: int = None):
+        self.write(struct.pack('>H', u2), position)
+        
+    def writeu4(self, u2: int, position: int = None):
+        self.write(struct.pack('>I', u2), position)
+        
+    def writeu8(self, u2: int, position: int = None):
+        self.write(struct.pack('>Q', u2), position)
+    
+    def read(self, size: int, position: int = None):
+        if position is None:
+            previousPosition = position = self.classfile.tell()
+        else:
+            previousPosition = self.classfile.tell()
+        if previousPosition != position:
+            self.classfile.seek(position)
+        result = self.classfile.read(size)
+        if previousPosition != position:
+            self.classfile.seek(previousPosition)
+        return result
+    
+    def readu1(self, position: int = None):
+        return struct.unpack('>B', self.read(1, position))[0]
+    
+    def readu2(self, position: int = None):
+        return struct.unpack('>H', self.read(2, position))[0]
+    
+    def readu4(self, position: int = None):
+        return struct.unpack('>I', self.read(4, position))[0]
+    
+    def readu8(self, position: int = None):
+        return struct.unpack('>Q', self.read(8, position))[0]
+    
+    def new_constant(self) -> int:
+        nConstants = self.readu2(self.nConstants_pos)
+        self.writeu2(nConstants + 1, self.nConstants_pos)
+        return nConstants
+    
+    def supports_code(self):
+        self.CodeAttribute = self.write_const_utf8('Code')
+    
+    def write_const_utf8(self, string: str) -> int:
+        index = self.new_constant()
+        self.writeu1(CONSTANT.Utf8)
+        self.writeu2(len(string))
+        self.write(string.encode('utf-8'))
+        return index
+    
+    def write_const_nameandtype(self, name: str, desc: str) -> int:
+        index = self.new_constant()
+        nameIndex = self.write_const_utf8(name)
+        descIndex = self.write_const_utf8(desc)
+        self.writeu1(CONSTANT.NameAndType)
+        self.writeu2(nameIndex)
+        self.writeu2(descIndex)
+        return index
+    
+    def write_const_methodref(self, name: str, desc: str, clazzIndex: int) -> int:
+        index = self.new_constant()
+        nameAndTypeIndex = self.write_const_nameandtype(name, desc)
+        self.writeu1(CONSTANT.Methodref)
+        self.writeu2(clazzIndex)
+        self.writeu2(nameAndTypeIndex)
+        return index
+    
+    def write_const_class(self, name: str) -> int:
+        nameIndex = self.write_const_utf8(name)
+        index = self.new_constant()
+        self.writeu1(CONSTANT.Class)
+        self.writeu2(nameIndex)
+        
+        return index
+    
+    def write_const_method(self, name: str, desc: str) -> tuple[int, int]:
+        return self.write_const_utf8(name), self.write_const_utf8(desc)
+    
+    def write_access_flags(self, accessFlags: int):
+        self.writeu2(accessFlags)
+        
+    def write_this_class(self, classIndex: int):
+        self.writeu2(classIndex)
+        
+    def write_super_class(self, superIndex: int):
+        self.writeu2(superIndex)
+        
+    def begin_interfaces(self):
+        self.nInterfaces_pos = self.classfile.tell()
+        self.writeu2(0)
+        
+    def add_interface(self, interfaceIndex: int):
+        self.writeu2(self.readu2(self.nInterfaces_pos) + 1, self.nInterfaces_pos)
+        self.writeu2(interfaceIndex)
+        
+    def begin_fields(self):
+        self.writeu2(0)
+        
+    def begin_methods(self):
+        self.nMethods_pos = self.classfile.tell()
+        self.writeu2(0)
+        
+    def add_method(self, access_flags: int, nameIndex: int, descIndex: int):
+        self.writeu2(self.readu2(self.nMethods_pos) + 1, self.nMethods_pos)
+        self.writeu2(access_flags)
+        self.writeu2(nameIndex)
+        self.writeu2(descIndex)
+        self.nCurrentMethodAttributes = self.classfile.tell()
+        self.writeu2(0)
+        
+    def begin_attributes(self):
+        self.writeu2(0)
+    
+    def write_attribute_code(self, code: bytes, maxStack: int, maxLocals: int, 
+                             excTable: list[tuple[int, int, int, int]]):
+        self.writeu2(self.readu2(self.nCurrentMethodAttributes) + 1, self.nCurrentMethodAttributes)
+        self.writeu2(self.CodeAttribute)
+        codeLength = len(code)
+        excTableLength = len(excTable)
+        self.writeu4(8 + codeLength + (excTableLength * 8) + 2)
+        self.writeu2(maxStack)
+        self.writeu2(maxLocals)
+        self.writeu4(codeLength)
+        self.write(code)
+        for excEntry in excTable:
+            startPc, endPc, handlerPc, catchType = excEntry
+            self.writeu2(startPc)
+            self.writeu2(endPc)
+            self.writeu2(handlerPc)
+            self.writeu2(catchType)
+        self.writeu2(0)
+        
+class JInteropFlags:
+    Override = 0
+
+def JOverride(f): # marker
+    return f
+
+def JNISignature(sig: str):
+    def _JNISignature(f):
+        f._JInteropSignature = sig
+        jnidescReprs = JObject.parse_jnidesc_parameters(sig)
+        Types = []
+        for jnidescRepr in jnidescReprs:
+            Types.append(jnidescRepr.get_c_type())
+        retType = JObject.parse_jnidesc_parameters('(' + sig.split(')')[-1] + ')')[0].get_c_type()
+        callbackType = CALLBACK(retType, Types)
+        f._JInteropCallback = callbackType(f)
+        def _marshal_func(*f_args):
+            arguments = [f._JInteropOwner.from_object(f_args[0])]
+            for i, typ in enumerate(Types):
+                if typ is jboolean:
+                    arguments.append(f_args[i+1] == JNI_TRUE)
+                elif arg in (jbyte, jshort, jint, jlong, jfloat, jdouble):
+                    arguments.append(f_args[i+1])
+                elif arg is jchar:
+                    arguments.append(chr(f_args[i+1]))
+                else:
+                    arguments.append(JObject.construct(jnidescReprs[i].jnidesc).from_object(f_args[i+1]))
+            return f(*arguments)
+        return functools.wraps(f)(_marshal_func)
+    return _JNISignature
+
+def JSignature(*args):
+    def _JSignature(f):        
+        callbackTypes = [THIS]
+        retType = None
+        sig = '('
+        ret = ''
+        
+        def add(jnidesc, ctype, i):
+            nonlocal ret, sig, callbackTypes, retType
+            if i == 0:
+                ret = jnidesc
+                callbackTypes.append(ctype)
+            else:
+                sig += jnidesc
+                retType = ctype
+        
+        for i, arg in enumerate(args):
+            if arg == 'boolean':
+                add('Z', jboolean, i)
+            elif arg == 'byte':
+                add('B', jbyte, i)
+            elif arg == 'char':
+                add('C', jchar, i)
+            elif arg == 'short':
+                add('S', jshort, i)
+            elif arg == 'int':
+                add('I', jint, i)
+            elif arg == 'long':
+                add('J', jlong, i)
+            elif arg == 'float':
+                add('F', jfloat, i)
+            elif arg == 'double':
+                add('D', jdouble, i)
+            elif arg == 'void':
+                if i != 0:
+                    raise ValueError('"void"')
+                retType = VOID
+                ret = 'V'
+            else:
+                add('L' + arg.replace('.', '/') + ';', PVOID, i)
+        
+        sig += ')' + ret
+        
+        def _marshal_func(*f_args):
+            arguments = [f._JInteropOwner.from_object(f_args[0])]
+            for i, arg in enumerate(args):
+                if arg == 'boolean':
+                    arguments.append(f_args[i+1] == JNI_TRUE)
+                elif arg in ('byte', 'short', 'int', 'long', 'float', 'double'):
+                    arguments.append(f_args[i+1])
+                elif arg == 'char':
+                    arguments.append(chr(f_args[i+1]))
+                else:
+                    arguments.append(JObject.construct(arg).from_object(f_args[i+1]))
+            return f(*arguments)
+        
+        f._JInteropSignature = sig
+        f._JInteropCallback = CALLBACK(retType, *callbackTypes)(_marshal_func)
+        
+        return functools.wraps(f)(_marshal_func)
+        
+    return _JSignature
+
+def JMethod(decl: str, *args):
+    def _JMethod(f):
+        nonlocal decl
+        if args:
+            f = JSignature(*args)(f)
+        f._JInteropFlags = JVM_ACC_NATIVE
+        decl = decl.split(' ')
+        
+        for value in decl:
+            if value == 'public':
+                f._JInteropFlags |= JVM_ACC_PUBLIC
+            elif value == 'private':
+                f._JInteropFlags |= JVM_ACC_PRIVATE
+            elif value == 'protected':
+                f._JInteropFlags |= JVM_ACC_PROTECTED
+            elif value == 'strictfp':
+                f._JInteropFlags |= JVM_ACC_STRICT
+            elif value == 'synchronized':
+                f._JInteropFlags |= JVM_ACC_SYNCHRONIZED
+            elif value == 'abstract':
+                f._JInteropFlags &= ~JVM_ACC_NATIVE
+                f._JInteropFlags |= JVM_ACC_ABSTRACT
+            elif value == 'static':
+                f._JInteropFlags |= JVM_ACC_STATIC
+            elif value == 'native':
+                pass
+            else:
+                raise ValueError(f'"{value}"')
+        return f
+    return _JMethod
+    
+def JClass(decl: str, super=None):
+    env = JObject._ensureEnv()
+    decl = decl.split(' ')
+    
+    def _JClass(cls):
+        nonlocal super
+        cls.__annotations__['_JInteropFlags'] = int
+        type.__setattr__(cls, '_JInteropFlags', 0)
+        for value in decl[:-1]:
+            if value == 'public':
+                cls._JInteropFlags |= JVM_ACC_PUBLIC
+            elif value == 'private':
+                cls._JInteropFlags |= JVM_ACC_PRIVATE
+            elif value == 'protected':
+                cls._JInteropFlags |= JVM_ACC_PROTECTED
+            elif value == 'abstract':
+                cls._JInteropFlags |= JVM_ACC_ABSTRACT
+            elif value == 'static':
+                cls._JInteropFlags |= JVM_ACC_STATIC
+            elif value == 'final':
+                cls._JInteropFlags |= JVM_ACC_FINAL
+            else:
+                raise ValueError(f'"{value}"')
+        className = decl[-1]
+        if super is None:
+            super = 'java/lang/Object'
+        elif isinstance(super, JObject):
+            super = object.__getattribute__(super, '_nativeName')
+        elif isinstance(super, JInteropMeta):
+            super = type.__getattribute__(super, '_nativeName')
+        else:
+            super = JObject.normalize_L_jnidesc(super)
+        type.__setattr__(cls, '_JInteropSuper', super)
+        type.__setattr__(cls, '_JInteropName', JObject.normalize_L_jnidesc(className))
+        
+        for method in dir(cls):
+            meth = getattr(cls, method)
+            if JInteropIsMethod(meth):
+                if hasattr(meth, '_JInteropOwner'):
+                    if JInteropIsOwner(meth, cls):
+                        meth._JInteropOwner = cls
+                else:
+                    meth._JInteropOwner = cls
+        
+        JInteropParseClass(cls)
+        return cls
+    return _JClass
+    
+def JInterface(decl: str, super=None):
+    def _JInterface(cls):
+        cls = JClass(decl, super)(cls)
+        cls._JInteropFlags |= JVM_ACC_INTERFACE
+        return cls
+    return _JInterface
+
+def JInteropIsMethod(meth):
+    return hasattr(meth, '_JInteropFlags')
+
+def JInteropIsOwner(meth, cls):
+    return meth._JInteropOwner is cls
+
+def JInteropParseClass(cls):
+    clz = io.BytesIO()
+    builder = ClassBuilder(clz)
+    this = builder.write_const_class(cls._JInteropName)
+    javaLangObject = builder.write_const_class('java/lang/Object')
+    ctorRef = builder.write_const_methodref('<init>', '()V', javaLangObject)
+    initName, initDesc = builder.write_const_method('<init>', '()V')
+    callbacks = []
+    methods = []
+    methodsStr = []
+    for method in dir(cls):
+        method = getattr(cls, method)
+        if JInteropIsMethod(method) and JInteropIsOwner(method, cls):
+            meth_desc = builder.write_const_method(method.__name__, method._JInteropSignature)
+            methods.append((*meth_desc, method._JInteropFlags))
+            methodsStr.append((method.__name__, method._JInteropSignature))
+            callbacks.append(method._JInteropCallback)
+    super = builder.write_const_class(type.__getattribute__(cls, '_JInteropSuper'))
+    builder.supports_code()
+    builder.write_access_flags(cls._JInteropFlags)
+    builder.write_this_class(this)
+    builder.write_super_class(super)
+    builder.begin_interfaces()
+    builder.begin_fields()
+    builder.begin_methods()
+    builder.add_method(JVM_ACC_PUBLIC, initName, initDesc)
+    # aload_0
+    # invokespecial java/lang/Object.<init>()V
+    # return
+    builder.write_attribute_code(bytes([0x2a, 0xb7, ctorRef, 0xb1]), 2, 0, [])
+    for method, desc, access in methods:
+        builder.add_method(access, method, desc)
+    builder.begin_attributes()
+    env = JObject._ensureEnv()
+    clz.seek(0)
+    content = clz.read()
+    print(content)
+    buf = create_string_buffer(content)
+    nativeName = create_string_buffer(cls._JInteropName.encode('ascii'))
+    clazz = env.DefineClass(nativeName, NULL, i_cast(buf, PTR(jbyte)), clz.tell())
+    JObject.jni_check_errors()
+    nativeMethods = []
+    for i, callback in enumerate(callbacks):
+        name, desc = methodsStr[i]
+        nativeMethods.append(JNINativeMethod(name.encode('ascii'), desc.encode('ascii'), i_cast(callback, PVOID)))
+    arrNativeMethods = (JNINativeMethod * len(nativeMethods))(*nativeMethods)
+    jCode = env.RegisterNatives(clazz, arrNativeMethods, len(nativeMethods))
+    if jCode != JNI_OK:
+        clz.close()
+        raise RuntimeError('"env.RegisterNatives" failure.')
+    clz.close()
+    JObject.construct(cls._nativeName)

@@ -510,6 +510,15 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("bmBitsPixel", WORD),
                 ("bmBits", LPVOID)
             ]
+            
+            bmType: int
+            bmWidth: int
+            bmHeight: int
+            bmWidthBytes: int
+            bmPlanes: int
+            bmBitsPixel: int
+            bmBits: int
+            
         BITMAP = tagBITMAP
         PBITMAP = POINTER(BITMAP)
         NPBITMAP = PBITMAP
@@ -3209,6 +3218,34 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("dwVisibleMask", DWORD),
                 ("dwDamageMask", DWORD)
             ]
+            
+            cAccumGreenBits: int
+            cAccumAlphaBits: int
+            cAccumBlueBits: int
+            cAccumRedBits: int
+            dwVisibleMask: int
+            cStencilBits: int
+            dwDamageMask: int
+            cGreenShift: int
+            cAlphaShift: int
+            cAuxBuffers: int
+            dwLayerMask: int
+            iPixelType: int
+            cColorBits: int
+            cGreenBits: int
+            cBlueShift: int
+            cAlphaBits: int
+            cAccumBits: int
+            cDepthBits: int
+            iLayerType: int
+            cRedShift: int
+            cBlueBits: int
+            bReserved: int
+            nVersion: int
+            cRedBits: int
+            dwFlags: int
+            nSize: int
+            
         PIXELFORMATDESCRIPTOR = tagPIXELFORMATDESCRIPTOR
         PPIXELFORMATDESCRIPTOR = POINTER(PIXELFORMATDESCRIPTOR)
         LPPIXELFORMATDESCRIPTOR = PPIXELFORMATDESCRIPTOR
