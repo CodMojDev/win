@@ -18,4 +18,8 @@ class Toolbar(Control):
     def image_list(self, image_list: ImageList):
         self.send(TB_SETIMAGELIST, 0, image_list)
         
-    
+    def add(self, image_index: int, identifier: int | HMENU, 
+            style: int = BTNS_BUTTON, state: int = TBSTATE_ENABLED):
+        btn = TBBUTTON(iBitmap=image_index, idCommand=identifier,
+                       fsStyle=style, fsState=state)
+        self.send(TB_ADDBUTTONS, 1, btn.ref())

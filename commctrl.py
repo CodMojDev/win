@@ -2812,3 +2812,338 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
 
         LVCOLUMNA_V1_SIZE = CCSIZEOF_STRUCT(LVCOLUMNA, "iSubItem")
         LVCOLUMNW_V1_SIZE = CCSIZEOF_STRUCT(LVCOLUMNW, "iSubItem")
+        
+        LVCF_FMT = 0x0001
+        LVCF_WIDTH = 0x0002
+        LVCF_TEXT = 0x0004
+        LVCF_SUBITEM = 0x0008
+        LVCF_IMAGE = 0x0010
+        LVCF_ORDER = 0x0020
+        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
+            LVCF_MINWIDTH = 0x0040
+            LVCF_DEFAULTWIDTH = 0x0080
+            LVCF_IDEALWIDTH = 0x0100
+        # LVCFMT_ flags up to FFFF are shared with the header control(HDF_ flags).
+        # Flags above FFFF are listview-specific.
+        LVCFMT_LEFT = 0x0000 # Same as HDF_LEFT
+        LVCFMT_RIGHT = 0x0001 # Same as HDF_RIGHT
+        LVCFMT_CENTER = 0x0002 # Same as HDF_CENTER
+        LVCFMT_JUSTIFYMASK = 0x0003 # Same as HDF_JUSTIFYMASK
+        LVCFMT_IMAGE = 0x0800 # Same as HDF_IMAGE
+        LVCFMT_BITMAP_ON_RIGHT = 0x1000 # Same as HDF_BITMAP_ON_RIGHT
+        LVCFMT_COL_HAS_IMAGES = 0x8000 # Same as HDF_OWNERDRAW
+        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
+            LVCFMT_FIXED_WIDTH = 0x00100 # Can't resize the column; same as HDF_FIXEDWIDTH
+            LVCFMT_NO_DPI_SCALE = 0x40000 # If not set, CCM_DPISCALE will govern scaling up fixed width
+            LVCFMT_FIXED_RATIO = 0x80000 # Width will augment with the row height
+            # The following flags
+            LVCFMT_LINE_BREAK = 0x100000 # Move to the top of the next list of columns
+            LVCFMT_FILL = 0x200000 # Fill the remainder of the tile area. Might have a title.
+            LVCFMT_WRAP = 0x400000 # This sub-item can be wrapped.
+            LVCFMT_NO_TITLE = 0x800000 # This sub-item doesn't have an title.
+            LVCFMT_TILE_PLACEMENTMASK = (LVCFMT_LINE_BREAK | LVCFMT_FILL)
+            LVCFMT_SPLITBUTTON = 0x1000000 # Column is a split button; same as HDF_SPLITBUTTON
+        LVM_GETCOLUMNA = (LVM_FIRST + 25)
+        LVM_GETCOLUMNW = (LVM_FIRST + 95)
+        LVM_GETCOLUMN = unicode(LVM_GETCOLUMNW, LVM_GETCOLUMNA)
+        
+        def ListView_GetColumn(hwnd, iCol, pcol):
+            return SendMessage(hwnd, LVM_GETCOLUMN, iCol, PtrUtil.get_address(pcol))
+        
+        LVM_SETCOLUMNA          = (LVM_FIRST + 26)
+        LVM_SETCOLUMNW          = (LVM_FIRST + 96)
+        LVM_SETCOLUMN = unicode(LVM_SETCOLUMNW, LVM_SETCOLUMNA)
+        
+        def ListBiew_SetColumn(hwnd, iCol, pcol):
+            return SendMessage(hwnd, LVM_SETCOLUMN, iCol, PtrUtil.get_address(pcol))
+        
+        LVM_INSERTCOLUMNA       = (LVM_FIRST + 27)
+        LVM_INSERTCOLUMNW       = (LVM_FIRST + 97)
+        LVM_INSERTCOLUMN = unicode(LVM_INSERTCOLUMNW, LVM_INSERTCOLUMNA)
+        
+        def ListView_InsertColumn(hwnd, iCol, pcol):
+            return SendMessage(hwnd, LVM_INSERTCOLUMN, iCol, PtrUtil.get_address(pcol))
+        
+        LVM_DELETECOLUMN = (LVM_FIRST + 28)
+        
+        def ListView_DeleteColumn(hwnd, iCol):
+            return SendMessage(hwnd, LVM_DELETECOLUMN, iCol, 0)
+        
+        LVM_GETCOLUMNWIDTH = (LVM_FIRST + 29)
+        
+        def ListView_GetColumnWidth(hwnd, iCol):
+            return SendMessage(hwnd, LVM_GETCOLUMNWIDTH, iCol, 0)
+        
+        LVSCW_AUTOSIZE = -1
+        LVSCW_USEHEADER = -2
+        LVM_SETCOLUMNWIDTH = (LVM_FIRST + 30)
+        
+        def ListView_SetColumnWidth(hwnd, iCol, cx):
+            return SendMessage(hwnd, LVM_SETCOLUMNWIDTH, iCol, cx)
+        
+        LVM_GETHEADER = (LVM_FIRST + 31)
+        
+        def ListView_GetHeader(hwnd):
+            return SendMessage(hwnd, LVM_GETHEADER, 0, 0)
+        
+        LVM_CREATEDRAGIMAGE = (LVM_FIRST + 33)
+        
+        def ListView_CreateDragImage(hwnd, i, lpptUpLeft):
+            return SendMessage(hwnd, LVM_CREATEDRAGIMAGE, i, PtrUtil.get_address(lpptUpLeft))
+        
+        LVM_GETVIEWRECT = (LVM_FIRST + 34)
+        
+        def ListView_GetViewRect(hwnd, prc):
+            return SendMessage(hwnd, LVM_GETVIEWRECT, 0, PtrUtil.get_address(prc))
+        
+        LVM_GETTEXTCOLOR = (LVM_FIRST + 35)
+        
+        def ListView_GetTextColor(hwnd):
+            return SendMessage(hwnd, LVM_GETTEXTCOLOR, 0, 0)
+        
+        LVM_SETTEXTCOLOR = (LVM_FIRST + 36)
+        
+        def ListView_SetTextColor(hwnd, clrText):
+            return SendMessage(hwnd, LVM_SETTEXTCOLOR, 0, clrText)
+        
+        LVM_GETTEXTBKCOLOR = (LVM_FIRST + 37)
+        
+        def ListView_GetTextBkColor(hwnd):
+            return SendMessage(hwnd, LVM_GETTEXTBKCOLOR, 0, 0)
+        
+        LVM_SETTEXTBKCOLOR = (LVM_FIRST + 38)
+        
+        def ListView_SetTextBkColor(hwnd, clrTextBk):
+            return SendMessage(hwnd, LVM_SETTEXTBKCOLOR, 0, clrTextBk)
+        
+        # FORCED DEVELOPMENT, NO MACROS
+        
+        LVM_GETTOPINDEX = (LVM_FIRST + 39)
+        LVM_GETCOUNTPERPAGE = (LVM_FIRST + 40)
+        LVM_GETORIGIN = (LVM_FIRST + 41)
+        LVM_UPDATE = (LVM_FIRST + 42)
+        LVM_SETITEMSTATE = (LVM_FIRST + 43)
+        LVM_GETITEMSTATE = (LVM_FIRST + 44)
+        LVM_GETITEMTEXTA = (LVM_FIRST + 45)
+        LVM_GETITEMTEXTW = (LVM_FIRST + 115)
+        LVM_GETITEMTEXT = unicode(LVM_GETITEMTEXTW, LVM_GETITEMTEXTA)
+        LVM_SETITEMTEXTA = (LVM_FIRST + 46)
+        LVM_SETITEMTEXTW = (LVM_FIRST + 116)
+        LVM_SETITEMTEXT = unicode(LVM_SETITEMTEXTW, LVM_SETITEMTEXTA)
+        
+        # these flags only apply to LVS_OWNERDATA listviews in report or list mode
+        LVSICF_NOINVALIDATEALL = 0x00000001
+        LVSICF_NOSCROLL = 0x00000002
+        LVM_SETITEMCOUNT = (LVM_FIRST + 47)
+        PFNLVCOMPARE = CALLBACK(INT, LPARAM, LPARAM, LPARAM)
+        LVM_SORTITEMS = (LVM_FIRST + 48)
+        LVM_SETITEMPOSITION32 = (LVM_FIRST + 49)
+        LVM_GETSELECTEDCOUNT = (LVM_FIRST + 50)
+        LVM_GETITEMSPACING = (LVM_FIRST + 51)
+        LVM_GETISEARCHSTRINGA = (LVM_FIRST + 52)
+        LVM_GETISEARCHSTRINGW = (LVM_FIRST + 117)
+        LVM_GETISEARCHSTRING = unicode(LVM_GETISEARCHSTRINGW, LVM_GETISEARCHSTRINGA)
+        LVM_SETICONSPACING = (LVM_FIRST + 53)
+        LVM_SETEXTENDEDLISTVIEWSTYLE = (LVM_FIRST + 54) # optional wParam == mask
+        LVM_GETEXTENDEDLISTVIEWSTYLE = (LVM_FIRST + 55)
+        LVS_EX_GRIDLINES = 0x00000001
+        LVS_EX_SUBITEMIMAGES = 0x00000002
+        LVS_EX_CHECKBOXES = 0x00000004
+        LVS_EX_TRACKSELECT = 0x00000008
+        LVS_EX_HEADERDRAGDROP = 0x00000010
+        LVS_EX_FULLROWSELECT = 0x00000020 # applies to report mode only
+        LVS_EX_ONECLICKACTIVATE = 0x00000040
+        LVS_EX_TWOCLICKACTIVATE = 0x00000080
+        LVS_EX_FLATSB = 0x00000100
+        LVS_EX_REGIONAL = 0x00000200
+        LVS_EX_INFOTIP = 0x00000400 # listview does InfoTips for you
+        LVS_EX_UNDERLINEHOT = 0x00000800
+        LVS_EX_UNDERLINECOLD = 0x00001000
+        LVS_EX_MULTIWORKAREAS = 0x00002000
+        LVS_EX_LABELTIP = 0x00004000 # listview unfolds partly hidden labels if it does not have infotip text
+        LVS_EX_BORDERSELECT = 0x00008000 # border selection style instead of highlight
+        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
+            LVS_EX_DOUBLEBUFFER = 0x00010000
+            LVS_EX_HIDELABELS = 0x00020000
+            LVS_EX_SINGLEROW = 0x00040000
+            LVS_EX_SNAPTOGRID = 0x00080000 # Icons automatically snap to grid.
+            LVS_EX_SIMPLESELECT = 0x00100000 # Also changes overlay rendering to top right for icon mode.
+        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
+            LVS_EX_JUSTIFYCOLUMNS = 0x00200000 # Icons are lined up in columns that use up the whole view area.
+            LVS_EX_TRANSPARENTBKGND = 0x00400000 # Background is painted by the parent via WM_PRINTCLIENT
+            LVS_EX_TRANSPARENTSHADOWTEXT = 0x00800000 # Enable shadow text on transparent backgrounds only(useful with bitmaps)
+            LVS_EX_AUTOAUTOARRANGE = 0x01000000 # Icons automatically arrange if no icon positions have been set
+            LVS_EX_HEADERINALLVIEWS = 0x02000000 # Display column header in all view modes
+            LVS_EX_AUTOCHECKSELECT = 0x08000000
+            LVS_EX_AUTOSIZECOLUMNS = 0x10000000
+            LVS_EX_COLUMNSNAPPOINTS = 0x40000000
+            LVS_EX_COLUMNOVERFLOW = 0x80000000
+        LVM_GETSUBITEMRECT = (LVM_FIRST + 56)
+        LVM_SUBITEMHITTEST = (LVM_FIRST + 57)
+        LVM_SETCOLUMNORDERARRAY = (LVM_FIRST + 58)
+        LVM_GETCOLUMNORDERARRAY = (LVM_FIRST + 59)
+        LVM_SETHOTITEM = (LVM_FIRST + 60)
+        LVM_GETHOTITEM = (LVM_FIRST + 61)
+        LVM_SETHOTCURSOR = (LVM_FIRST + 62)
+        LVM_GETHOTCURSOR = (LVM_FIRST + 63)
+        LVM_APPROXIMATEVIEWRECT = (LVM_FIRST + 64)
+        LV_MAX_WORKAREAD = 16
+        LVM_SETWORKAREAS = (LVM_FIRST + 65)
+        LVM_GETWORKAREAS = (LVM_FIRST + 70)
+        LVM_GETNUMBEROFWORKAREAD = (LVM_FIRST + 73)
+        LVM_GETSELECTIONMARK = (LVM_FIRST + 66)
+        LVM_SETSELECTIONMARK = (LVM_FIRST + 67)
+        LVM_SETHOVERTIME = (LVM_FIRST + 71)
+        LVM_GETHOVERTIME = (LVM_FIRST + 72)
+        LVM_SETTOOLTIPS = (LVM_FIRST + 74)
+        LVM_GETTOOLTIPS = (LVM_FIRST + 78)
+        LVM_SORTITEMSEX = (LVM_FIRST + 81)
+        
+        class LVBKIMAGEA(CStructure):
+            _fields_ = [
+                ('ulFlags', ULONG),
+                ('hbm', HBITMAP),
+                ('pszImage', LPSTR),
+                ('cchImageMax', UINT),
+                ('xOffsetPercent', INT),
+                ('yOffsetPercent', INT)
+            ]
+            
+            ulFlags: int
+            hbm: int
+            pszImage: LPSTR
+            cchImageMax: int
+            xOffsetPercent: int
+            yOffsetPercent: int
+
+        LPLVBKIMAGEA = LVBKIMAGEA.PTR()
+        
+        class LVBKIMAGEW(CStructure):
+            _fields_ = [
+                ('ulFlags', ULONG),
+                ('hbm', HBITMAP),
+                ('pszImage', LPWSTR),
+                ('cchImageMax', UINT),
+                ('xOffsetPercent', INT),
+                ('yOffsetPercent', INT)
+            ]
+            
+            ulFlags: int
+            hbm: int
+            pszImage: LPWSTR
+            cchImageMax: int
+            xOffsetPercent: int
+            yOffsetPercent: int
+        
+        LPLVBKIMAGEW = LVBKIMAGEW.PTR()
+        
+        LVBKIF_SOURCE_NONE = 0x00000000
+        LVBKIF_SOURCE_HBITMAP = 0x00000001
+        LVBKIF_SOURCE_URL = 0x00000002
+        LVBKIF_SOURCE_MASK = 0x00000003
+        LVBKIF_STYLE_NORMAL = 0x00000000
+        LVBKIF_STYLE_TILE = 0x00000010
+        LVBKIF_STYLE_MASK = 0x00000010
+        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
+            LVBKIF_FLAG_TILEOFFSET = 0x00000100
+            LVBKIF_TYPE_WATERMARK = 0x10000000
+            LVBKIF_FLAG_ALPHABLEND = 0x20000000
+        LVM_SETBKIMAGEA = (LVM_FIRST + 68)
+        LVM_SETBKIMAGEW = (LVM_FIRST + 138)
+        LVM_GETBKIMAGEA = (LVM_FIRST + 69)
+        LVM_GETBKIMAGEW = (LVM_FIRST + 139)
+        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
+            LVM_SETSELECTEDCOLUMN = (LVM_FIRST + 140)
+            LV_VIEW_ICON = 0x0000
+            LV_VIEW_DETAILS = 0x0001
+            LV_VIEW_SMALLICON = 0x0002
+            LV_VIEW_LIST = 0x0003
+            LV_VIEW_TILE = 0x0004
+            LV_VIEW_MAX = 0x0004
+            LVM_SETVIEW = (LVM_FIRST + 142)
+            LVM_GETVIEW = (LVM_FIRST + 143)
+            LVGF_NONE = 0x00000000
+            LVGF_HEADER = 0x00000001
+            LVGF_FOOTER = 0x00000002
+            LVGF_STATE = 0x00000004
+            LVGF_ALIGN = 0x00000008
+            LVGF_GROUPID = 0x00000010
+            if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
+                LVGF_SUBTITLE = 0x00000100 # pszSubtitle is valid
+                LVGF_TASK = 0x00000200 # pszTask is valid
+                LVGF_DESCRIPTIONTOP = 0x00000400 # pszDescriptionTop is valid
+                LVGF_DESCRIPTIONBOTTOM = 0x00000800 # pszDescriptionBottom is valid
+                LVGF_TITLEIMAGE = 0x00001000 # iTitleImage is valid
+                LVGF_EXTENDEDIMAGE = 0x00002000 # iExtendedImage is valid
+                LVGF_ITEMS = 0x00004000 # iFirstItem and cItems are valid
+                LVGF_SUBSET = 0x00008000 # pszSubsetTitle is valid
+                LVGF_SUBSETITEMS = 0x00010000 # readonly, cItems holds count of items in visible subset, iFirstItem is valid
+            LVGS_NORMAL = 0x00000000
+            LVGS_COLLAPSED = 0x00000001
+            LVGS_HIDDEN = 0x00000002
+            LVGS_NOHEADER = 0x00000004
+            LVGS_COLLAPSIBLE = 0x00000008
+            LVGS_FOCUSED = 0x00000010
+            LVGS_SELECTED = 0x00000020
+            LVGS_SUBSETED = 0x00000040
+            LVGS_SUBSETLINKFOCUSED = 0x00000080
+            LVGA_HEADER_LEFT = 0x00000001
+            LVGA_HEADER_CENTER = 0x00000002
+            LVGA_HEADER_RIGHT = 0x00000004 # Don't forget to validate exclusivity
+            LVGA_FOOTER_LEFT = 0x00000008
+            LVGA_FOOTER_CENTER = 0x00000010
+            LVGA_FOOTER_RIGHT = 0x00000020 # Don't forget to validate exclusivity
+            
+            class LVGROUP(CStructure):
+                fields = [
+                    ('cbSize', UINT),
+                    ('mask', UINT),
+                    ('pszHeader', LPWSTR),
+                    ('cchHeader', INT),
+                    ('pszFooter', LPWSTR),
+                    ('cchFooter', INT),
+                    ('iGroupId', INT),
+                    ('stateMask', UINT),
+                    ('state', UINT),
+                    ('uAlign', UINT)
+                ]
+                if cpreproc.getdef('_WINVER') >= WIN32_WINNT_VISTA:
+                    fields.extend([
+                        ('pszSubtitle', LPWSTR),
+                        ('cchSubtitle', UINT),
+                        ('pszTask', LPWSTR),
+                        ('cchTask', UINT),
+                        ('pszDescriptionTop', LPWSTR),
+                        ('cchDescriptionTop', UINT),
+                        ('pszDescriptionBottom', LPWSTR),
+                        ('cchDescriptionBottom', UINT),
+                        ('iTitleImage', INT),
+                        ('iExtendedImage', INT),
+                        ('iFirstItem', INT),
+                        ('cItems', UINT),
+                        ('pszSubsetTitle', LPWSTR),
+                        ('cchSubsetTitle', UINT)
+                    ])
+                
+                cbSize: int
+                mask: int
+                pszHeader: LPWSTR
+                cchHeader: int
+                
+                pszFooter: LPWSTR
+                cchFooter: int
+                
+                iGroupId: int
+                
+                stateMask: int
+                state: int
+                uAlign: int
+                
+                iExtendedImage: int # Read only
+                cItems: int # Read only
+                pszSubsetTitle: LPWSTR # NULL if group is not subset
+                cchSubsetTitle: int
+                
+            LVGROUP_V5_SIZE = CCSIZEOF_STRUCT(LVGROUP, 'uAlign')
+            PLVGROUP = LVGROUP.PTR()
+            

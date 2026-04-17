@@ -1,6 +1,9 @@
 from win.defbase_errordef import *
+from win.handleapi import *
+from win.synchapi import *
 from win.winuser import *
 from win.wingdi import *
+from win.winnt import *
 
 class Handle(HANDLE):
     _released: bool
@@ -104,7 +107,10 @@ class DC(Handle):
         self._closed = True
             
     def create_compatible(self) -> 'DC':
-        dc = DC(CreateCompatibleDC(self))
+        hDC = CreateCompatibleDC(self)
+        if not hDC:
+            raise WinException()
+        dc = DC(hDC)
         dc._created = True
         return dc
     
@@ -117,7 +123,10 @@ class DC(Handle):
         
     @classmethod
     def get(self, hwnd: int | HWND = NULL) -> 'DC':
-        return DC(GetDC(hwnd))
+        hDC = GetDC(hwnd)
+        if not hDC:
+            raise WinException()
+        return DC(hDC)
         
     def select(self, hGdiObject: int | HANDLE) -> int:
         return SelectObject(self, hGdiObject)
@@ -402,4 +411,18 @@ class GLContext(Handle):
         if self._current:
             wglMakeCurrent(NULL, NULL)
         wglDeleteContext(self)
+        self._closed = True
+        
+class Event(Handle):
+    def __init__(self, name: str, initial: bool = False, manual_reset: bool = True, 
+                 security_attributes: SECURITY_ATTRIBUTES = NULL):
+        super().__init__()
+        name = '\\Local\\' + name
+        pSecurityAttributes = security_attributes.ref() if security_attributes is not None else NULL
+        self.value = CreateEventW(pSecurityAttributes, manual_reset, initial, name)
+        if not self.value:
+            raise WinException()
+    
+    def close(self):
+        CloseHandle(self)
         self._closed = True
