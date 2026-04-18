@@ -149,7 +149,8 @@ __all__ = [
     "hot_reload_module",
     "suppress_WinWarning", "unsuppress_WinWarning",
     "NullFunction",
-    "pcall"
+    "pcall",
+    "i_getattr", "i_setattr"
 ]
 
 def pcall(f, *args, **kwargs) -> tuple[Any, BaseException]:
@@ -1369,6 +1370,12 @@ class PtrUtil:
         """
         return _is_ptr_type(ptr_type)
     
+    def to_python(ptr: IPointer[WT]) -> object:
+        """
+        Convert pointer to python object.
+        """
+        return i_cast(ptr, py_object).value
+    
 class PtrArithmetic:
     @staticmethod
     def add(ptr: IPointer[WT], *offsets: int) -> IPointer[WT]:
@@ -2386,6 +2393,18 @@ class CClass(CStructure):
 from typing import overload
 
 WT_STRUCTURE = TypeVar('_WT_STRUCTURE', bound=CStructure)
+
+def i_getattr(obj: object, attr: str) -> object:
+    """
+    Get attribute of object bypassing all `__getattribute__` interceptors.
+    """
+    return object.__getattribute__(obj, attr)
+
+def i_setattr(obj: object, attr: str, value: object) -> object:
+    """
+    Set attribute of object bypassing all `__getattribute__` interceptors.
+    """
+    return object.__setattr__(obj, attr, value)
 
 def i_cast_structure(obj: CStructure, typ: Type[WT_STRUCTURE]) -> WT_STRUCTURE:
     """

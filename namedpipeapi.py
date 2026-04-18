@@ -15,6 +15,7 @@ from .winbase import *
 from .defbase import *
 
 if cpreproc.pragma_once("_NAMEDPIPE_H_"):
+    kernelbase = get_win_library('kernelbase.dll')
     CreatePipe = declare(kernel32.CreatePipe, BOOL, PHANDLE, PHANDLE, LPSECURITY_ATTRIBUTES, DWORD)
     ConnectNamedPipe = declare(kernel32.ConnectNamedPipe, BOOL, HANDLE, LPOVERLAPPED)
     DisconnectNamedPipe = declare(kernel32.DisconnectNamedPipe, BOOL, HANDLE)
@@ -31,7 +32,7 @@ if cpreproc.pragma_once("_NAMEDPIPE_H_"):
         GetNamedPipeClientComputerNameA = declare(kernel32.GetNamedPipeClientComputerNameA, BOOL, HANDLE, LPSTR, ULONG)
         GetNamedPipeClientComputerNameW = declare(kernel32.GetNamedPipeClientComputerNameW, BOOL, HANDLE, LPWSTR, ULONG)
         GetNamedPipeClientComputerName = unicode(GetNamedPipeClientComputerNameW, GetNamedPipeClientComputerNameA)
-        ImpersonateNamedPipeClient = declare(kernel32.ImpersonateNamedPipeClient, BOOL, HANDLE)
+        ImpersonateNamedPipeClient = declare(kernelbase.ImpersonateNamedPipeClient, BOOL, HANDLE)
 
     # REGION *** Application Family or OneCore Family ***
 

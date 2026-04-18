@@ -3143,7 +3143,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 cItems: int # Read only
                 pszSubsetTitle: LPWSTR # NULL if group is not subset
                 cchSubsetTitle: int
-                
+            
+            declare_fields(LVGROUP)
+            
             LVGROUP_V5_SIZE = CCSIZEOF_STRUCT(LVGROUP, 'uAlign')
             PLVGROUP = LVGROUP.PTR()
             
