@@ -33,5 +33,8 @@ class StatusBar(Control):
     @parts.setter
     def parts(self, parts: Iterable[int]):
         length = len(parts)
-        pParts = (INT * length)(*parts)
+        iParts = []
+        for part in parts:
+            iParts.append(int(part))
+        pParts = (INT * length)(*iParts)
         self.send(SB_SETPARTS, length, pParts)

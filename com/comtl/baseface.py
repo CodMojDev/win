@@ -343,6 +343,17 @@ def TlAccessOAStringAndFree(bstr: BSTR) -> str:
     SysFreeString(bstr)
     return string
 
+
+def TlBSTR(bstrLike: BSTR |str) -> str:
+    """
+    Check the providen string is BSTR, then access and free it,
+    otherwise return it.
+    """
+    print(type(bstrLike), bstrLike)
+    if isinstance(bstrLike, BSTR):
+        return TlAccessOAStringAndFree(bstrLike)
+    return bstrLike
+
 #
 # COM TL Context utilities
 #

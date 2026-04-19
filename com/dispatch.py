@@ -11,10 +11,15 @@ import builtins
 import datetime
 import decimal
 
+class DispatchPolicy:
+    MarshalBSTR = 1
+
 class Dispatch:
     _dispids: Dict[str, int]
     _methods: List[str]
     _disp: IDispatch
+    
+    policy: int = 0
     
     def __init__(self, disp: IDispatch):
         disp.AddRef()
@@ -94,7 +99,12 @@ class Dispatch:
                                byref(result), NULL, NULL)
         if FAILED(hr): raise COMError(hr)
         
-        return result.value
+        value = result.value
+        if isinstance(value, BSTR) and Dispatch.policy & DispatchPolicy.MarshalBSTR:
+            result = value.value
+            SysFreeString(value)
+            return result
+        return value
                             
     def __getattr__(self, name: str):
         if name in self._methods:
@@ -116,7 +126,12 @@ class Dispatch:
                                    byref(result), NULL, NULL)
             if FAILED(hr): raise COMError(hr)
             
-            return result.value
+            value = result.value
+            if isinstance(value, BSTR) and Dispatch.policy & DispatchPolicy.MarshalBSTR:
+                result = value.value
+                SysFreeString(value)
+                return result
+            return value
         
     def put_property(self, dispid: int, pVar: IPointer[VARIANT]):
         dispparams = DISPPARAMS(NULL, NULL, 1, 1)
@@ -132,13 +147,16 @@ class Dispatch:
                                    dispparams)
         
     def __setattr__(self, name: str, value):
+        if name == 'policy':
+            return i_setattr(self, name, value)
+        
         if name in self._methods:
             raise AttributeError('Methods are immutable properties.')
         
         dispId = self._get_dispid(name)
         
         var = VARIANT()
-        var._set_value(value)
+        variant_set_value(var, value)
         
         dispParams = DISPPARAMS()
         dispParams.rgvarg = pointer(var)

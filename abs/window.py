@@ -47,6 +47,9 @@ class Window(HWND):
             self.on_mouse_wheel = Event()
             self.on_timer = Event()
             self.after_message = Event()
+            self.on_notify = Event()
+            self.on_message = Event()
+            self.on_mouse_move = Event()
     
     _timers: dict[int, FARPROC]
     class_name: str | None
@@ -72,7 +75,7 @@ class Window(HWND):
             return self._style
         return GetWindowLongW(self, GWL_EXSTYLE)
     
-    @style.setter
+    @extended_style.setter
     def extended_style(self, extended_style: int):
         self._extended_style = extended_style
         if self.value:
@@ -94,7 +97,7 @@ class Window(HWND):
         class_name = f'Win-Abs/Class-N{str(Window._class_count).zfill(4)}'
         
         wc.lpszClassName = class_name
-        self.pfsnWndProc = wc.lpfnWndProc = WNDPROC(self.window_proc)
+        self.pfnWndProc = wc.lpfnWndProc = WNDPROC(self.window_proc)
         atomResult = RegisterClass(wc.ref())
         
         if not atomResult:
@@ -135,10 +138,10 @@ class Window(HWND):
         elif msg == WM_RBUTTONDBLCLK:
             self.on_right_button_double_click.execute(wParam, LOWORD(lParam), HIWORD(lParam))
         elif msg == WM_CLOSE:
-            if all(self.on_close.execute(hwnd)):
+            if all(self.on_close.execute()):
                 SendMessage(hwnd, WM_DESTROY, 0, 0)
         elif msg == WM_DESTROY:
-            self.on_destroy.execute(hwnd)
+            self.on_destroy.execute()
             self.running = False
             PostQuitMessage(0)
         elif msg == WM_COMMAND:
@@ -180,6 +183,11 @@ class Window(HWND):
         elif msg == WM_TIMER:
             if not all(self.on_timer.execute(wParam, i_cast(lParam, TIMERPROC))):
                 return FALSE
+        elif msg == WM_NOTIFY:
+            nmhdr = i_cast(lParam, LPNMHDR).contents
+            self.on_notify.execute(nmhdr)
+        elif msg == WM_NCMOUSEMOVE:
+            self.on_mouse_move.execute(wParam, LOWORD(lParam), HIWORD(lParam))
         else:
             result = self.on_unknown_message.execute(msg, wParam, lParam)
             for value in result:
@@ -232,7 +240,19 @@ class Window(HWND):
             lParam = PtrUtil.get_address(lParam)
             
         return SendMessage(self, message, wParam, lParam)
-        
+    
+    @property
+    def name(self) -> str:
+        nText = GetWindowTextLengthW(self) + 1
+        buffer = create_unicode_buffer(nText)
+        GetWindowTextW(self, buffer, nText)
+        return buffer.value
+    
+    @name.setter
+    def name(self, name: str):
+        if not SetWindowTextW(self, name):
+            raise WinException()
+    
     @property
     def parent(self) -> 'Window':
         return Window(GetParent(self), headless=True)
@@ -336,6 +356,7 @@ class Window(HWND):
         while self.running:
             if PeekMessage(pMsg, NULL, 0, 0, PM_REMOVE):
                 TranslateMessage(pMsg)
+                self.on_message.execute(msg)
                 DispatchMessageW(pMsg)
                 
             self.after_message.execute()

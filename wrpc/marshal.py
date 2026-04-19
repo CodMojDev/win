@@ -3,10 +3,37 @@ from .message import *
 from .stream import *
 from .errors import *
 
+import typing
 import types
 
 LPDOUBLE = PTR(DOUBLE)
 LPFLOAT = PTR(FLOAT)
+
+class IWRPCMarshal(IInterface):
+    _iid_: typing.ClassVar[IID]
+    
+    @interface_abstract_method
+    def marshal(self) -> bytes:
+        """
+        Marshal object into buffer.
+        """
+    
+    @interface_abstract_method
+    @classmethod
+    def unmarshal(self, stream: Stream) -> Any:
+        """
+        Unmarshal marshalled object on stream into Python object.
+        """
+
+class _WRPCState:
+    __slots__ = ['registry']
+    
+    registry: dict[bytes, IWRPCMarshal]
+    
+    def __init__(self):
+        self.registry = {}
+        
+_wrpc_state = _WRPCState()
 
 class WRPC:
     class Context:
@@ -14,8 +41,20 @@ class WRPC:
         
         def __init__(self):
             self.marshal_cache = []
-            
-        
+    
+    @staticmethod
+    def get(iid: GUID | bytes) -> IWRPCMarshal:
+        if isinstance(iid, GUID):
+            iid = bytes(iid)
+        return _wrpc_state.registry[iid]
+    
+    @staticmethod
+    def add(marshaller: IWRPCMarshal):
+        iid = bytes(marshaller._iid_)
+        if iid in _wrpc_state.registry:
+            raise KeyError(f'Marshaller {marshaller.__qualname__} already exists.')
+        _wrpc_state.registry[iid] = marshaller
+    
     @staticmethod
     def marshal(value: object, udp: bool = False, ctx: 'WRPC.Context' = None) -> bytes:
         if ctx is None:
@@ -149,6 +188,10 @@ class WRPC:
         elif value_t is bool:
             buffer = bytes(BYTE(WRPC_T_BOOL))
             buffer += bytes(BOOLEAN(value))
+        elif isinstance(value, IWRPCMarshal):
+            buffer = bytes(BYTE(WRPC_T_MARSHALEXT))
+            buffer += bytes(value._iid_)
+            buffer += value.marshal()
         else:
             if value in ctx.marshal_cache:
                 buffer = bytes(BYTE(WRPC_T_MARSHALREF))
@@ -303,6 +346,10 @@ class WRPC:
             value = ctx.marshal_cache[wId]
             ctx.marshal_cache.append(value)
             return value
+        elif bType == WRPC_T_MARSHALEXT:
+            guid = stream.read(16)
+            marshaller = _wrpc_state.registry[guid]
+            return marshaller.unmarshal(stream)
 
 WRPC_PROTOCOL_PREF_UDP = 0x01
 WRPC_PROTOCOL_PREF_TCP = 0x02

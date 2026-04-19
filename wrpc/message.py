@@ -300,6 +300,16 @@ PWRPC_MARSHAL_DATA_SMALLCOMPLEX_IMAG = PTR(WRPC_MARSHAL_DATA_SMALLCOMPLEX_IMAG)
 WRPC_T_MARSHALREF = 0x13
 
 #
+# WRPC marshal format for MarshalExtension
+#
+# BYTE Type
+# GUID Marshaller
+# CHAR MarshalData[]
+#
+
+WRPC_T_MARSHALEXT = 0x14
+
+#
 # WRPC marshal format for Exception
 #
 # WORD TypeNameSize

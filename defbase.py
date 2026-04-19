@@ -1326,6 +1326,8 @@ from ctypes import sizeof, c_char_p, c_wchar_p
 
 class PtrUtil:
     def get_address(ptr: IPointer[WT]) -> int:
+        if ptr is None:
+            return 0
         return i_cast(ptr, c_void_p).value
     
     def get_type(ptr: IPointer[WT]) -> WT:
