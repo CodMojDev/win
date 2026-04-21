@@ -1421,7 +1421,7 @@ if cpreproc.pragma_once("_WINUSER_"):
         POINTTOPOINTS = lambda pt: POINTS(SHORT(pt.x), SHORT(pt.y))
         MAKEWPARAM = lambda l, h: WPARAM(DWORD(MAKELONG(l, h)).value).value
         MAKELPARAM = lambda l, h: LPARAM(DWORD(MAKELONG(l, h)).value).value
-        MAKELRESULT = lambda l, h: LRESULT(DWORD(MAKELONG(l, h))).value
+        MAKELRESULT = lambda l, h: LRESULT(DWORD(MAKELONG(l, h))).val
 
         if cpreproc.ifndef("NOWINOFFSETS"):
 

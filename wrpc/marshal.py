@@ -350,10 +350,23 @@ class WRPC:
             guid = stream.read(16)
             marshaller = _wrpc_state.registry[guid]
             return marshaller.unmarshal(stream)
+        
+    @staticmethod
+    def unmarshal_exceptions(stm: Stream, n: int) -> list[tuple[str, str]]:
+        exceptions = []
+        
+        for _ in range(n):
+            type_name = stm.read(stm.read_word()).decode('utf-8')
+            text = stm.read(stm.read_word()).decode('utf-8')
+            exceptions.append((type_name, text))
+        
+        return exceptions
 
-WRPC_PROTOCOL_PREF_UDP = 0x01
-WRPC_PROTOCOL_PREF_TCP = 0x02
-WRPC_PROTOCOL_PREF_NP = 0x04
+
+
+#
+# under construction, partial implementation
+#
 
 class WRPCProxyObject:
     protocol: 'IWRPCProtocol'
@@ -369,7 +382,10 @@ class WRPCProxyObject:
         
         protocol: IWRPCProtocol = i_getattr(self, 'protocol')
         protocol.write_message(message, rq_data)
-        protocol.wait()
+        msg, data = protocol.wait(timeout=5.0)
+        if msg.nExceptions != 0:
+            stm = Stream(data)
+            raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
     
     def __getattribute__(self, attribute: str) -> object:
         protocol: IWRPCProtocol = i_getattr(self, 'protocol')
@@ -384,7 +400,10 @@ class WRPCProxyObject:
         message.dwDataSize = len(rq_data)
         
         protocol.write_message(message, rq_data)
-        stm = Stream(protocol.wait()[1])
+        msg, data = protocol.wait(timeout=5.0)
+        stm = Stream(data)
+        if msg.nExceptions != 0:
+            raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
         stm.protocol = protocol
         return WRPC.unmarshal(stm)
         
@@ -403,7 +422,10 @@ class WRPCProxyObject:
         message.dwDataSize = len(rq_data)
         
         protocol.write_message(message, rq_data)
-        protocol.wait()
+        msg, data = protocol.wait(timeout=5.0)
+        if msg.nExceptions != 0:
+            stm = Stream(data)
+            raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
         
     def __call__(self, *args, **kwargs):
         protocol: IWRPCProtocol = i_getattr(self, 'protocol')
@@ -420,7 +442,10 @@ class WRPCProxyObject:
         message.dwDataSize = len(rq_data)
         
         protocol.write_message(message, rq_data)
-        stm = Stream(protocol.wait()[1])
+        msg, data = protocol.wait(timeout=5.0)
+        stm = Stream(data)
+        if msg.nExceptions != 0:
+            raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
         stm.protocol = protocol
         return WRPC.unmarshal(stm)
         
@@ -435,4 +460,67 @@ class WRPCProxyObject:
         message.dwDataSize = len(rq_data)
         
         protocol.write_message(message, rq_data)
-        protocol.wait()
+        msg, data = protocol.wait(timeout=5.0)
+        if msg.nExceptions != 0:
+            stm = Stream(data)
+            raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
+        
+    def unary(self, op: int) -> Any:
+        protocol: IWRPCProtocol = i_getattr(self, 'protocol')
+        
+        if not protocol.alive():
+            raise WRPCException('WRPC Protocol is destroyed but trying to use proxy object referring to destroyed protocol.')
+        
+        message = WRPCUtils.message(WRPC_M_REQUEST)
+        rq_data = WRPCUtils.obj_request(WRPC_RQ_T_UNARYOP, i_getattr(self, 'obj'))
+        rq_data += bytes(BYTE(op))
+        message.dwDataSize = len(rq_data)
+        
+        protocol.write_message(message, rq_data)
+        msg, data = protocol.wait(timeout=5.0)
+        stm = Stream(data)
+        if msg.nExceptions != 0:
+            raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
+        stm.protocol = protocol
+        return WRPC.unmarshal(stm)
+        
+    def binary(self, op: int, value: Any) -> Any:
+        protocol: IWRPCProtocol = i_getattr(self, 'protocol')
+        
+        if not protocol.alive():
+            raise WRPCException('WRPC Protocol is destroyed but trying to use proxy object referring to destroyed protocol.')
+        
+        message = WRPCUtils.message(WRPC_M_REQUEST)
+        rq_data = WRPCUtils.obj_request(WRPC_RQ_T_BINOP, i_getattr(self, 'obj'))
+        rq_data += bytes(BYTE(op))
+        rq_data += WRPC.marshal(value)
+        message.dwDataSize = len(rq_data)
+        
+        protocol.write_message(message, rq_data)
+        msg, data = protocol.wait(timeout=5.0)
+        stm = Stream(data)
+        if msg.nExceptions != 0:
+            raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
+        stm.protocol = protocol
+        return WRPC.unmarshal(stm)
+    
+    def __str__(self):
+        return i_getattr(self, 'unary')(WRPC_UNARYOP_STR)
+    
+    def __abs__(self):
+        return i_getattr(self, 'unary')(WRPC_UNARYOP_ABS)
+    
+    def __invert__(self):
+        return i_getattr(self, 'unary')(WRPC_UNARYOP_INV)
+    
+    def __neg__(self):
+        return i_getattr(self, 'unary')(WRPC_UNARYOP_NEG)
+    
+    def __pos__(self):
+        return i_getattr(self, 'unary')(WRPC_UNARYOP_POS)
+    
+    def __int__(self):
+        return i_getattr(self, 'unary')(WRPC_UNARYOP_INT)
+    
+    def __repr__(self):
+        return i_getattr(self, 'unary')(WRPC_UNARYOP_REPR)

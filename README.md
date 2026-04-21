@@ -15,6 +15,14 @@ See `com/icl/wicl/parser.py` for its implementation.
 See `defbase.py` for reference (`foreign_optimized`, `foreign`, `delegate`, `CStructure.delegate`, `CStructure.virt_delegate`).
 5. CIMPL - C Implementation Language, custom DSL for the definition of the JIT-compilable code, which lays between assembly and high-level definitions. Now is in development and not stable-to-work.
 See `cimpl/cimpldef.py` and `cimpl/cimpljit.py` (under construction) for reference.
+6. WET - Windows Event Tracing, custom tracing and logging system.
+See `wet/trace.py` for reference.
+7. WD - Win Debugger, custom debugger for debugging Python code with native calls, supports calling INT3 for entering native debugger (e.g. WinDbg).
+8. COM TL - COM Template Library, the answer to Microsoft ATL, core module for COM utilities, COM object definitions and COM Servers API
+9. NTL - .NET Template Library, library for hosting CLR, .NET Framework interop startup, utilities for interop.
+10. JTL - Java Template Library, library for interacting JNI and interop startup.
+11. WRPC - Win Remote Procedure Call, custom protocol for distributed objects system and remote procedure calling.
+12. WinAbs - Win Abstractions Layer, abstractions over Win32 primitives for securely interacting with WinAPI and fastely developing on WinAPI on Python, destroying the Win32 API boilerplate code.
 
 ### Main files
 
@@ -32,6 +40,22 @@ See `cimpl/cimpldef.py` and `cimpl/cimpljit.py` (under construction) for referen
 12. `com/icl/wicl/parser.py`: definitions for the WICL - ICL Parser and its context.
 13. `defbase_errordef.py`: definitions for the Windows error exceptions and exception text formatting.
 14. `com/guid.py`: definitions for the GUID, IID and CLSID. 
-15. `com/comtl.py`: COM Templates Library, the ATL analogue in library.
+15. `com/comtl`: COM Templates Library, the ATL analogue in library.
 16. `com/bstr.py`: definition of the BSTR class.
 17. `com/unknwn.py`: definition of the IUnknown, IClassFactory and COMClass classes and other core COM infrastructure logic.
+18. `abs/core/handle.py`: core definitions for RAII-like handles for WinAbs
+19. `abs/core/event.py`: core definition of WinAbs C#-like Event
+20. `abs/window.py`: core window logic of WinAbs framework
+21. `wrpc/message.py`: specification of WRPC protocol
+22. `wrpc/marshal.py`: core marshal logic of WRPC
+23. `wrpc/protocol.py`: main implementation of WRPC protocol
+24. `net/interop.py`: .NET Framework Interop full implementation
+25. `net/ntl.py` and `net/ntlext.py`: NTL and its extension
+26. `net/ntlgen.py`: Python code generator from .NET assembly (part of NTL)
+27. `java/interop.py`: Java Interop full implementation
+28. `java/jtl.py`: Java Template Library
+29. `winrt/winrtns.py`: definitions of WinRT namespaces, core import
+30. `wet/trace.py`: implementation of WET - Windows Event Tracing
+31. `dbg/wd.py`: implementation of WD - Win Debugger
+32. `com/dispatch.py`: definition for OLE Automation wrapper
+33. `com/icl/iclstorage`: main storage place for ICL files

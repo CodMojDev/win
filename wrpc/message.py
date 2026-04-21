@@ -1,14 +1,23 @@
 from win.minwindef import *
 
+# WRPC Versions
 WRPC_VERSION_LAST = 0x0001
 
+# WRPC message IDs
 WRPC_M_RESPONSE = 0x01
 WRPC_M_REQUEST  = 0x02
+WRPC_M_SIGNAL   = 0x03
 
+# WRPC Magic signature
 WRPC_SIGNATURE = b'WRPC'
 
-WRPC_UDP_PACKET_MAXSIZE = 0xffff
-WRPC_WAIT_TIME_QUANT = 0.00001
+WRPC_UDP_PACKET_MAXSIZE = 0xffff # 65535 standard UDP packet limit
+WRPC_WAIT_TIME_QUANT = 0.001 # 1 ms, NT time quant
+
+# WRPC Protocol Preferences
+WRPC_PROTOCOL_PREF_UDP = 0x01
+WRPC_PROTOCOL_PREF_TCP = 0x02
+WRPC_PROTOCOL_PREF_NP = 0x04
 
 #
 # WRPC message
@@ -445,7 +454,80 @@ WRPC_RQ_T_RELEASE = 0x08
 # WRPC_MARSHAL_ENTRY Kwargs
 #
 
-WRPC_RQ_T_CALL = 0x07 # t.k(*args, **kwargs)
+WRPC_RQ_T_CALL = 0x09 # t.k(*args, **kwargs)
+
+#
+# WRPC data format for GlobalData request
+#
+# DWORD dwDataID
+#
+
+WRPC_RQ_T_GLOBALDATA = 0x0A
+
+#
+# WRPC data format for GetItem request
+#
+# PVOID ObjectRef
+# WRPC_MARSHAL_ENTRY Key
+#
+
+WRPC_RQ_T_GETITEM = 0x0B
+
+#
+# WRPC data format for SetItem request
+#
+# PVOID ObjectRef
+# WRPC_MARSHAL_ENTRY Key
+# WRPC_MARSHAL_ENTRY Value
+#
+
+WRPC_RQ_T_SETITEM = 0x0C
+
+#
+# WRPC data format for DetItem request
+#
+# PVOID ObjectRef
+# WRPC_MARSHAL_ENTRY Key
+#
+
+WRPC_RQ_T_DELITEM = 0x0D
+
+#
+# WRPC data format for Stop signal
+#
+# BYTE Signal
+# BOOLEAN Soft
+# WORD Preferences
+# CHAR StopData[]
+#
+
+WRPC_SIG_STOP = 0x01
+
+#
+# WRPC data format for Connect signal
+#
+# BYTE Signal
+#
+
+WRPC_SIG_CONNECT = 0x02
+
+#
+# WRPC data format for Disconnect signal
+#
+# BYTE Signal
+#
+
+WRPC_SIG_DISCONNECT = 0x03
+
+#
+# WRPC data format for UDPStop
+#
+# BYTE Signal
+# BOOLEAN Soft
+# WORD Preferences
+# IN_ADDR Stopping
+# WORD StoppingPort
+#
 
 class WRPCUtils:
     @staticmethod
@@ -461,7 +543,19 @@ class WRPCUtils:
         return message
     
     @staticmethod
+    def request(rq_type: int) -> bytes:
+        return bytes(BYTE(rq_type))
+    
+    @staticmethod
     def obj_request(rq_type: int, obj: int) -> bytes:
         buffer = bytes(BYTE(rq_type))
         buffer += bytes(PVOID(obj))
+        return buffer
+    
+    @staticmethod
+    def signal(sig: int, *args) -> bytes:
+        buffer = bytes(BYTE(sig))
+        if sig == WRPC_SIG_STOP:
+            buffer += bytes(BOOLEAN(args[0]))
+            buffer += bytes(WORD(args[1]))
         return buffer

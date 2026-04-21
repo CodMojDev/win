@@ -186,7 +186,7 @@ class Window(HWND):
         elif msg == WM_NOTIFY:
             nmhdr = i_cast(lParam, LPNMHDR).contents
             self.on_notify.execute(nmhdr)
-        elif msg == WM_NCMOUSEMOVE:
+        elif msg == WM_MOUSEMOVE:
             self.on_mouse_move.execute(wParam, LOWORD(lParam), HIWORD(lParam))
         else:
             result = self.on_unknown_message.execute(msg, wParam, lParam)
