@@ -102,7 +102,7 @@ if cpreproc.pragma_once("_DXDIAG_H_"):
             @virtual_table.com_function_vbstyle(DWORD, LPWSTR, DWORD)
             def EnumChildContainerNames(self, dwIndex: int, pwszContainer: WT_LPWSTR, cchContainer: int): ...
             
-            def _RetVal_GetChildContainer(retval) -> IPointer['IDxDiagContainer']:
+            def _RetVal_GetChildContainer(retval) -> 'IDxDiagContainer':
                 return i_cast2(retval, IDxDiagContainer.PTR()).contents
             
             @virtual_table.com_function_vbstyle(LPCWSTR, retval_index=1, retval_type=PVOID,
@@ -167,7 +167,7 @@ if cpreproc.pragma_once("_DXDIAG_H_"):
         @virtual_table.com_function(DXDIAG_INIT_PARAMS.PTR())
         def Initialize(self, pParams: IPointer[DXDIAG_INIT_PARAMS]) -> int: ...
         
-        @virtual_table.com_function(IDxDiagContainer.DOUBLE_PTR())
+        @virtual_table.com_function(PVOID)
         def GetRootContainer(self, ppInstance: IDoublePtr[IDxDiagContainer]) -> int: ...
         
         virtual_table.build()

@@ -89,11 +89,13 @@ class COMVirtualTable(VirtualTable):
         return self
     
     def com_function(self, *args: type, exists: bool = False,
-                     intermediate_method: bool = False) -> Callable:
+                     intermediate_method: bool = False,
+                     marshal_scheme: list[tuple[int, Callable]] = []) -> Callable:
         """
         Declare COM function.
         """
-        return super().function(HRESULT, *args, exists=exists, intermediate_method=intermediate_method)
+        return super().function(HRESULT, *args, exists=exists, intermediate_method=intermediate_method,
+                                marshal_scheme=marshal_scheme)
 
     def com_function_vbstyle(self, *args: type, exists: bool = False,
                      intermediate_method: bool = False, retval_index: int = -1,

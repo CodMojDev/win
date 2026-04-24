@@ -150,7 +150,8 @@ __all__ = [
     "suppress_WinWarning", "unsuppress_WinWarning",
     "NullFunction",
     "pcall",
-    "i_getattr", "i_setattr"
+    "i_getattr", "i_setattr",
+    "WinAttribute", "WinProperty", "WinPropertyStore", "attributes"
 ]
 
 def pcall(f, *args, **kwargs) -> tuple[Any, BaseException]:
@@ -2843,6 +2844,83 @@ def module_to_namespace(module: ModuleType, namespace: Type[object]) -> None:
     for name in dir(module):
         if not name.startswith('_'):
             setattr(namespace, name, getattr(module, name))
+
+class WinAttribute:
+    type: str
+    string: str
+    
+    def __init__(self, type: str, string: str):
+        self.type = type
+        self.string = string
+    
+    def __str__(self):
+        return repr(self)
+    
+    def __repr__(self):
+        return f'<attribute [{self.type}], string="{self.string}">'
+    
+class WinProperty(WinAttribute):
+    propertyType: str
+    propertyString: str
+    
+    def __init__(self, propertyType: str, propertyString: str, string: str):
+        super().__init__('win.api.Property', string)
+        self.propertyType = propertyType
+        self.propertyString = propertyString
+    
+    def __repr__(self):
+        return f'<win.api.Property [{self.propertyType}], string="{self.propertyString}">'
+    
+class WinPropertyStore(WinAttribute):
+    properties: list[WinProperty]
+    
+    def __init__(self):
+        super().__init__('win.api.PropertyStore', '')
+        self.properties = []
+    
+    def __repr__(self):
+        return f'<win.api.PropertyStore length={len(self.properties)}>'
+
+import tokenize
+
+def attributes(data: str | bytes, encoding='utf-8') -> list[WinAttribute]:
+    if isinstance(data, str):
+        data = data.encode(encoding)
+    
+    data = data.replace(b'\r\n', b'\n')
+    splitted = data.split(b'\n')
+    iterator = iter(splitted)
+    tokens = tokenize.tokenize(iterator.__next__)
+    parsingPropertyStore = 0
+    propStore = None
+    attributes = []
+    
+    for token in tokens:
+        if token.type == tokenize.COMMENT:
+            comment = token.string
+            if comment.startswith('# ['):
+                comment = comment[3:]
+                if ']' in comment:
+                    attribute_type = comment[:comment.find(']')]
+                    if attribute_type == 'win.api.PropertyStore':
+                        parsingPropertyStore = 1
+                        propStore = WinPropertyStore()
+                        attributes.append(propStore)
+                    elif attribute_type == 'win.api.Property' and parsingPropertyStore == 2:
+                        propcomm = comment[len(attribute_type)+1:]
+                        if propcomm.startswith('[') and ']' in propcomm:
+                            proptype = propcomm[1:propcomm.find(']')]
+                            prop = WinProperty(proptype, propcomm[2+len(proptype):], comment)
+                            propStore.properties.append(prop)
+                    else:
+                        attributes.append(WinAttribute(attribute_type, comment[len(attribute_type)+1:]))
+            elif comment == '# {' and parsingPropertyStore == 1:
+                parsingPropertyStore = 2
+            elif comment == '# }' and parsingPropertyStore == 2:
+                parsingPropertyStore = 0
+                propStore = None
+                
+    return attributes
 
 # internal
 def _diagnostic(mod_path = '.'):

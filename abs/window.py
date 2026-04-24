@@ -241,6 +241,11 @@ class Window(HWND):
             
         return SendMessage(self, message, wParam, lParam)
     
+    def map(self, window: int | HWND, points: Iterable[POINT]):
+        length = len(points)
+        pPoints = (POINT * length)(*points)
+        MapWindowPoints(self, window, pPoints, length)
+    
     @property
     def name(self) -> str:
         nText = GetWindowTextLengthW(self) + 1
@@ -279,9 +284,9 @@ class Window(HWND):
                 flags |= SWP_NOMOVE
                 x = y = 0
             else:
-                rect = self.rect
-                if notx: x = rect.left
-                if noty: y = rect.top
+                pos = self.position
+                if notx: x = pos[0]
+                if noty: y = pos[1]
         notw, noth = width is None, height is None
         if notw or noth:
             if notw and noth:
@@ -295,6 +300,9 @@ class Window(HWND):
         
     def set_foreground(self):
         SetForegroundWindow(self)
+        
+    def to_client(self, screen: POINT):
+        ScreenToClient(self, byref(screen))
         
     @property
     def valid(self):
@@ -329,7 +337,7 @@ class Window(HWND):
         
     @property
     def x(self) -> int:
-        return self.rect.left
+        return self.position[0]
     
     @x.setter
     def x(self, x: int):
@@ -337,11 +345,22 @@ class Window(HWND):
         
     @property
     def y(self) -> int:
-        return self.rect.top
+        return self.position[1]
     
     @y.setter
     def y(self, y: int):
         self.set_position(y=y)
+        
+    @property
+    def position(self) -> tuple[int, int]:
+        rc = self.rect
+        pt = POINT(rc.left, rc.top)
+        self.to_client(pt)
+        return pt.x, pt.y
+    
+    @position.setter
+    def position(self, position: tuple[int, int]):
+        self.set_position(x=position[0], y=position[1])
         
     def invalidate(self, rect: RECT = None, erase: bool = True):
         InvalidateRect(self, byref(rect) if rect is not None else rect, erase)

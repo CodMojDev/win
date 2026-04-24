@@ -2359,6 +2359,11 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("idFrom", UINT_PTR),
                 ("code", UINT) # NM_CODE
             ]
+            
+            hwndFrom: int
+            idFrom: int
+            code: int
+            
         NMHDR = tagNMHDR
 
         # REGION ***
@@ -6188,6 +6193,15 @@ if cpreproc.pragma_once("_WINUSER_"):
                         ("nPos", INT),
                         ("nTrackPos", INT)
                     ]
+                    
+                    cbSize: int
+                    fMask: int
+                    nMin: int
+                    nMax: int
+                    nPage: int
+                    nPos: int
+                    nTrackPos: int
+                    
                 SCROLLINFO = tagSCROLLINFO
                 LPSCROLLINFO = POINTER(SCROLLINFO)
                 LPCSCROLLINFO = LPSCROLLINFO
@@ -6230,6 +6244,17 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("style", DWORD),
                     ("lParam", LPARAM) # app-defined stuff
                 ]
+                
+                szClass: LPCSTR
+                szTitle: LPCSTR
+                hOwner: int
+                x: int
+                y: int
+                cx: int
+                cy: int
+                style: int
+                lParam: int
+                
             MDICREATESTRUCTA = tagMDICREATESTRUCTA
             LPMDICREATESTRUCTA = POINTER(MDICREATESTRUCTA)
 
@@ -6245,6 +6270,17 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("style", DWORD),
                     ("lParam", LPARAM) # app-defined stuff
                 ]
+                
+                szClass: LPCWSTR
+                szTitle: LPCWSTR
+                hOwner: int
+                x: int
+                y: int
+                cx: int
+                cy: int
+                style: int
+                lParam: int
+                
             MDICREATESTRUCTW = tagMDICREATESTRUCTW
             LPMDICREATESTRUCTW = POINTER(MDICREATESTRUCTW)
 
@@ -6256,6 +6292,10 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("hWindowMenu", HANDLE),
                     ("idFirstChild", UINT)
                 ]
+                
+                hWindowMenu: int
+                idFirstChild: int
+                
             CLIENTCREATESTRUCT = tagCLIENTCREATESTRUCT
             LPCLIENTCREATESTRUCT = POINTER(CLIENTCREATESTRUCT)
 
@@ -6293,6 +6333,10 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("mkKeylist", CHAR),
                 ("szKeyphrase", CHAR * 1)
             ]
+            
+            mkSize: int
+            mkKeylist: int
+            
         PMULTIKEYHELPA = POINTER(MULTIKEYHELPA)
         LPMULTIKEYHELPA = PMULTIKEYHELPA
 
@@ -6302,6 +6346,9 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("mkKeylist", WCHAR),
                 ("szKeyphrase", WCHAR * 1)
             ]
+            mkSize: int
+            mkKeylist: int
+            
         PMULTIKEYHELPW = POINTER(MULTIKEYHELPW)
         LPMULTIKEYHELPW = PMULTIKEYHELPW
         MULTIKEYHELP = unicode(MULTIKEYHELPW, MULTIKEYHELPA)
@@ -6318,6 +6365,14 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("wMax", INT),
                 ("rgchMember", CHAR * 2)
             ]
+            
+            wStructSize: int
+            x: int
+            y: int
+            dx: int
+            dy: int
+            wMax: int
+            
         PHELPWININFOA = POINTER(HELPWININFOA)
         LPHELPWININFOA = PHELPWININFOA
 
@@ -6331,6 +6386,14 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("wMax", INT),
                 ("rgchMember", WCHAR * 2)
             ]
+            
+            wStructSize: int
+            x: int
+            y: int
+            dx: int
+            dy: int
+            wMax: int
+            
         PHELPWININFOW = POINTER(HELPWININFOW)
         LPHELPWININFOW = PHELPWININFOW
         HELPWININFO = unicode(HELPWININFOW, HELPWININFOA)

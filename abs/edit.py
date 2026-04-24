@@ -64,3 +64,7 @@ class Edit(Control):
     @property
     def current_line(self) -> int:
         return SendMessage(self, EM_LINEFROMCHAR, -1, 0)
+    
+    @property
+    def line_count(self) -> int:
+        return SendMessage(self, EM_GETLINECOUNT, 0, 0)

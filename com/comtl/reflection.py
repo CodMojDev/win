@@ -542,7 +542,7 @@ class PythonObject(CComClass, IPythonObject):
         elif var.vt == VT_R8:
             var.dblVal = float(self._obj)
         elif var.vt == VT_BSTR:
-            var.bstrVal = TlAllocateOAString(str(self._obj)), BSTR
+            var.bstrVal = TlAllocateOAString(str(self._obj))
         elif var.vt == VT_BOOL:
             var.boolVal = VARIANT_FALSE if not bool(self._obj) else VARIANT_TRUE
         else:
