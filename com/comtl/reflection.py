@@ -448,7 +448,7 @@ class PythonObject(CComClass, IPythonObject):
         self.dbg_trace(provider, 'S_OK')
         return S_OK
     
-    def GetAttr_Impl(self, pwszAttr: str, pvPpObject: int) -> int:
+    def GetAttr_Impl(self, pwszAttr: LPWSTR, pvPpObject: int) -> int:
         if not pvPpObject:
             self.dbg_trace(provider, 'ppObject == NULL!', level=WET_LEVEL_ERROR)
             return E_POINTER
@@ -458,9 +458,9 @@ class PythonObject(CComClass, IPythonObject):
             return E_POINTER
         
         try:
-            attribute = getattr(self._obj, pwszAttr)
+            attribute = getattr(self._obj, pwszAttr.value)
         except AttributeError:
-            self.dbg_trace(provider, f'No attribute L"{pwszAttr}"', level=WET_LEVEL_ERROR)
+            self.dbg_trace(provider, f'No attribute L"{pwszAttr.value}"', level=WET_LEVEL_ERROR)
             return E_INVALIDARG
         
         obj = PythonObject(attribute)
@@ -469,13 +469,13 @@ class PythonObject(CComClass, IPythonObject):
         self.dbg_trace(provider, 'S_OK')
         return S_OK
     
-    def SetAttr_Impl(self, pwszAttr: str, pvPObject: int) -> int:
+    def SetAttr_Impl(self, pwszAttr: LPWSTR, pvPObject: int) -> int:
         if not pvPObject:
             self.dbg_trace(provider, 'pObject == NULL!', level=WET_LEVEL_ERROR)
             return E_POINTER
         
         try:
-            setattr(self._obj, TlObjectItfToPython(pvPObject))
+            setattr(self._obj, pwszAttr.value, TlObjectItfToPython(pvPObject))
         except Exception as e:
             self.dbg_trace(provider, f'Unexpected exception "{e}"', level=WET_LEVEL_ERROR)
             self._exc = e
@@ -750,6 +750,12 @@ class IPythonManager(IUnknown):
         """
         Get the Python error if ocurred.
         """
+        
+    @virtual_table.com_function(LPVARIANT, PVOID)
+    def CreateObject(self, pVar: IPointer[VARIANT], ppObject: IDoublePtr['IPythonObject']) -> int:
+        """
+        Create object from VARIANT.
+        """
     
     virtual_table.build()
     
@@ -887,6 +893,60 @@ class PythonManager(CComClass, IPythonManager):
         self._exc = None
         
         self.dbg_trace(provider, 'S_OK')
+        return S_OK
+    
+    def CreateObject_Impl(self, pVariant: IPointer[VARIANT], pvPpObject: IDoublePtr[IPythonObject]) -> int:
+        if not pVariant:
+            self.dbg_trace(provider, 'pVariant == NULL!')
+            return E_POINTER
+        
+        if not pvPpObject:
+            self.dbg_trace(provider, 'ppObject == NULL!')
+            return E_POINTER
+        
+        var = pVariant.contents
+        if var.vt == VT_BSTR:
+            result = var.bstrVal.value
+        elif var.vt == VT_I1:
+            result = var.cVal
+        elif var.vt == VT_UI1:
+            result = var.bVal
+        elif var.vt == VT_I2:
+            result = var.iVal
+        elif var.vt == VT_UI2:
+            result = var.uiVal
+        elif var.vt == VT_I4:
+            result = var.lVal
+        elif var.vt == VT_UI4:
+            result = var.ulVal
+        elif var.vt == VT_I8:
+            result = var.llVal
+        elif var.vt == VT_UI8:
+            result = var.ullVal
+        elif var.vt == VT_R4:
+            result = var.fltVal
+        elif var.vt == VT_R8:
+            result = var.dblVal
+        elif var.vt == VT_BOOL:
+            result = var.boolVal == VARIANT_TRUE
+        elif var.vt == VT_INT:
+            result = var.intVal
+        elif var.vt == VT_UINT:
+            result = var.uintVal
+        elif var.vt == VT_UNKNOWN:
+            pObject = IPythonObject.NULL()
+            if SUCCEEDED(var.punkVal.contents.QueryInterface(IPythonObject, byref(pObject))):
+                result = TlObjectItfToPython(pObject)
+            else:
+                self.dbg_trace(provider, f'Unsupported interface', level=WET_LEVEL_ERROR)
+            return E_INVALIDARG
+        else:
+            self.dbg_trace(provider, f'Unsupported VT {var.vt}', level=WET_LEVEL_ERROR)
+            return E_INVALIDARG
+        
+        obj = PythonObject(result)
+        TlWritePointerToPpv(pvPpObject, obj.ptr())
+        
         return S_OK
     
     virtual_table.build()

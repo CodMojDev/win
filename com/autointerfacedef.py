@@ -558,6 +558,7 @@ class TYPEDESC(CStructure):
     _anonymous_ = ['u']
     
     vt: int
+    hreftype: int
     
     @property
     def lptdesc(self) -> IPointer['TYPEDESC']:

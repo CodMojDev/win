@@ -46,12 +46,19 @@ class HSTRING(HANDLE):
     def __len__(self) -> int:
         return WindowsGetStringLen(self)
     
-    def __str__(self) -> str:
-        return WindowsGetStringRawBuffer(self, NULL)
+    @property
+    def string(self) -> LPCWSTR:
+        length = UINT32()
+        buffer = WindowsGetStringRawBuffer(self, byref(length))
+        return i_cast(buffer, PTR(WCHAR * length.value)).contents
     
     def __del__(self): 
         if self._allocated:
-            WindowsDeleteString(self)
+            self.delete()
+            
+    def delete(self):
+        WindowsDeleteString(self)
+        if self._allocated:
             self._allocated = False
     
     def __add__(self, string: TUnion['HSTRING', str]) -> 'HSTRING':

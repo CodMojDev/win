@@ -713,6 +713,19 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("biClrUsed", DWORD),
                 ("biClrImportant", DWORD)
             ]
+            
+            biSize: int
+            biWidth: int
+            biHeight: int
+            biPlanes: int
+            biBitCount: int
+            biCompression: int
+            biSizeImage: int
+            biXPelsPerMeter: int
+            biYPelsPerMeter: int
+            biClrUsed: int
+            biClrImportant: int
+            
         BITMAPINFOHEADER = tagBITMAPINFOHEADER
         LPBITMAPINFOHEADER = POINTER(BITMAPINFOHEADER)
         PBITMAPINFOHEADER = LPBITMAPINFOHEADER
@@ -798,6 +811,9 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("bmiHeader", BITMAPINFOHEADER),
                 ("bmiColors", RGBQUAD * 1)
             ]
+            
+            bmiHeader: BITMAPINFOHEADER
+            
         BITMAPINFO = tagBITMAPINFO
         LPBITMAPINFO = POINTER(BITMAPINFO)
         PBITMAPINFO = LPBITMAPINFO
@@ -811,6 +827,9 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("bmciHeader", BITMAPCOREHEADER),
                 ("bmciColors", RGBTRIPLE * 1)
             ]
+            
+            bmciHeader: BITMAPCOREHEADER
+            
         BITMAPCOREINFO = tagBITMAPCOREINFO
         LPBITMAPCOREINFO = POINTER(BITMAPCOREINFO)
         PBITMAPCOREINFO = LPBITMAPCOREINFO
@@ -824,6 +843,13 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("bfReserved2", WORD),
                 ("bfOffBits", DWORD)
             ]
+            
+            bfType: int
+            bfSize: int
+            bfReserved1: int
+            bfReserved2: int
+            bfOffBits: int
+            
         BITMAPFILEHEADER = tagBITMAPFILEHEADER
         LPBITMAPFILEHEADER = POINTER(BITMAPFILEHEADER)
         PBITMAPFILEHEADER = LPBITMAPFILEHEADER
@@ -3504,7 +3530,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         GetCurrentObject = declare(gdi32.GetCurrentObject, HGDIOBJ, HDC, UINT)
         GetCurrentPositionEx = declare(gdi32.GetCurrentPositionEx, BOOL, HDC, LPPOINT)
         GetDeviceCaps = declare(gdi32.GetDeviceCaps, INT, HDC, INT)
-        GetDIBits = declare(gdi32.GetDIBits, INT, HDC, HBITMAP, UINT, UINT, LPVOID, UINT)
+        GetDIBits = declare(gdi32.GetDIBits, INT, HDC, HBITMAP, UINT, UINT, LPVOID, LPBITMAPINFO, UINT)
         GetGlyphOutlineA = declare(gdi32.GetGlyphOutlineA, DWORD, HDC, UINT, UINT, LPGLYPHMETRICS, DWORD, LPVOID, PMAT2)
         GetGlyphOutlineW = declare(gdi32.GetGlyphOutlineW, DWORD, HDC, UINT, UINT, LPGLYPHMETRICS, DWORD, LPVOID, PMAT2)
         GetGlyphOutline = unicode(GetGlyphOutlineW, GetGlyphOutlineA)

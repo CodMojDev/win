@@ -38,7 +38,7 @@ class BSTR(LPOLESTR):
         return bstr
             
     def __bool__(self) -> bool:
-        return self._allocated and bool(self.value)
+        return bool(PtrUtil.get_address(self))
     
     def __str__(self) -> str:
         if getattr(self, '_allocated', True): return self.value

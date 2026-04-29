@@ -45,6 +45,9 @@ class Code:
     def append_gencomment(self):
         self.append('.gencomment')
         
+    def append_gencommentlw(self):
+        self.append('.gencommentlw')
+        
     def append_commentext(self, comment: str):
         self.append(f'.commentext {comment}')
         
@@ -101,7 +104,7 @@ class Code:
         return self.indents * self.INDENT
     
     def add_import(self, import_entry: str):
-        self.append(f'from import_entry import *')
+        self.append_indented(f'import {import_entry}')
         
     def add_com_function(self, name: str, arguments: list[str]):
         arguments = ' '.join(arguments)
@@ -109,7 +112,7 @@ class Code:
         
     def add_virtual_function(self, name: str, result_type: str, arguments: list[str]):
         arguments = ' '.join(arguments)
-        self.append_indented(f'cf {name} {result_type} {arguments}')
+        self.append_indented(f'vf {name} {result_type} {arguments}')
     
     def add_iid(self, iid: str):
         self.append_indented(f'iid {iid}')
@@ -117,3 +120,18 @@ class Code:
     def indent(self): self.indents += 1
     
     def unindent(self): self.indents -= 1
+    
+    def add_class(self, name: str):
+        self.add_block(f'C {name}')
+        
+    def add_clsid(self, clsid: str):
+        self.append_indented(f'clsid {clsid}')
+        
+    def add_union(self, name: str):
+        self.add_block(f'ud {name}')
+        
+    def add_alias(self, name: str, *aliases: str):
+        self.append_indented(f'al {name} {" ".join(aliases)}')
+        
+    def add_pointer_explicit(self, name: str, pointer: str):
+        self.append_indented(f'pie {name} {pointer}')

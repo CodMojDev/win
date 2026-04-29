@@ -203,6 +203,159 @@ def TlAccessPpv(pvPpv: int, type_object: type[WT]) -> WT:
     """
     return i_cast(pvPpv, PTR(type_object)).contents
 
+class _TL_REF_GUARD:
+    itf: IUnknown
+    
+    def __init__(self, itf: IUnknown):
+        self.itf = itf
+    
+    def __del__(self):
+        self.itf.Release()
+
+def TlGetInterface(itf: IT | IPointer[IT]) -> IT:
+    """
+    Get interface structure from pointer, 
+    otherwise return given value.
+    """
+    if PtrUtil.is_pointer(itf):
+        contents = getattr(itf, 'contents', None)
+        if contents is None:
+            return getattr(itf, '_obj')
+        return contents
+    return itf
+
+def TlGetInterfacePtr(itf: IT | IPointer[IT]) -> IT:
+    """
+    Get interface pointer from structure, 
+    otherwise return given value.
+    """
+    if PtrUtil.is_pointer(itf):
+        return itf
+    if isinstance(itf, CComPtr):
+        return itf.p
+    return itf.ref()
+
+TL_OLESTR_NORMAL = 0
+TL_OLESTR_EXTERNAL = 1
+
+class TL_OLESTR(LPOLESTR):
+    def __init__(self):
+        super().__init__()
+        self._external = False
+    
+    @classmethod
+    def new(string: str, olestr_flags: int) -> 'TL_OLESTR':
+        olestr = TL_OLESTR(TlAllocateString(string))
+        if olestr_flags & TL_OLESTR_EXTERNAL:
+            olestr._external = True
+    
+    def __del__(self):
+        if self and not self._external:
+            CoTaskMemFree(self)
+
+class _TL_ENUMERATOR(IUnknown):
+    virtual_table = COMVirtualTable.from_ancestor(IUnknown)
+    
+    @virtual_table.com_function(ULONG, PVOID, PULONG)
+    def Next(self, celt: int, rgelt: PVOID,
+             pceltFetched: PULONG) -> int: ...
+    
+    @virtual_table.com_function(ULONG)
+    def Skip(self, celt: int) -> int: ...
+    
+    @virtual_table.com_function()
+    def Reset(self) -> int: ...
+    
+    @virtual_table.com_function(PVOID)
+    def Clone(self, ppenum: IDoublePtr['_TL_ENUMERATOR']) -> int: ...
+    
+    virtual_table.build()
+
+_TL_LPENUMERATOR = _TL_ENUMERATOR.PTR()
+
+def _TlGetEnumerator(enumerator: IT | IPointer[IT]) -> _TL_ENUMERATOR:
+    enumerator = TlGetInterfacePtr(enumerator)
+    return i_cast(enumerator, _TL_LPENUMERATOR).contents
+
+class TL_ITERATOR(Template[WT]):
+    _tl_enumerator: _TL_ENUMERATOR
+    
+    def __init__(self, enumerator: IUnknown | IPointer[IUnknown]):
+        self._tl_enumerator = _TlGetEnumerator(enumerator)
+        self._tl_enumerator.AddRef()
+        self.save_template()
+        
+    def __iter__(self): 
+        return self
+    
+    def __next__(self) -> WT: 
+        value_type = self.get_single_type()
+        
+        if is_genericalias(value_type):
+            value_type = resolve_genericalias(value_type)
+        else:
+            value_type = resolve_type(value_type)
+        
+        value = value_type()
+        hr = self._tl_enumerator.Next(1, TlGetRef(value), NULL)
+        
+        if hr == S_OK:
+            return value
+        elif FAILED(hr):
+            raise COMError(hr)
+        else:
+            raise StopIteration
+    
+    def __del__(self):
+        self._tl_enumerator.Release()
+    
+    def copy(self) -> 'TL_ITERATOR':
+        tl_enumerator = _TL_LPENUMERATOR()
+        hr = self._tl_enumerator.Clone(byref(tl_enumerator))
+        if FAILED(hr): raise COMError(hr)
+        tl_iterator = TL_ITERATOR(tl_enumerator)
+        tl_enumerator.Release()
+        return tl_iterator
+    
+    def reset(self):
+        hr = self._tl_enumerator.Reset()
+        if FAILED(hr): raise COMError(hr)
+        
+    def skip(self, count: int = 1):
+        hr = self._tl_enumerator.Skip(count)
+        if FAILED(hr): raise COMError(hr)
+        
+def TlGetIterator(itf: IT, enumerator: type[IT], value_type: type[WT]) -> TL_ITERATOR[WT]:
+    """
+    Get the iterator by interface instance, enumerator interface and iterator value type.
+    """
+    return TL_ITERATOR[value_type](TlQueryInterface(enumerator, itf))
+
+def TlAddRefGuard(itf: IT):
+    """
+    Add ref-guard to interface.
+    """
+    itf = TlGetInterface(itf)
+    i_setattr(itf, '_tl_ref_guard', _TL_REF_GUARD(itf))
+
+def TlHoldInterface(itf: IT):
+    """
+    Add ref to interface and add ref-guard to interface.
+    """
+    itf = TlGetInterface(itf)
+    itf.AddRef()
+    TlAddRefGuard(itf)
+    
+    return itf
+
+def TlGetRefCount(itf: IT):
+    """
+    Get COM Ref count of interface.
+    """
+    itf = TlGetInterface(itf)
+    itf.AddRef()
+    return itf.Release()
+
 if TYPE_CHECKING:
     from .unknown import CUnknown
 
@@ -222,7 +375,8 @@ def TlGetRef(obj: CStructure):
     """
     Safely get reference to object.
     """
-    return obj.ref() if obj else NULL
+    ref = getattr(obj, 'ref', None)
+    return ref() if ref is not None else byref(obj) if PtrUtil.get_address(obj) == 0 else NULL
 
 def TlTypeField(obj: CStructure, field: str, typ_callable: Callable):
     """
@@ -321,6 +475,7 @@ def TlQueryInterface(unk: IT, itf: type[IT2]) -> IT2:
     """
     Query interface from `IUnknown`.
     """
+    unk = TlGetInterface(unk)
     itf_instance = itf.NULL()
     hr = unk.QueryInterface(itf, byref(itf_instance))
     if FAILED(hr): raise COMError(hr)
@@ -330,6 +485,7 @@ def TlQueryInterfacePtr(unk: IT, itf: type[IT2]) -> IPointer[IT2]:
     """
     Query interface pointer from `IUnknown`.
     """
+    unk = TlGetInterface(unk)
     itf_instance = itf.NULL()
     hr = unk.QueryInterface(itf, byref(itf_instance))
     if FAILED(hr): raise COMError(hr)
@@ -342,7 +498,6 @@ def TlAccessOAStringAndFree(bstr: BSTR) -> str:
     string = bstr.value
     SysFreeString(bstr)
     return string
-
 
 def TlBSTR(bstrLike: BSTR |str) -> str:
     """

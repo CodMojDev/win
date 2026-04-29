@@ -20,7 +20,7 @@ class Code:
         assert self.file and not self.file.closed
         
         if len(args) == 0 and len(named_args) == 0:
-            self.file.write(f'{self.make_indents()}@{decorator}\n')
+            self.file.write(f'{self.make_indents()}@{decorator}()\n')
             return
         named_args: List[str] = [f'{name} = {value}' for name, value in named_args]
         args.extend(named_args)

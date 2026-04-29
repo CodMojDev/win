@@ -33,7 +33,15 @@ class CComObject(CUnknownMTA):
         
         # IUnknown
         self.implement(self.QueryInterface)
-    
+        
+        """
+        for attribute in dir(self):
+            value = i_getattr(self, attribute)
+            implementation_name = getattr(value, '_tl_implementation_name', None)
+            if implementation_name is not None:
+                self.implement(i_getattr(self, implementation_name))
+        """
+        
     def QueryInterface_Impl(self, piid: IPointer[IID], ppv: IVoidPtr) -> int:
         iid = piid.contents
         
@@ -60,3 +68,12 @@ class CComObject(CUnknownMTA):
         self.dbg_trace(provider, f'No interface {iid}')
         i_cast(ppv, PLPVOID).contents.value = NULL
         return E_NOINTERFACE
+    
+"""
+def TlFunction(f: Callable) -> Callable:
+    f._tl_implementation_name = f.__name__
+    f.__name__ += '_Impl'
+    f.__code__.co_name = f.__name__
+    f.__qualname__ = f.__code__.co_qualname = '.'.join(f.__qualname__.split('.')[:-1] + [f.__name__])
+    return f
+"""

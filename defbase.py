@@ -151,7 +151,8 @@ __all__ = [
     "NullFunction",
     "pcall",
     "i_getattr", "i_setattr",
-    "WinAttribute", "WinProperty", "WinPropertyStore", "attributes"
+    "WinAttribute", "WinProperty", "WinPropertyStore", "attributes",
+    "i_cast_value"
 ]
 
 def pcall(f, *args, **kwargs) -> tuple[Any, BaseException]:
@@ -1329,7 +1330,7 @@ class PtrUtil:
     def get_address(ptr: IPointer[WT]) -> int:
         if ptr is None:
             return 0
-        return i_cast(ptr, c_void_p).value
+        return i_cast(ptr, c_void_p).value or 0
     
     def get_type(ptr: IPointer[WT]) -> WT:
         """
@@ -1629,7 +1630,8 @@ class CStructure(Structure):
     fields: ClassVar[List[tuple]]
     
     def __init_subclass__(cls, *args, **kwargs):
-        cls._pack_ = _CPreprocState._cur_pack
+        if not hasattr(cls, '_pack_'):
+            cls._pack_ = _CPreprocState._cur_pack
         
     @classmethod
     def size(cls):
@@ -2414,6 +2416,12 @@ def i_cast_structure(obj: CStructure, typ: Type[WT_STRUCTURE]) -> WT_STRUCTURE:
     Cast the given structure to another structure.
     """
     return i_cast(pointer(obj), PTR(typ)).contents
+
+def i_cast_value(obj, typ: Type[WT]) -> WT:
+    """
+    Cast the given castable value into another type.
+    """
+    return i_cast(obj, PTR(typ)).contents
 
 if TYPE_CHECKING:
     def i_cast(obj: Any, typ: Type[IPointer[WT]]) -> IPointer[WT]:

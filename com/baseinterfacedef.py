@@ -42,6 +42,9 @@ class STATSTG(CStructure):
     
     grfStateBits: int
     reserved: int
+    mtime: FILETIME
+    ctime: FILETIME
+    atime: FILETIME
     
 STGTY_STORAGE	= 1,
 STGTY_STREAM	= 2,
@@ -279,6 +282,9 @@ class IEnumUnknown(IUnknown):
     @virtual_table.com_function(ULONG)
     def Skip(self, celt: int) -> int: ...
     
+    @virtual_table.com_function()
+    def Reset(self) -> int: ...
+    
     @virtual_table.com_function(PVOID)
     def Clone(self, ppenum: IDoublePtr['IEnumUnknown']) -> int: ...
     
@@ -296,6 +302,9 @@ class IEnumString(IUnknown):
     
     @virtual_table.com_function(ULONG)
     def Skip(self, celt: int) -> int: ...
+    
+    @virtual_table.com_function()
+    def Reset(self) -> int: ...
     
     @virtual_table.com_function(PVOID)
     def Clone(self, ppenum: IDoublePtr['IEnumString']) -> int: ...

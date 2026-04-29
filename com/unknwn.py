@@ -7,33 +7,6 @@ from ..wtypesbase import *
 WT_CI = TypeVar('WT_CI', bound=COMInterface)
 
 class IUnknown(COMInterface):
-    class VB(COMInterface):
-        _iid_ = IID('{00000000-0000-0000-C000-000000000046}')
-        virtual_table = COMVirtualTable('IUnknown')
-        
-        @classmethod
-        def Create(cls, clsid: CLSID, clsctx: int = CLSCTX_INPROC_SERVER,
-                   unkOuter: 'IUnknown.VB' = NULL) -> 'IUnknown.VB':
-            pUnk = cls.NULL()
-            hr = CoCreateInstance(clsid, unkOuter.ref() if unkOuter else NULL,
-                                  clsctx, cls._iid_, byref(pUnk))
-            if FAILED(hr): raise COMError(hr)
-            return i_cast(pUnk, cls.PTR()).contents
-        
-        @virtual_table.com_function_vbstyle_nonvariant(REFIID, intermediate_method=True,
-                                            retval_index=1, retval_type=PVOID)
-        def QueryInterface(self, itf: type[WT_CI], **kwargs) -> WT_CI:
-            pv = self.virt_delegate(itf._iid_.ref())
-            return i_cast2(pv, itf.PTR()).contents
-        
-        @virtual_table.function(ULONG)
-        def AddRef(self): ...
-        
-        @virtual_table.function(ULONG)
-        def Release(self): ...
-        
-        _fields_ = virtual_table.build()
-        
     _iid_ = IID('{00000000-0000-0000-C000-000000000046}')
     virtual_table = COMVirtualTable('IUnknown')
     
@@ -123,26 +96,6 @@ def CoCreateInstance(clsid: CLSID, pUnkOuter: IPointer[IUnknown],
     return delegate(clsid.ref(), pUnkOuter, dwClsContext, iid.ref(), ppv)
 
 class IClassFactory(IUnknown):
-    class VB(IUnknown):
-        virtual_table = COMVirtualTable.from_ancestor(IUnknown.virtual_table, 'IClassFactory')
-    
-        @virtual_table.com_function_vbstyle_nonvariant(LPUNKNOWN, REFIID, intermediate_method=True, 
-                                            retval_index=2, retval_type=PVOID)
-        def CreateInstance(self, unkOuter: IUnknown, itf: type[WT_CI], **kwargs) -> WT_CI:
-            """
-            Creates an uninitialized object.
-            """
-            pv = self.virt_delegate(unkOuter.ref() if unkOuter else NULL, itf._iid_.ref())
-            return i_cast2(pv, itf.PTR()).contents
-        
-        @virtual_table.com_function_vbstyle_nonvariant(BOOL)
-        def LockServer(self, fLock: bool):
-            """
-            Locks an object application open in memory. This enables instances to be created more quickly.
-            """
-        
-        virtual_table.build()
-        
     virtual_table = COMVirtualTable.from_ancestor(IUnknown.virtual_table, 'IClassFactory')
     _iid_ = IID('{00000001-0000-0000-C000-000000000046}')
     

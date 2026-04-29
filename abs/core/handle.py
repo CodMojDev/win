@@ -20,6 +20,10 @@ class Handle(HANDLE):
         instance._closed = True
         return instance
     
+    def exchange_owner(self):
+        self._closed = not self._closed
+        return self
+    
     def __enter__(self):
         self._released = False
         self._closed = False
@@ -27,7 +31,7 @@ class Handle(HANDLE):
         
     def __exit__(self, *_):
         if not self._released:
-            self._released = False
+            self._released = True
             if self.value:
                 self.close()
             
@@ -166,6 +170,13 @@ class DC(Handle):
     def bit_blt(self, dstX: int, dstY: int, srcX: int, srcY: int, 
                 width: int, height: int, srcHdc: int | HDC, rop: int):
         if not BitBlt(self, dstX, dstY, width, height, srcHdc, srcX, srcY, rop):
+            raise WinException()
+    
+    def stretch_blt(self, dstX: int, dstY: int, srcX: int, srcY: int, 
+                dstWidth: int, dstHeight: int, srcWidth: int, srcHeight: int, 
+                srcHdc: int | HDC, rop: int):
+        if not StretchBlt(self, dstX, dstY, dstWidth, dstHeight,
+                      srcHdc, srcX, srcY, srcWidth, srcHeight, rop):
             raise WinException()
     
     def pat_blt(self, x: int, y: int, width: int, height: int, rop: int):
@@ -343,6 +354,41 @@ class Icon(Handle):
             raise WinException()
         
         return icon
+    
+    @classmethod
+    def from_icon(cls, path: str, width: int = 0, height: int = 0) -> 'Icon':
+        icon = cls()
+        icon.value = LoadImageW(
+            NULL, path, IMAGE_ICON, width, height, 
+            LR_LOADFROMFILE | LR_DEFAULTSIZE)
+        
+        if not icon.value:
+            raise WinException()
+        
+        return icon
+    
+    @classmethod
+    def load(cls, id: int, hInst: int = NULL) -> 'Icon':
+        icon = cls.foreign_owner(LoadIconW(hInst, i_cast(id, LPCWSTR)))
+        
+        if not icon.value:
+            raise WinException()
+        
+        return icon
+    
+class Cursor(Handle):
+    def close(self):
+        DestroyCursor(self)
+        self._closed = True
+    
+    @classmethod
+    def load(cls, id: int, hInst: int = NULL) -> 'Cursor':
+        icon = cls.foreign_owner(LoadCursorW(hInst, i_cast(id, LPCWSTR)))
+        
+        if not icon.value:
+            raise WinException()
+        
+        return icon
         
 class Bitmap(GDIObjectHandle):
     def __init__(self, width: int, height: int, planes: int = 1, bit_count: int = 32, bits = NULL):
@@ -401,11 +447,18 @@ class GLContext(Handle):
         hGLCtx = wglCreateContext(hDC)
         if not hGLCtx:
             raise WinException()
+        return GLContext.current_external(hDC, hGLCtx)
+    
+    @classmethod
+    def current_external(self, hDC: int | HANDLE, hGLCtx: int | HANDLE) -> 'GLContext':
         glCtx = GLContext(hGLCtx)
         if not wglMakeCurrent(hDC, hGLCtx):
             raise WinException()
-        glCtx._current = True
         return glCtx
+    
+    def owned_current(self, value: bool):
+        self._current = value
+        return self
     
     def close(self):
         if self._current:

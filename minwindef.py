@@ -19,10 +19,6 @@ if cpreproc.pragma_once("_MINWINDEF_"):
 
     FALSE = 0
     TRUE = 1
-
-    #def CFUNCTYPE(restype, *argtypes, **kw): ...
-    
-    #def WINFUNCTYPE(restype, *argtypes, **kw): ...
     
     CDECL = CFUNCTYPE
     CALLBACK = WINFUNCTYPE
@@ -68,6 +64,10 @@ if cpreproc.pragma_once("_MINWINDEF_"):
             ("dwLowDateTime", DWORD),
             ("dwHighDateTime", DWORD)
         ]
+        
+        dwLowDateTime:  int
+        dwHighDateTime: int
+        
     _FILETIME = FILETIME
     PFILETIME = POINTER(FILETIME)
     LPFILETIME = PFILETIME

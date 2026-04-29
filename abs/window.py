@@ -72,7 +72,7 @@ class Window(HWND):
     @property
     def extended_style(self) -> int:
         if not self.value:
-            return self._style
+            return self._extended_style
         return GetWindowLongW(self, GWL_EXSTYLE)
     
     @extended_style.setter
@@ -86,9 +86,9 @@ class Window(HWND):
         
         wc.hbrBackground = self.hbrBackground
         if self.icon is None:
-            self.icon = LoadIconW(NULL, i_cast(IDI_APPLICATION, LPWSTR))
+            self.icon = Icon.load(IDI_APPLICATION)
         if self.cursor is None:
-            self.cursor = LoadCursorW(NULL, i_cast(IDC_ARROW, LPWSTR))
+            self.cursor = Cursor.load(IDC_ARROW)
         wc.hIcon = self.icon
         wc.hCursor = self.cursor
         wc.hInstance = GetModuleHandleW(NULL)
@@ -216,6 +216,8 @@ class Window(HWND):
     def kill_timer(self, event_id: int):
         if not KillTimer(self, event_id):
             raise WinException()
+        if event_id in self._timers:
+            del self._timers[event_id]
         
     def close(self):
         SendMessage(self, WM_CLOSE, 0, 0)
@@ -303,6 +305,9 @@ class Window(HWND):
         
     def to_client(self, screen: POINT):
         ScreenToClient(self, byref(screen))
+        
+    def to_screen(self, client: POINT):
+        ClientToScreen(self, byref(client))
         
     @property
     def valid(self):
@@ -419,9 +424,9 @@ class Control(Window):
     @visible.setter
     def visible(self, visible: bool):
         if visible:
-            self.style &= ~WS_VISIBLE
-        else:
             self.style |= WS_VISIBLE
+        else:
+            self.style &= ~WS_VISIBLE
     
     def create(self, width: int, height: int, x: int = 0, y: int = 0, window_name: str='Control', relative: int | HWND = NULL):
         if relative is not NULL:
@@ -475,6 +480,7 @@ class GLWindow(Window):
             PFD_MAIN_PLANE,
             0, 0, 0, 0
         )
+        self.gl_ready = Event()
     
     def GL_after_message(self):
         SwapBuffers(self.dc)
@@ -488,3 +494,58 @@ class GLWindow(Window):
         iPixelFormat = ChoosePixelFormat(self.dc, pPfd)
         SetPixelFormat(self.dc, iPixelFormat, pPfd)
         self.gl_context = GLContext.current(self.dc)
+        self.gl_ready.execute()
+
+PFNWGLCREATECONTEXTATTRIBSARB = APIENTRY(HGLRC, HDC, HGLRC, PINT)
+WGL_CONTEXT_MAJOR_VERSION_ARB = (0x2091)
+WGL_CONTEXT_MINOR_VERSION_ARB = (0x2092)
+WGL_CONTEXT_PROFILE_MASK_ARB = (0x9126)
+WGL_CONTEXT_CORE_PROFILE_BIT_ARB = (0x00000001)
+WGL_CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB = (0x00000002)
+WGL_CONTEXT_FLAGS_ARB = (0x2094)
+WGL_CONTEXT_DEBUG_BIT_ARB = (0x0001)
+WGL_CONTEXT_FORWARD_COMPATIBLE_BIT_ARB = (0x0002)
+WGL_CONTEXT_LAYER_PLANE_ARB = (0x2093)
+
+class ExtendedGLWindow(GLWindow):
+    """
+    Extended GL Window with modern OpenGL support.
+    """
+    
+    wglCreateContextAttribsARB: Callable[[int, int, PINT], int]
+    attributes: dict[int, int]
+    
+    def __init__(self):
+        super().__init__()
+        self.attributes = {}
+        
+    def create(self, width: int = CW_USEDEFAULT, height: int = CW_USEDEFAULT, 
+               x: int = CW_USEDEFAULT, y: int = CW_USEDEFAULT, 
+               window_name: str = 'Window', parent = NULL):
+        self.gl_ready.block()
+        super().create(width, height, x, y, window_name, parent)
+        self.gl_ready.unblock()
+        wglCreateContextAttribsARB = wglGetProcAddress(b'wglCreateContextAttribsARB')
+        self.wglCreateContextAttribsARB = i_cast(wglCreateContextAttribsARB, PFNWGLCREATECONTEXTATTRIBSARB)
+        attribs = [entry for pair in self.attributes.items() for entry in pair]
+        attribList = (INT * (len(attribs) + 1))(*attribs, 0)
+        hGLCtx = self.wglCreateContextAttribsARB(
+            self.dc, NULL, attribList)
+        if not hGLCtx:
+            raise WinException()
+        self.gl_context = GLContext.current_external(self.dc, hGLCtx).owned_current(True)
+        self.gl_ready.execute()
+        
+    def version(self, major: int | str, minor: int = None):
+        if minor is None:
+            if isinstance(major, str):
+                components = major.split('.')[0:2]
+                major, minor = components
+                major, minor = int(major), int(minor)
+            else:
+                minor = 0
+                
+        major = int(major)
+        minor = int(minor)
+        self.attributes[WGL_CONTEXT_MAJOR_VERSION_ARB] = major
+        self.attributes[WGL_CONTEXT_MINOR_VERSION_ARB] = minor

@@ -104,16 +104,20 @@ class ICLParser(IIMLParser):
                 has_refs.value = True
                 
             if ptr_count != 0:
-                if ptr_count > 2:
-                    self.syntax_error('3+ pointers at the same time not supported.')
-            
-                ptr_type = 'IPointer' if ptr_count == 1 else 'IDoublePtr'
+                if ptr_count == 2:
+                    ptr_type = 'IDoublePtr'
+                elif ptr_count == 1:
+                    ptr_type = 'IPointer'
+                else:
+                    ptr_type = 'IPointer' + '[IPointer' * (ptr_count - 1)
                 ptr_type += '['
                 if forward_decl:
                     ptr_type += f"'{type_name}'"
                 else:
                     ptr_type += type_name
                 ptr_type += ']'
+                if ptr_count > 2:
+                    ptr_type += ']' * (ptr_count - 1)
                 
                 if not forward_decl:
                     if orig_type_name == 'PVOID':
@@ -123,9 +127,14 @@ class ICLParser(IIMLParser):
                             if type_name in self.POINTER_MAP:
                                 type_name = f'PTR({self.POINTER_MAP[type_name]})'
                             else: type_name = f'DOUBLE_PTR({type_name})'
+                        elif ptr_count == 1:
+                            type_name = self.POINTER_MAP.get(
+                                type_name, f'PTR({type_name})')
                         else:
                             type_name = self.POINTER_MAP.get(
                                 type_name, f'PTR({type_name})')
+                            for i in range(ptr_count - 1):
+                                type_name = f'PTR({type_name})'
                     decorator_args.append(type_name)
                 else:
                     decorator_args.append('PVOID')
@@ -140,6 +149,13 @@ class ICLParser(IIMLParser):
             
             args.append((arg_name, type_name))
         
+    def documentation(self):
+        indents = self.indented
+        self.code.append(f'{indents}"""')
+        for line in self.context.docs.rstrip('\n').replace('\r\n', '\n').split('\n'):
+            self.code.append(indents + line)
+        self.code.append(f'{indents}"""')
+        
     def new_function(self, has_refs: Ref[bool], function_name: str,
                      result_type: str, args: List[str], decorator_name: str,
                      decorator_args: List[str], decorator_named_args: List[str],
@@ -150,11 +166,8 @@ class ICLParser(IIMLParser):
         if len(self.context.docs) != 0:
             self.code.append_function(function_name, result_type, args, [], kwargs=has_refs, has_body=True)
             
-            indents = self.indented
-            self.context.docs = self.context.docs.replace('\n', indents)
-            self.code.append(f'{indents}"""')
-            self.code.append(self.context.docs, not_breakline=True)
-            self.code.append(f'{indents}"""')
+            self.code.append_newline()
+            self.documentation()
         elif has_refs:
             self.code.append_function(function_name, result_type, args, [], kwargs=has_refs, has_body=True)
             
@@ -280,7 +293,7 @@ class ICLParser(IIMLParser):
             if not self.context.silent:
                 self.foreign_function_lib(instruction)
         elif instruction == 'doc':
-            self.context.docs += self.context.last_line[3:].lstrip()+'\n'
+            self.context.docs = self.context.last_line[3:].lstrip()+'\n'
         elif instruction == 'eq':
             if not self.context.silent:
                 self.equal()
@@ -339,6 +352,8 @@ class ICLParser(IIMLParser):
                 self.syntax_error('Incorrect usage of "vbnb" instruction,'
                                   'missing no-VB-base interface name.')
             self.context.no_vb_bases.append(self.context.tokens[1])
+        elif instruction == 'ud':
+            self.union_define()
         else:
             return False
         return True
@@ -363,11 +378,8 @@ class ICLParser(IIMLParser):
         if not self.context.silent:
             self.code.append_class(interface_name, self.context.base)
             if len(self.context.docs) != 0:
-                indents = self.indented
-                self.context.docs = self.context.docs.replace('\n', indents)
-                self.code.append(f'{indents}"""')
-                self.code.append(self.context.docs, not_breakline=True)
-                self.code.append(f'{indents}"""')
+                self.documentation()
+                self.context.docs = ''
             self.code.indent()
             if self.context.base != '':
                 self.code.append_field('virtual_table',
@@ -553,6 +565,18 @@ class ICLParser(IIMLParser):
             self.code.append_decorator('CStructure.make', [], [])
             self.code.append_class(structure_name, 'CStructure')
             self.code.indent()
+        
+    def union_define(self):
+        if self.context.tokens_length == 1:
+            self.syntax_error('Incorrect declaration of union placeholder, '
+                            'missing structure name.', 3)
+        
+        structure_name = self.context.tokens[1]
+        self.context.declaring_structure = structure_name
+        if not self.context.silent:
+            self.code.append_decorator('CUnion.make', [], [])
+            self.code.append_class(structure_name, 'CUnion')
+            self.code.indent()
             
     def structure_field(self):
         if self.context.tokens_length < 3:
@@ -629,7 +653,8 @@ class ICLParser(IIMLParser):
         if self.context.commentext:
             self.code.append_comment()
             self.code.append_comment('Additional info:')
-            self.code.append_comment(self.context.commentext, not_breakline=True)
+            for line in self.context.commentext[:-1].split('\n'):
+                self.code.append_comment(line)
             self.context.commentext = ''
         self.code.append_comment()
             
@@ -640,7 +665,8 @@ class ICLParser(IIMLParser):
         if self.context.commentext:
             self.code.append_comment()
             self.code.append_comment('Additional info:')
-            self.code.append_comment(self.context.commentext, not_breakline=True)
+            for line in self.context.commentext[:-1].split('\n'):
+                self.code.append_comment(line)
             self.context.commentext = ''
         self.code.append_comment('{')
         self.context.in_gencommentlw_block = True
@@ -757,11 +783,8 @@ class ICLParser(IIMLParser):
         if not self.context.silent:
             self.code.append_class(interface_name, self.context.base)
             if len(self.context.docs) != 0:
-                indents = self.indented
-                self.context.docs = self.context.docs.replace('\n', indents)
-                self.code.append(f'{indents}"""')
-                self.code.append(self.context.docs, not_breakline=True)
-                self.code.append(f'{indents}"""')
+                self.documentation()
+                self.context.docs = ''
             self.code.indent()
             if self.context.base != '':
                 self.code.append_field('virtual_table',

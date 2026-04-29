@@ -173,82 +173,8 @@ class COMVirtualTable(VirtualTable):
                         return variant_get_value(retval)
                     if isinstance(retval, IUnpackable):
                         retval = retval.unpack()
-                    if callable(retval_function):
-                        return retval_function(retval)
-                    return retval
-                return None
-            
-            if not intermediate_method:
-                _virtual_wrapper = wraps(f)(_virtual_wrapper)
-            else:
-                @wraps(f)
-                def _intermediate(*args, **kwargs):
-                    return f(*args, **kwargs, function=_virtual_wrapper)
-                
-            if intermediate_method:
-                setattr(_intermediate, 'proto', WINFUNCTYPE(HRESULT, THIS, *args))
-                setattr(_intermediate, 'f', f)
-                
-                return _intermediate
-            
-            setattr(_virtual_wrapper, 'proto', WINFUNCTYPE(HRESULT, THIS, *args))
-            setattr(_virtual_wrapper, 'f', f)
-            
-            return _virtual_wrapper
-    
-        return _com_function_vbstyle
-    
-    def com_function_vbstyle_nonvariant(self, *args: type, exists: bool = False,
-                     intermediate_method: bool = False, retval_index: int = -1,
-                     retval_type: type = type(None), retval_function: Callable = None) -> Callable:
-        """
-        Declare COM function in VB style (Visual Basic).
-        Without support of VARIANT type.
-        """
-        def _com_function_vbstyle(f: Callable):
-            name = self._pack_name(f.__name__)
-            if not exists:
-                self._add(name)
-            
-            def _virtual_wrapper(f_self, *f_args, **kwargs) -> Callable: 
-                callback = getattr(f, 'callback', None)
-                if callback is None:
-                    field_name = self.field_name
-                    get_vtable = getattr(f_self, f'__get_{self.name}__', None)
-                    if get_vtable is not None:
-                        field_name = get_vtable()
-                    vtable = i_cast(getattr(f_self, field_name), 
-                                    POINTER(self.VType))
-                    address = getattr(vtable.contents, name)
-                    callback = VirtualTable.func_ptr(PtrUtil.get_address(address))
-                    callback.restype = HRESULT
-                    
-                    if retval_index != -1:
-                        list_args = list(args)
-                        list_args.insert(retval_index, PTR(retval_type))
-                        callback.argtypes = (THIS, *list_args)
-                    else:
-                        callback.argtypes = (THIS, *args)
-                    
-                    setattr(f, 'callback', callback)
-                
-                list_f_args = list(f_args)
-                if retval_index != -1:
-                    retval = retval_type()
-                    list_f_args.insert(retval_index, byref(retval))
-                    
-                hr = callback(byref(f_self), *list_f_args)
-                if FAILED(hr): raise COMError(hr)
-                
-                if retval_index != -1:
-                    if isinstance(retval_type, IReferenceable):
-                        retval = retval_type.dereference(retval)
-                    if PtrUtil.is_pointer(retval_type):
-                        ptr_type = PtrUtil.get_type(retval_type)
-                        if issubclass(ptr_type, IReferenceable):
-                            retval = ptr_type.dereference(retval.contents if retval else NULL)
-                    if callable(retval_function):
-                        return retval_function(retval)
+                    if IMarshaller.is_marshaller(retval_function):
+                        return IMarshaller.call_marshaller(retval, retval_function)
                     return retval
                 return None
             
@@ -322,6 +248,11 @@ class COMInterface(CStructure, IReferenceable, IUnpackable):
             self._registry = registry
         registry.append(callback)
         
+    def implement_interface(self, interface: 'COMInterface'):
+        methods = [value for value in interface.__dict__.values() if hasattr(value, 'proto') and hasattr(value, 'f')]
+        for method in methods:
+            self.implement(method)
+        
     def stub(self, function: Callable, stub: WINFUNCTYPE):
         """
         Implement the given function as a stub
@@ -338,8 +269,14 @@ class COMInterface(CStructure, IReferenceable, IUnpackable):
         """
         Initialize the given virtual table to use.
         """
+        vtable = virtual_table.VType()
         setattr(self, virtual_table.field_name, 
-                i_cast(pointer(virtual_table.VType()), PVOID))
+                i_cast(pointer(vtable), PVOID))
+        registry = getattr(self, '_registry', None)
+        if registry is None:
+            registry = []
+            self._registry = registry
+        registry.append(vtable)
         
     def set_vtable_on_ctx(self, virtual_table: COMVirtualTable):
         """
@@ -347,6 +284,13 @@ class COMInterface(CStructure, IReferenceable, IUnpackable):
         Used in `implement` and `stub` to 
         resolve what virtual table needed to use.
         """
+        vtable_on_ctx = getattr(self, '_virtual_table_on_ctx', None)
+        if vtable_on_ctx is not None:
+            registry = getattr(self, '_registry', None)
+            if registry is None:
+                registry = []
+                self._registry = registry
+            registry.append(vtable_on_ctx)
         self._virtual_table_on_ctx = virtual_table
         
     def get_reference(self):
