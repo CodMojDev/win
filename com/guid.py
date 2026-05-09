@@ -55,6 +55,13 @@ class GUID(CStructure):
         
         return IsEqualGUID(self, other)
     
+    @classmethod
+    def string(cls, guid: str) -> 'GUID':
+        instance = cls()
+        hr = CLSIDFromString(guid, i_cast(instance.ref(), LPCLSID))
+        if FAILED(hr): raise COMError(hr)
+        return instance
+    
     __hash__ = CStructure.__hash__
     
 GUID_NULL = GUID()

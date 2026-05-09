@@ -124,6 +124,31 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
                 ("dwReserved", DWORD),
                 ("FlagsEx", DWORD)
             ]
+            
+            lpfnHook: FARPROC
+            lpstrCustomFilter: LPSTR
+            lpstrFileTitle: LPSTR
+            lpstrFile: LPSTR
+            pvReserved: int
+            hwndOwner: int
+            hInstance: int
+            lpstrInitialDir: LPSTR
+            nMaxCustFilter: int
+            nFileExtension: int
+            lpTemplateName: LPSTR
+            nMaxFileTitle: int
+            nFilterIndex: int
+            lStructSize: int
+            lpstrFilter: LPSTR
+            nFileOffset: int
+            lpstrDefExt: LPSTR
+            lpstrTitle: LPSTR
+            dwReserved: int
+            lCustData: int
+            nMaxFile: int
+            FlagsEx: int
+            Flags: int
+            
         OPENFILENAMEA = tagOFNA
         LPOPENFILENAMEA = POINTER(OPENFILENAMEA)
 
@@ -153,6 +178,31 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
                 ("dwReserved", DWORD),
                 ("FlagsEx", DWORD)
             ]
+            
+            lpfnHook: FARPROC
+            lpstrCustomFilter: LPWSTR
+            lpstrFileTitle: LPWSTR
+            lpstrFile: LPWSTR
+            pvReserved: int
+            hwndOwner: int
+            hInstance: int
+            lpstrInitialDir: LPWSTR
+            nMaxCustFilter: int
+            nFileExtension: int
+            lpTemplateName: LPWSTR
+            nMaxFileTitle: int
+            nFilterIndex: int
+            lStructSize: int
+            lpstrFilter: LPWSTR
+            nFileOffset: int
+            lpstrDefExt: LPWSTR
+            lpstrTitle: LPWSTR
+            dwReserved: int
+            lCustData: int
+            nMaxFile: int
+            FlagsEx: int
+            Flags: int
+            
         OPENFILENAMEW = tagOFNW
         LPOPENFILENAMEW = POINTER(OPENFILENAMEW)
         OPENFILENAME_SIZE_VERSION_400A = CDSIZEOF_STRUCT(OPENFILENAMEA, "lpTemplateName")
@@ -369,6 +419,17 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("lpfnHook", LPCCHOOKPROC),
             ("lpTemplateName", LPCSTR)
         ]
+        
+        lStructSize: int
+        hwndOwner: int
+        hInstance: int
+        rgbResult: int
+        lpCustColors: IPointer[COLORREF]
+        Flags: int
+        lCustData: int
+        lpfnHook: FARPROC
+        lpTemplateName: LPWSTR
+        
     CHOOSECOLORA = tagCHOOSECOLORA
     LPCHOOSECOLORA = POINTER(CHOOSECOLORA)
 
@@ -384,6 +445,17 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("lpfnHook", LPCCHOOKPROC),
             ("lpTemplateName", LPCWSTR)
         ]
+        
+        lStructSize: int
+        hwndOwner: int
+        hInstance: int
+        rgbResult: int
+        lpCustColors: IPointer[COLORREF]
+        Flags: int
+        lCustData: int
+        lpfnHook: FARPROC
+        lpTemplateName: LPCWSTR
+        
     CHOOSECOLORW = tagCHOOSECOLORW
     LPCHOOSECOLORW = POINTER(CHOOSECOLORW)
 
@@ -421,6 +493,19 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("lpfnHook", LPFRHOOKPROC), # ptr. to hook fn. or NULL
             ("lpTemplateName", LPCSTR) # custom template name
         ]
+        
+        lStructSize: int
+        hwndOwner: int
+        hInstance: int
+        Flags: int
+        lpstrFindWhat: LPSTR
+        lpstrReplaceWith: LPSTR
+        wFindWhatLen: int
+        wReplaceWithLen: int
+        lCustData: int
+        lpfnHook: FARPROC
+        lpTemplateName: LPCSTR
+        
     FINDREPLACEA = tagFINDREPLACEA
     LPFINDREPLACEA = POINTER(FINDREPLACEA)
 
@@ -439,6 +524,19 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("lpfnHook", LPFRHOOKPROC), # ptr. to hook fn. or NULL
             ("lpTemplateName", LPCSTR) # custom template name
         ]
+        
+        lStructSize: int
+        hwndOwner: int
+        hInstance: int
+        Flags: int
+        lpstrFindWhat: LPWSTR
+        lpstrReplaceWith: LPWSTR
+        wFindWhatLen: int
+        wReplaceWithLen: int
+        lCustData: int
+        lpfnHook: FARPROC
+        lpTemplateName: LPCWSTR
+        
     FINDREPLACEW = tagFINDREPLACEW
     LPFINDREPLACEW = POINTER(FINDREPLACEW)
 

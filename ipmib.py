@@ -64,7 +64,7 @@ if cpreproc.pragma_once("_IPMIB_"):
         PMIB_IPADDRROW = PMIB_IPADDRROW_XP
     elif _version >= WIN32_WINNT_WIN2K:
         MIB_IPADDRROW = MIB_IPADDRROW_W2K
-        PMIB_IPADDROW = PMIB_IPADDRROW_W2K
+        PMIB_IPADDRROW = PMIB_IPADDRROW_W2K
     else:
         MIB_IPADDRROW = MIB_IPADDRROW_XP
         PMIB_IPADDRROW = PMIB_IPADDRROW_XP  
@@ -82,7 +82,7 @@ if cpreproc.pragma_once("_IPMIB_"):
     class MIB_IPADDRTABLE(CStructure):
         _fields_ = [
             ("dwNumEntries", DWORD),
-            ("table", PMIB_IPADDROW)
+            ("table", PMIB_IPADDRROW)
         ]
     PMIB_IPADDRTABLE = POINTER(MIB_IPADDRTABLE)
 

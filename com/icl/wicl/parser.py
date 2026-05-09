@@ -10,6 +10,14 @@ from .codegen import *
 import time
 import os
 
+GENCOMMENTLW = 0
+VBI = 1
+STRUCT = 2
+CLASS = 3
+IFDEF = 4
+IMPORTS = 5
+ENUM = 6
+
 class ICLParser(IIMLParser):
     class ICLContext(IIMLContext):
         declaring_vb_interface: str
@@ -23,8 +31,10 @@ class ICLParser(IIMLParser):
         in_ifdef_block: bool
         declaring_enum: str
         function_count: int
+        closing: list[int]
         ifver_used: bool
         in_imports: bool
+        terminated: bool
         commentext: str
         silent: bool
         vb_base: str
@@ -45,10 +55,12 @@ class ICLParser(IIMLParser):
             self.function_count = 0
             self.in_imports = False
             self.ifver_used = False
+            self.terminated = False
             self.no_vb_bases = []
             self.commentext = ''
             self.silent = False
             self.vb_base = ''
+            self.closing = []
             self.py = False
             self.docs = ''
             self.base = ''
@@ -220,6 +232,9 @@ class ICLParser(IIMLParser):
                 self.code.append_newline()
     
     def on_instruction(self, instruction: str) -> bool:
+        if self.context.terminated:
+            return True
+        
         if self.context.py:
             if instruction == '}':
                 self.context.py = False
@@ -334,6 +349,7 @@ class ICLParser(IIMLParser):
             self.ifdef()
         elif instruction == 'imports':
             self.context.in_imports = True
+            self.context.closing.append(IMPORTS)
             self.code.append_newline()
         elif instruction == 'import':
             self.code.append(f'from {self.context.tokens[1]} import *')
@@ -354,6 +370,8 @@ class ICLParser(IIMLParser):
             self.context.no_vb_bases.append(self.context.tokens[1])
         elif instruction == 'ud':
             self.union_define()
+        elif instruction == '.terminate':
+            self.context.terminated = True
         else:
             return False
         return True
@@ -396,28 +414,29 @@ class ICLParser(IIMLParser):
         elif self.context.function_count != 0:
             self.interface_end()
             return True
-        elif self.context.declaring_enum:
+        last = self.context.closing.pop()
+        if last == ENUM:
             self.code.append(f'{self.indents}{self.context.declaring_enum} = INT')
             self.code.append_newline()
             self.context.declaring_enum = ''
             self.context.enum_entry_count = 0
             return True
-        elif self.context.declaring_structure:
+        elif last == STRUCT:
             self.context.declaring_structure = ''
             self.code.unindent()
             self.code.append_newline()
             return True
-        elif self.context.declaring_class:
+        elif last == CLASS:
             self.context.declaring_class = False
             self.code.unindent()
             self.code.append_newline()
             return True
-        elif self.context.in_ifdef_block:
+        elif last == IFDEF:
             self.context.in_ifdef_block = False
             self.code.unindent()
             self.code.append_newline()
             return True
-        elif self.context.in_imports:
+        elif last == IMPORTS:
             self.context.in_imports = False
             self.code.append_newline()
             return True
@@ -561,8 +580,9 @@ class ICLParser(IIMLParser):
         
         structure_name = self.context.tokens[1]
         self.context.declaring_structure = structure_name
+        self.context.closing.append(STRUCT)
         if not self.context.silent:
-            self.code.append_decorator('CStructure.make', [], [])
+            self.code.append_decorator('CStructure.make', [], [], no_call=True)
             self.code.append_class(structure_name, 'CStructure')
             self.code.indent()
         
@@ -573,6 +593,7 @@ class ICLParser(IIMLParser):
         
         structure_name = self.context.tokens[1]
         self.context.declaring_structure = structure_name
+        self.context.closing.append(STRUCT)
         if not self.context.silent:
             self.code.append_decorator('CUnion.make', [], [])
             self.code.append_class(structure_name, 'CUnion')
@@ -605,6 +626,7 @@ class ICLParser(IIMLParser):
         self.TYPE_MAP[enum_name] = 'int'
         self.context.declaring_enum = enum_name
         self.context.enum_entry_count = 0
+        self.context.closing.append(ENUM)
         
     def enum_entry(self):
         if self.context.tokens_length == 1:
@@ -771,7 +793,7 @@ class ICLParser(IIMLParser):
         d = [data[2:].zfill(2) for data in d]
         
         guid = f'{{{data1}-{data2}-{data3}-{d[0]+d[1]}-{d[2]+d[3]+d[4]+d[5]+d[6]+d[7]}}}'
-        self.code.append(f"{name} = {class_name}('{guid}')")
+        self.code.append(f"{self.code.make_indents()}{name} = {class_name}('{guid}')")
         
     def define_interface_unknown(self):
         if self.context.tokens_length == 1:
@@ -810,6 +832,7 @@ class ICLParser(IIMLParser):
         self.code.indent()
         
         self.context.declaring_class = True
+        self.context.closing.append(CLASS)
         
     def clsid(self):
         if self.context.tokens_length == 1:
@@ -823,7 +846,7 @@ class ICLParser(IIMLParser):
         if not self.context.ifver_used:
             self.context.ifver_used = True
             self.code.append_newline()
-            self.code.append('from ..sdkddkver import *')
+            self.code.append('from win.sdkddkver import *')
             self.code.append('_version = cpreproc.get_version()\n')
             
         version = self.context.tokens[1]
@@ -832,6 +855,7 @@ class ICLParser(IIMLParser):
         self.code.append(f'if _version {op} {version}:')
         self.code.indent()
         self.context.in_ifdef_block = True
+        self.context.closing.append(IFDEF)
         
     def ifver_ge(self):
         if self.context.tokens_length == 1:
@@ -860,6 +884,7 @@ class ICLParser(IIMLParser):
                               'missing define name.', len(self.context.last_line)+1)
             
         self.context.in_ifdef_block = True
+        self.context.closing.append(IFDEF)
         self.code.append(f'if cpreproc.ifdef("{self.context.tokens[1]}"):')
         self.code.indent()
     
@@ -879,13 +904,14 @@ class ICLParser(IIMLParser):
                               'missing define name.', len(self.context.last_line)+1)
             
         self.context.in_ifdef_block = True
+        self.context.closing.append(IFDEF)
         self.code.append(f'if cpreproc.ifndef("{self.context.tokens[1]}"):')
         self.code.indent()
         
     def _ifver_ie(self, op: str):
         if not self.context.ifver_used:
             self.context.ifver_used = True
-            self.code.append('from ..sdkddkver import *')
+            self.code.append('from win.sdkddkver import *')
             
         version = self.context.tokens[1]
         if version.startswith('@'):
@@ -893,6 +919,7 @@ class ICLParser(IIMLParser):
         self.code.append(f'if WIN32_IE {op} {version}:')
         self.code.indent()
         self.context.in_ifdef_block = True
+        self.context.closing.append(IFDEF)
         
     def ifver_ie_ge(self):
         if self.context.tokens_length == 1:

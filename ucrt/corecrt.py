@@ -4,7 +4,7 @@ CRTDECL = CDECL
 
 from ..defbase import declare
 
-ucrtbased = W_CDLL('ucrtbased.dll')
+ucrtbase = W_CDLL('ucrtbase.dll')
 
 errcode = INT
 errno_t = INT
@@ -36,7 +36,7 @@ intptr_t = SSIZE_T
 wchar_t = WCHAR
 uintptr_t = SSIZE_T
 
-report_gsfailure = declare(ucrtbased.__report_gsfailure, void, uintptr_t)
+report_gsfailure = declare(ucrtbase.__report_gsfailure, void, uintptr_t)
 
 security_cookie = uintptr_t
 #vcrt_malloc_normal = lambda _Size: malloc(_Size)

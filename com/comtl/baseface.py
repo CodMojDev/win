@@ -314,7 +314,7 @@ class TL_ITERATOR(Template[WT]):
         hr = self._tl_enumerator.Clone(byref(tl_enumerator))
         if FAILED(hr): raise COMError(hr)
         tl_iterator = TL_ITERATOR(tl_enumerator)
-        tl_enumerator.Release()
+        tl_enumerator.contents.Release()
         return tl_iterator
     
     def reset(self):

@@ -1,7 +1,7 @@
 from typing import ClassVar
 from win.winuser import *
 
-class MessageBox:
+class MsgBox:
     _extra_styles_: ClassVar[int] = 0
     
     @classmethod
@@ -56,20 +56,22 @@ class MessageBox:
     def question():
         return QuestionBox
 
-class WarningBox(MessageBox):
+class WarningBox(MsgBox):
     _extra_styles_ = MB_ICONWARNING
     
-class ErrorBox(MessageBox):
+class ErrorBox(MsgBox):
     _extra_styles_ = MB_ICONERROR
 
-class InfoBox(MessageBox):
+class InfoBox(MsgBox):
     _extra_styles_ = MB_ICONINFORMATION
     
-class ExclamationBox(MessageBox):
+class ExclamationBox(MsgBox):
     _extra_styles_ = MB_ICONEXCLAMATION
     
-class AsteriskBox(MessageBox):
+class AsteriskBox(MsgBox):
     _extra_styles_ = MB_ICONASTERISK
     
-class QuestionBox(MessageBox):
+class QuestionBox(MsgBox):
     _extra_styles_ = MB_ICONQUESTION
+    
+MessageBox = MsgBox

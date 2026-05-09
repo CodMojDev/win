@@ -17,4 +17,4 @@ if cpreproc.pragma_once("_SLIDDEFS_H_"):
     if cpreproc.pragma_once("_WINDOWS_SLID_"):
         from .guiddef import GUID
 
-        WINDOWS_SLID = GUID("{55c92734-d682-4d71-983e-d6ec3f16059f}")
+        WINDOWS_SLID = GUID.string("{55c92734-d682-4d71-983e-d6ec3f16059f}")

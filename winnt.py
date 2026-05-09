@@ -271,8 +271,8 @@ if cpreproc.pragma_once("_WINNT_"):
         COMPARTMENT_ID = _COMPARTMENT_ID
         PCOMPARTMENT_ID = POINTER(COMPARTMENT_ID)
 
-    ucrtbased = W_WinDLL("ucrtbased.dll")
-    _get_wide_winmain_command_line = declare(ucrtbased._get_wide_winmain_command_line, LPWSTR, VOID)
+    ucrtbase = W_WinDLL("ucrtbase.dll")
+    _get_wide_winmain_command_line = declare(ucrtbase._get_wide_winmain_command_line, LPWSTR, VOID)
         
     LOGICAL = ULONG
     PLOGICALL = PULONG
@@ -361,6 +361,16 @@ if cpreproc.pragma_once("_WINNT_"):
                 ("wSecond", WORD),
                 ("wMilliseconds", WORD)
             ]
+            
+            wYear: int
+            wMonth: int
+            wDayOfWeek: int
+            wDay: int
+            wHour: int
+            wMinute: int
+            wSecond: int
+            wMilliseconds: int
+            
         PSYSTEMTIME = POINTER(SYSTEMTIME)
         LPSYSTEMTIME = PSYSTEMTIME
     if cpreproc.pragma_once("_SECURITY_ATTRIBUTES_"):
@@ -370,6 +380,10 @@ if cpreproc.pragma_once("_WINNT_"):
                 ("lpSecurityDescriptor", LPVOID),
                 ("bInheritHandle", BOOL)
             ]
+            nLength: int
+            lpSecurityDescriptor: int
+            bInheritHandle: int
+            
         SECURITY_ATTRIBUTES = _SECURITY_ATTRIBUTES
         PSECURITY_ATTRIBUTES = POINTER(SECURITY_ATTRIBUTES)
         LPSECURITY_ATTRIBUTES = PSECURITY_ATTRIBUTES
@@ -439,6 +453,10 @@ if cpreproc.pragma_once("_WINNT_"):
             ("Buffer", PCHAR)
         ]
         
+        Length: int
+        MaximumLength: int
+        Buffer: LPSTR
+        
     STRING = _STRING
     PSTRING = POINTER(STRING)
     ANSI_STRING = STRING
@@ -455,6 +473,10 @@ if cpreproc.pragma_once("_WINNT_"):
             ("Buffer", PCCHAR)
         ]
         
+        Length: int
+        MaximumLength: int
+        Buffer: LPSTR
+        
     CSTRING = _CSTRING
     PCSTRING = POINTER(CSTRING)
     
@@ -470,6 +492,10 @@ if cpreproc.pragma_once("_WINNT_"):
             ("MaximumLength", USHORT),
             ("Buffer", PWCH)
         ]
+        
+        Length: int
+        MaximumLength: int
+        Buffer: LPWSTR
         
     UNICODE_STRING = _UNICODE_STRING
     PUNICODE_STRING = POINTER(_UNICODE_STRING)
@@ -609,6 +635,13 @@ if cpreproc.pragma_once("_WINNT_"):
             ("SecurityDescriptor", PVOID),
             ("SecurityQualityOfService", PVOID)
         ]
+        
+        Length: int
+        RootDirectory: int
+        ObjectName: IPointer[UNICODE_STRING]
+        Attributes: int
+        SecurityDescriptor: int
+        SecurityQualityOfService: int
         
     OBJECT_ATTRIBUTES = _OBJECT_ATTRIBUTES
     POBJECT_ATTRIBUTES = POINTER(OBJECT_ATTRIBUTES)

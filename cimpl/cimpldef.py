@@ -46,6 +46,8 @@ class CImplWord(CImplContainer[int]): ...
 class CImplDword(CImplContainer[int]): ...
         
 class CImplQword(CImplContainer[int]): ...
+
+class CImplAssemblyData(CImplContainer[tuple[str, int]]): ...
         
 class CImplInstruction:
     UNKNOWN = -1
@@ -117,9 +119,12 @@ class CImplFunction:
         
         self.instructions = []
         self.name = 'unknown_function'
-        self.function_space = 0
+        self.function_space = 0x20
         self.has_frame = True
         self.has_ret = True
+    
+    def align(self, space: int) -> int:
+        return (16 - (8 + space) & 15) & 15
     
     def write(self, context: CImplContext):
         have_invokes = False
@@ -127,10 +132,6 @@ class CImplFunction:
             if instruction == CImplInstruction.INVOKE:
                 have_invokes = True
                 break
-        
-        if context.win64 and have_invokes:
-            if have_invokes:
-                context.add_line(f'sub rsp, {self.function_space}')
                 
         if self.has_frame:
             if context.win64:
@@ -139,6 +140,10 @@ class CImplFunction:
             else:
                 context.add_line('push ebp')
                 context.add_line('mov ebp, esp')
+        
+        if context.win64 and have_invokes:
+            if have_invokes:
+                context.add_line(f'sub rsp, {self.function_space}')
         
         for i_no, instruction in enumerate(self.instructions):
             instruction_data = instruction.data.copy()
@@ -184,13 +189,17 @@ class CImplFunction:
                                                  f'Instruction INVOKE at {i_no}. '
                                                  f'Argument at {arg_no}.')
                             
-                            if argument.contained > BIT64:
-                                raise ValueError(f'Too big argument value (bigger than 64-bit). '
-                                                 f'Instruction INVOKE at {i_no}. '
-                                                 f'Argument at {arg_no}.')
-                            
+                            if isinstance(argument, CImplAssemblyData):
+                                data = argument.contained[0]
+                            else:
+                                if argument.contained > BIT64:
+                                    raise ValueError(f'Too big argument value (bigger than 64-bit). '
+                                                    f'Instruction INVOKE at {i_no}. '
+                                                    f'Argument at {arg_no}.')
+                                data = hex(argument.contained)
+                                
                             if arg_no > 3:
-                                context.add_line(f'mov rax, {hex(argument.contained)}')
+                                context.add_line(f'mov rax, {data}')
                                 context.add_line(f'push rax')
                             else:
                                 match arg_no:
@@ -205,14 +214,54 @@ class CImplFunction:
                                 if argument.contained == 0:
                                     context.add_line(f'xor {register}, {register}')
                                 else:
-                                    context.add_line(f'mov {register}, {hex(argument.contained)}')
+                                    context.add_line(f'mov {register}, {data}')
                     else: 
                         for arg_no, argument in enumerate(instruction_data):
                             if not isinstance(argument, CImplContainer):
                                     raise ValueError(f'Argument is not a container. '
                                                     f'Instruction INVOKE at {i_no}. '
                                                     f'Argument at {arg_no}.')
+                            
+                            if isinstance(argument, CImplAssemblyData):
+                                data = argument.contained[0]
+                            else:
+                                if argument.contained > BIT64:
+                                        raise ValueError(f'Too big argument value (bigger than 64-bit) '
+                                                        f'(System is 32-bit). '
+                                                        f'Instruction INVOKE at {i_no}. '
+                                                        f'Argument at {arg_no}.')
+                                    
+                                if argument.contained > BIT32 or isinstance(argument, CImplQword):
+                                    raise SystemError(f'Argument value is 64-bit, but system is not 64-bit. '
+                                                    f'Instruction INVOKE at {i_no}. '
+                                                    f'Argument at {arg_no}.')
+                                data = hex(argument.contained)
                                 
+                            if arg_no > 1:
+                                context.add_line(f'push {data}')
+                            else:
+                                match arg_no:
+                                    case 0:
+                                        register = 'ecx'
+                                    case 1:
+                                        register = 'edx'
+                                if argument.contained == 0:
+                                    context.add_line(f'xor {register}, {register}')
+                                else:
+                                    context.add_line(f'mov {register}, {data}')
+                                    
+                elif convention == CImplConvention.CDECL and not context.win64:
+                    args_size: int = 0
+                    for arg_no, argument in enumerate(instruction_data):
+                        if not isinstance(argument, CImplContainer):
+                                raise ValueError(f'Argument is not a container. '
+                                                f'Instruction INVOKE at {i_no}. '
+                                                f'Argument at {arg_no}.')
+                        
+                        if isinstance(argument, CImplAssemblyData):
+                            data = argument.contained[0]
+                            args_size += argument.contained[1]
+                        else:
                             if argument.contained > BIT64:
                                     raise ValueError(f'Too big argument value (bigger than 64-bit) '
                                                     f'(System is 32-bit). '
@@ -223,44 +272,13 @@ class CImplFunction:
                                 raise SystemError(f'Argument value is 64-bit, but system is not 64-bit. '
                                                 f'Instruction INVOKE at {i_no}. '
                                                 f'Argument at {arg_no}.')
-                                
-                            if arg_no > 1:
-                                context.add_line(f'push {hex(argument.contained)}')
-                            else:
-                                match arg_no:
-                                    case 0:
-                                        register = 'ecx'
-                                    case 1:
-                                        register = 'edx'
-                                if argument.contained == 0:
-                                    context.add_line(f'xor {register}, {register}')
-                                else:
-                                    context.add_line(f'mov {register}, {hex(argument.contained)}')
-                                    
-                elif convention == CImplConvention.CDECL and not context.win64:
-                    args_size: int = 0
-                    for arg_no, argument in enumerate(instruction_data):
-                        if not isinstance(argument, CImplContainer):
-                                raise ValueError(f'Argument is not a container. '
-                                                f'Instruction INVOKE at {i_no}. '
-                                                f'Argument at {arg_no}.')
+                            data = hex(argument.contained)
                             
-                        if argument.contained > BIT64:
-                                raise ValueError(f'Too big argument value (bigger than 64-bit) '
-                                                 f'(System is 32-bit). '
-                                                f'Instruction INVOKE at {i_no}. '
-                                                f'Argument at {arg_no}.')
+                            if isinstance(argument, CImplByte): args_size += 1
+                            if isinstance(argument, CImplWord): args_size += 2
+                            if isinstance(argument, CImplDword): args_size += 4
                             
-                        if argument.contained > BIT32 or isinstance(argument, CImplQword):
-                            raise SystemError(f'Argument value is 64-bit, but system is not 64-bit. '
-                                            f'Instruction INVOKE at {i_no}. '
-                                            f'Argument at {arg_no}.')
-                            
-                        if isinstance(argument, CImplByte): args_size += 1
-                        if isinstance(argument, CImplWord): args_size += 2
-                        if isinstance(argument, CImplDword): args_size += 4
-                            
-                        context.add_line(f'push {hex(argument.contained)}')
+                        context.add_line(f'push {data}')
                             
                 elif convention == CImplConvention.STDCALL and not context.win64:
                     for arg_no, argument in enumerate(instruction_data):
@@ -268,19 +286,23 @@ class CImplFunction:
                                 raise ValueError(f'Argument is not a container. '
                                                  f'Instruction INVOKE at {i_no}. '
                                                  f'Argument at {arg_no}.')
+                        
+                        if isinstance(argument, CImplAssemblyData):
+                            data = argument.contained[0]
+                        else:
+                            if argument.contained > BIT64:
+                                    raise ValueError(f'Too big argument value (bigger than 64-bit) '
+                                                    f'(System is 32-bit). '
+                                                    f'Instruction INVOKE at {i_no}. '
+                                                    f'Argument at {arg_no}.')
+                                
+                            if argument.contained > BIT32 or isinstance(argument, CImplQword):
+                                raise SystemError(f'Argument value is 64-bit, but system is not 64-bit. '
+                                                f'Instruction INVOKE at {i_no}. '
+                                                f'Argument at {arg_no}.')
+                            data = hex(argument.contained)
                             
-                        if argument.contained > BIT64:
-                                raise ValueError(f'Too big argument value (bigger than 64-bit) '
-                                                 f'(System is 32-bit). '
-                                                 f'Instruction INVOKE at {i_no}. '
-                                                 f'Argument at {arg_no}.')
-                            
-                        if argument.contained > BIT32 or isinstance(argument, CImplQword):
-                            raise SystemError(f'Argument value is 64-bit, but system is not 64-bit. '
-                                             f'Instruction INVOKE at {i_no}. '
-                                             f'Argument at {arg_no}.')
-                            
-                        context.add_line(f'push {hex(argument.contained)}')
+                        context.add_line(f'push {data}')
                 
                 if address > BIT32:
                     context.add_line(f'mov rax, {hex(address)}')
@@ -295,9 +317,9 @@ class CImplFunction:
             else:
                 raise RuntimeError(f'Unknown instruction {instruction.format()} at {i_no}.')
                         
-        if have_invokes:
+        if have_invokes and not self.has_frame:
             context.add_line(f'add rsp, {self.function_space}')
-            
+        
         if self.has_frame:
             if context.win64:
                 context.add_line('mov rsp, rbp')

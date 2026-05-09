@@ -103,7 +103,7 @@ class IIMLParser(IInterface):
             self.on_parse_started()
         
         contents = self.file.read()
-        contents = re.sub(r'/\*.*\*/', '', contents, flags=re.DOTALL)
+        contents = re.sub(r'/\*.*?\*/', '', contents, flags=re.DOTALL)
         
         lines = contents.split('\n')
         lines_length: int = len(lines)

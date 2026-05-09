@@ -43,7 +43,7 @@ if cpreproc.pragma_once("_ICWCFG_H_"):
     
     # REGION *** Desktop Family ***
 
-    inetcfg = WinDLL('Inetcfg.dll')
+    inetcfg = get_win_library('Inetcfg.dll')
 
     #
     # defines

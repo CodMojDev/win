@@ -21,7 +21,7 @@ if cpreproc.pragma_once("__WNV_API_INCLUDED_"):
     from .in6addr import *
     from .inaddr import *
 
-    wnvapi = WinDLL('wnvapi.dll')
+    wnvapi = get_win_library('wnvapi.dll')
 
     from .sdkddkver import WIN32_WINNT_WIN8
     

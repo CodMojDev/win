@@ -4,7 +4,7 @@
 
 from . import cpreproc
 
-from .minwindef import Structure, DWORD, BOOL, BYTE
+from .minwindef import CStructure, DWORD, BOOL, BYTE, IArray
 
 if cpreproc.pragma_once("__SAC_H__"):
     
@@ -19,9 +19,10 @@ if cpreproc.pragma_once("__SAC_H__"):
     SAC_CERT_X509 = 1
     SAC_CERT_V1 = 2
 
-    class __MACINFO(CStructure):
+    class MACINFO(CStructure):
         _fields_ = [
             ("fUsed", BOOL),
             ("abMacState", BYTE * 36)
         ]
-    MACINFO = __MACINFO
+        fUsed: int
+        abMacState: IArray[int]

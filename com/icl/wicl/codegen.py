@@ -16,8 +16,12 @@ class Code:
             self.file.close()
             
     def append_decorator(self, decorator: str, args: List[str], 
-                         named_args: List[Tuple[str, str]]):
+                         named_args: List[Tuple[str, str]], no_call: bool = False):
         assert self.file and not self.file.closed
+        
+        if no_call:
+            self.file.write(f'{self.make_indents()}@{decorator}\n')
+            return
         
         if len(args) == 0 and len(named_args) == 0:
             self.file.write(f'{self.make_indents()}@{decorator}()\n')

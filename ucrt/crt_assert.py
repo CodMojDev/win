@@ -4,7 +4,7 @@ from ..defbase import declare
 
 import inspect
 
-ucrtbase = cdll.ucrtbased
+ucrtbase = cdll.ucrtbase
 
 wassert = declare(ucrtbase._wassert, VOID, LPCWSTR, LPCWSTR, UINT)
 

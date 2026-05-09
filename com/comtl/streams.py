@@ -3,6 +3,7 @@ from .baseface import *
 from ..storagedef import *
 
 import os
+import io
 
 WIN32_EPOCH_NULL_TIMESTAMP = 116444736000000000
 STG_E_INVALIDFUNCTION = 0x80030001

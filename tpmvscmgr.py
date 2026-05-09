@@ -14,7 +14,7 @@ from . import cpreproc
 if cpreproc.pragma_once("__tpmvscmgr_h__"):
     from .sdkddkver import *
 
-    from comtypes import IUnknown, COMMETHOD, CoClass
+    from .com.unknwn import IUnknown, COMClass, COMVirtualTable
     from .tpmvscattestation import *
     from .guiddef import IID, CLSID
     from .minwindef import *
@@ -71,11 +71,16 @@ if cpreproc.pragma_once("__tpmvscmgr_h__"):
 
         IID_ITpmVirtualSmartCardManagerStatusCallback = IID("{1A1BB35F-ABB8-451C-A1AE-33D98F1BEF4A}")
         class ITpmVirtualSmartCardManagerStatusCallback(IUnknown):
+            virtual_table = COMVirtualTable.from_ancestor(IUnknown)
             _iid_ = IID_ITpmVirtualSmartCardManagerStatusCallback
-            _methods_ = IUnknown._methods_ + [
-                COMMETHOD(["in", HRESULT, "ReportProgress", ("Status", TPMVSCMGR_STATUS)]),
-                COMMETHOD(["in", HRESULT, "ReportError", ("Error", TPMVSCMGR_ERROR)])
-            ]
+            
+            @virtual_table.com_function(TPMVSCMGR_STATUS)
+            def ReportProgress(self, Status: int) -> int: ...
+            
+            @virtual_table.com_function(TPMVSCMGR_ERROR)
+            def ReportError(self, Error: int) -> int: ...
+            
+            virtual_table.build()
 
         #
         # TPM Virtual Smart Card Default Admin Key Algorithm ID
@@ -88,109 +93,83 @@ if cpreproc.pragma_once("__tpmvscmgr_h__"):
 
         IID_ITpmVirtualSmartCardManager = IID("{112B1DFF-D9DC-41F7-869F-D67FEE7CB591}")
         class ITpmVirtualSmartCardManager(IUnknown):
+            virtual_table = COMVirtualTable.from_ancestor(IUnknown)
             _iid_ = IID_ITpmVirtualSmartCardManager
-            _methods_ = IUnknown._methods_ + [
-                COMMETHOD(["in", "in", "in", "in", 
-                           "in", "in", "in", "in", 
-                           "in", "in", "in", "in", 
-                           "out", "out"],
-                          HRESULT, "CreateVirtualSmartCard", 
-                          ("pszFriendlyName", LPCWSTR),
-                          ("bAdminAlgId", BYTE),
-                          ("pbAdminKey", PBYTE),
-                          ("cbAdminKey", DWORD),
-                          ("pbAdminKcv", PBYTE),
-                          ("cbAdminKcv", DWORD),
-                          ("pbPuk", PBYTE),
-                          ("cbPuk", DWORD),
-                          ("pbPin", PBYTE),
-                          ("cbPin", DWORD),
-                          ("fGenerate", BOOL),
-                          ("pStatusCallback", POINTER(ITpmVirtualSmartCardManagerStatusCallback)),
-                          ("ppszInstanceId", POINTER(LPWSTR)),
-                          ("pfNeedReboot", PBOOL)),
-                COMMETHOD(["in", "in", "out"], HRESULT, "DestroyVirtualSmartCard",
-                          ("pszInstanceId", LPCWSTR),
-                          ("pStatusCallback", POINTER(ITpmVirtualSmartCardManagerStatusCallback)),
-                          ("pfNeedReboot", PBOOL))
-            ]
+            
+            @virtual_table.com_function(LPCWSTR, PBYTE, PBYTE, DWORD, PBYTE, 
+                                        DWORD, PBYTE, DWORD, PBYTE, DWORD, BOOL, 
+                                        PTR(ITpmVirtualSmartCardManagerStatusCallback), 
+                                        PTR(LPWSTR), PBOOL)
+            def CreateVirtualSmartCard(
+                self, pszFriendlyName: LPCWSTR, bAdminAlgId: int, pbAdminKey: PBYTE,
+                cbAdminKey: int, pbAdminKcv: PBYTE, cbAdminKcv: int,
+                pbPuk: PBYTE, cbPuk: int, pbPin: PBYTE, cbPin: int,
+                fGenerate: int, pStatusCallback: IPointer[ITpmVirtualSmartCardManagerStatusCallback],
+                ppszInstanceId: IPointer[LPWSTR], pfNeedReboot: PBOOL) -> int: ...
+            
+            @virtual_table.com_function(LPCWSTR, PTR(ITpmVirtualSmartCardManagerStatusCallback), PBOOL)
+            def DestroyVirtualSmartCard(
+                self, pszInstanceId: LPCWSTR, 
+                pStatusCallback: IPointer[ITpmVirtualSmartCardManagerStatusCallback], 
+                pfNeedReboot: PBOOL) -> int: ...
+            
+            virtual_table.build()
 
         # (_WINVER >= WIN32_WINNT_WIN8)")
 
         if cpreproc.get_version() >= WIN32_WINNT_WINBLUE:
             IID_ITpmVirtualSmartCardManager2 = IID("{FDF8A2B9-02DE-47F4-BC26-AA85AB5E5267}")
             class ITpmVirtualSmartCardManager2(ITpmVirtualSmartCardManager):
+                virtual_table = COMVirtualTable.from_ancestor(ITpmVirtualSmartCardManager)
                 _iid_ = IID_ITpmVirtualSmartCardManager2
-                _methods_ = ITpmVirtualSmartCardManager._methods_ + [
-                    COMMETHOD(["in", "in", "in", "in", 
-                               "in", "in", "in", "in", 
-                               "in", "in", "in", "in", 
-                               "in", "in", "out", "out"], HRESULT, "CreateVirtualSmartCardWithPinPolicy",
-                          ("pszFriendlyName", LPCWSTR),
-                          ("bAdminAlgId", BYTE),
-                          ("pbAdminKey", PBYTE),
-                          ("cbAdminKey", DWORD),
-                          ("pbAdminKcv", PBYTE),
-                          ("cbAdminKcv", DWORD),
-                          ("pbPuk", PBYTE),
-                          ("cbPuk", DWORD),
-                          ("pbPin", PBYTE),
-                          ("cbPin", DWORD),
-                          ("pbPinPolicy", PBYTE),
-                          ("cbPinPolicy", DWORD),
-                          ("fGenerate", BOOL),
-                          ("pStatusCallback", POINTER(ITpmVirtualSmartCardManagerStatusCallback)),
-                          ("ppszInstanceId", POINTER(LPWSTR)),
-                          ("pfNeedReboot", PBOOL))
-                ]
+
+                @virtual_table.com_function(LPCWSTR, PBYTE, PBYTE, DWORD, PBYTE, 
+                                            DWORD, PBYTE, DWORD, PBYTE, DWORD, PBYTE, DWORD, BOOL,
+                                            PTR(ITpmVirtualSmartCardManagerStatusCallback), 
+                                            PTR(LPWSTR), PBOOL)
+                def CreateVirtualSmartCardWithPinPolicy(
+                    self, pszFriendlyName: LPCWSTR, bAdminAlgId: int, pbAdminKey: PBYTE, 
+                    cbAdminKey: int, pbAdminKcv: PBYTE, cbAdminKcv: int,
+                    pbPuk: PBYTE, cbPuk: int, pbPin: PBYTE, cbPin: int, pbPinPolicy: PBYTE, cbPinPolicy: int,
+                    fGenerate: int, pStatusCallback: IPointer[ITpmVirtualSmartCardManagerStatusCallback],
+                    ppszInstanceId: IPointer[LPWSTR], pfNeedReboot: PBOOL) -> int: ...
+                
+                virtual_table.build()
 
         # (_WINVER >= WIN32_WINNT_WINBLUE)")
 
         if cpreproc.get_version() >= WIN32_WINNT_WINTHRESHOLD:
             IID_ITpmVirtualSmartCardManager3 = IID("{3C745A97-F375-4150-BE17-5950F694C699}")
             class ITpmVirtualSmartCardManager3(ITpmVirtualSmartCardManager2):
+                virtual_table = COMVirtualTable.from_ancestor(ITpmVirtualSmartCardManager2)
                 _iid_ = IID_ITpmVirtualSmartCardManager3
-                _methods_ = ITpmVirtualSmartCardManager2._methods_ + [
-                    COMMETHOD(["in", "in", "in", "in", 
-                               "in", "in", "in", "in", 
-                               "in", "in", "in", "in", 
-                               "in", "in", "in", "out", 
-                               "out"], HRESULT, "CreateVirtualSmartCardWithAttestation",
-                          ("pszFriendlyName", LPCWSTR),
-                          ("bAdminAlgId", BYTE),
-                          ("pbAdminKey", PBYTE),
-                          ("cbAdminKey", DWORD),
-                          ("pbAdminKcv", PBYTE),
-                          ("cbAdminKcv", DWORD),
-                          ("pbPuk", PBYTE),
-                          ("cbPuk", DWORD),
-                          ("pbPin", PBYTE),
-                          ("cbPin", DWORD),
-                          ("pbPinPolicy", PBYTE),
-                          ("cbPinPolicy", DWORD),
-                          ("attestationType", TPMVSC_ATTESTATION_TYPE),
-                          ("fGenerate", BOOL),
-                          ("pStatusCallback", POINTER(ITpmVirtualSmartCardManagerStatusCallback)),
-                          ("ppszInstanceId", POINTER(LPWSTR)),
-                          ("pfNeedReboot", PBOOL))
-                ]
+                
+                @virtual_table.com_function(LPCWSTR, PBYTE, PBYTE, DWORD, PBYTE, 
+                                            DWORD, PBYTE, DWORD, PBYTE, DWORD, PBYTE, DWORD, TPMVSC_ATTESTATION_TYPE, BOOL,
+                                            PTR(ITpmVirtualSmartCardManagerStatusCallback), 
+                                            PTR(LPWSTR), PBOOL)
+                def CreateVirtualSmartCardWithAttestation(
+                    self, pszFriendlyName: LPCWSTR, bAdminAlgId: int, pbAdminKey: PBYTE, 
+                    cbAdminKey: int, pbAdminKcv: PBYTE, cbAdminKcv: int,
+                    pbPuk: PBYTE, cbPuk: int, pbPin: PBYTE, cbPin: int, pbPinPolicy: PBYTE, cbPinPolicy: int, attestationType: int,
+                    fGenerate: int, pStatusCallback: IPointer[ITpmVirtualSmartCardManagerStatusCallback],
+                    ppszInstanceId: IPointer[LPWSTR], pfNeedReboot: PBOOL) -> int: ...
+                
+                virtual_table.build()
 
         # (_WINVER >= WIN32_WINNT_WINTHRESHOLD)")
-
         
         if cpreproc.get_version() >= WIN32_WINNT_WIN8:
             CLSID_TpmVirtualSmartCardManagers = CLSID("{1C60A923-2D86-46AA-928A-E7F3E37577AF}")
             CLSID_TpmVirtualSmartCardManager = CLSID("{16A18E86-7F6E-4C20-AD89-4FFC0DB7A96A}")
             CLSID_RemoteTpmVirtualSmartCardManager = CLSID("{152EA2A8-70DC-4C59-8B2A-32AA3CA0DCAC}")
-            class TpmVirtualSmartCardManagers(CoClass):
-                _reg_clsid_ = CLSID_TpmVirtualSmartCardManagers
-                class TpmVirtualSmartCardManager(CoClass):
-                    _reg_clsid_ = CLSID_TpmVirtualSmartCardManager
-                    _com_interfaces_ = [ITpmVirtualSmartCardManager, ITpmVirtualSmartCardManager2, ITpmVirtualSmartCardManager3]
+            class TpmVirtualSmartCardManagers(COMClass):
+                _clsid_ = CLSID_TpmVirtualSmartCardManagers
+                class TpmVirtualSmartCardManager(COMClass, ITpmVirtualSmartCardManager3):
+                    _clsid_ = CLSID_TpmVirtualSmartCardManager
                 
-                class RemoteTpmVirtualSmartCardManager(CoClass):
-                    _reg_clsid_ = CLSID_RemoteTpmVirtualSmartCardManager
-                    _com_interfaces_ = [ITpmVirtualSmartCardManager, ITpmVirtualSmartCardManager2, ITpmVirtualSmartCardManager3]
+                class RemoteTpmVirtualSmartCardManager(COMClass, ITpmVirtualSmartCardManager3):
+                    _clsid_ = CLSID_RemoteTpmVirtualSmartCardManager
 
     # (_WINVER >= WIN32_WINNT_WIN8)")
 

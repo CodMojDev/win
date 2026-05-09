@@ -1316,6 +1316,10 @@ if cpreproc.pragma_once("_WINGDI_"):
                     ("peBlue", BYTE),
                     ("peFlags", BYTE)
                 ]
+                peRed: int
+                peGreen: int
+                peBlue: int
+                peFlags: int
             PALETTEENTRY = tagPALETTEENTRY
             PPALETTEENTRY = POINTER(PALETTEENTRY)
             LPPALETTEENTRY = PPALETTEENTRY
@@ -1326,9 +1330,12 @@ if cpreproc.pragma_once("_WINGDI_"):
             class tagLOGPALETTE(CStructure):
                 _fields_ = [
                     ("palVersion", WORD),
-                    ("palNumEntries", WORD),
-                    ("palPalEntry", PALETTEENTRY * 1)
+                    ("palNumEntries", WORD)
                 ]
+                palVersion: int
+                palNumEntries: int
+                palPalEntry: IPointer[tagPALETTEENTRY]
+            array_after_structure(tagLOGPALETTE, 'palPalEntry', tagPALETTEENTRY)
             LOGPALETTE = tagLOGPALETTE
             PLOGPALETTE = POINTER(LOGPALETTE)
             NPLOGPALETTE = PLOGPALETTE
@@ -1356,6 +1363,20 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("lfPitchAndFamily", BYTE),
                 ("lfFaceName", CHAR * LF_FACESIZE)
             ]
+            lfHeight: int
+            lfWidth: int
+            lfEscapement: int
+            lfOrientation: int
+            lfWeight: int
+            lfItalic: int
+            lfUnderline: int
+            lfStrikeOut: int
+            lfCharSet: int
+            lfOutPrecision: int
+            lfClipPrecision: int
+            lfQuality: int
+            lfPitchAndFamily: int
+            lfFaceName: ICharArray
         LOGFONTA = tagLOGFONTA
         PLOGFONTA = POINTER(LOGFONTA)
         NPLOGFONTA = PLOGFONTA
@@ -1378,6 +1399,20 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("lfPitchAndFamily", BYTE),
                 ("lfFaceName", WCHAR * LF_FACESIZE)
             ]
+            lfHeight: int
+            lfWidth: int
+            lfEscapement: int
+            lfOrientation: int
+            lfWeight: int
+            lfItalic: int
+            lfUnderline: int
+            lfStrikeOut: int
+            lfCharSet: int
+            lfOutPrecision: int
+            lfClipPrecision: int
+            lfQuality: int
+            lfPitchAndFamily: int
+            lfFaceName: IWideCharArray
         LOGFONTW = tagLOGFONTW
         PLOGFONTW = POINTER(LOGFONTW)
         NPLOGFONTW = PLOGFONTW
@@ -1401,6 +1436,9 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("elfFullName", CHAR * LF_FULLFACESIZE),
                 ("elfStyle", CHAR * LF_FACESIZE)
             ]
+            elfLogFont: LOGFONTA
+            elfFullName: ICharArray
+            elfStyle: ICharArray
         ENUMLOGFONTA = tagENUMLOGFONTA
         LPENUMLOGFONTA = POINTER(ENUMLOGFONTA)
 
@@ -1411,6 +1449,9 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("elfFullName", WCHAR * LF_FULLFACESIZE),
                 ("elfStyle", WCHAR * LF_FACESIZE)
             ]
+            elfLogFont: LOGFONTA
+            elfFullName: IWideCharArray
+            elfStyle: IWideCharArray
         ENUMLOGFONTW = tagENUMLOGFONTW
         LPENUMLOGFONTW = POINTER(ENUMLOGFONTW)
 
@@ -1424,6 +1465,10 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("elfStyle", CHAR * LF_FACESIZE),
                 ("elfScript", CHAR * LF_FACESIZE)
             ]
+            elfLogFont: LOGFONTA
+            elfFullName: ICharArray
+            elfStyle: ICharArray
+            elfScript: ICharArray
         ENUMLOGFONTEXA = tagENUMLOGFONTEXA
         LPENUMLOGFONTEXA = POINTER(ENUMLOGFONTEXA)
 
@@ -1434,6 +1479,10 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("elfStyle", WCHAR * LF_FACESIZE),
                 ("elfScript", WCHAR * LF_FACESIZE)
             ]
+            elfLogFont: LOGFONTA
+            elfFullName: ICharArray
+            elfStyle: ICharArray
+            elfScript: IWideCharArray
         ENUMLOGFONTEXW = tagENUMLOGFONTEXW
         LPENUMLOGFONTEXW = POINTER(ENUMLOGFONTEXW)
 
@@ -3887,6 +3936,14 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("Blue", COLOR16),
                 ("Alpha", COLOR16)
             ]
+            
+            x: int
+            y: int
+            Red: int
+            Green: int
+            Blue: int
+            Alpha: int
+            
         TRIVERTEX = _TRIVERTEX
         PTRIVERTEX = POINTER(TRIVERTEX)
         LPTRIVERTEX = PTRIVERTEX
@@ -3901,6 +3958,11 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("Vertex2", ULONG),
                 ("Vertex3", ULONG)
             ]
+            
+            Vertex1: int
+            Vertex2: int
+            Vertex3: int
+            
         GRADIENT_TRIANGLE = _GRADIENT_TRIANGLE
         PGRADIENT_TRIANGLE = POINTER(GRADIENT_TRIANGLE)
         LPGRADIENT_TRIANGLE = PGRADIENT_TRIANGLE
@@ -3910,6 +3972,8 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("UpperLeft", ULONG),
                 ("LowerRight", ULONG)
             ]
+            UpperLeft: int
+            LowerRight: int
         GRADIENT_RECT = _GRADIENT_RECT
         PGRADIENT_RECT = POINTER(GRADIENT_RECT)
         LPGRADIENT_RECT = PGRADIENT_RECT
@@ -3925,6 +3989,10 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("SourceConstantAlpha", BYTE),
                 ("AlphaFormat", BYTE)
             ]
+            BlendOp: int
+            BlendFlags: int
+            SourceConstantAlpha: int
+            AlphaFormat: int
         BLENDFUNCTION = _BLENDFUNCTION
         PBLENDFUNCTION = POINTER(BLENDFUNCTION)
 
@@ -4009,6 +4077,10 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("dsBitfields", DWORD * 3),
                 ("dsOffset", DWORD)
             ]
+            dsBm: BITMAP
+            dsBmih: BITMAPINFOHEADER
+            dsBitFields: IArrayFixedSize[DWORD, 3]
+            dsOffset: int
         DIBSECTION = tagDIBSECTION
         LPDIBSECTION = POINTER(DIBSECTION)
         PDIBSECTION = LPDIBSECTION
@@ -4018,7 +4090,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         GDI__DIBSIZE = lambda bi: GDI_DIBWIDTHBYTES(bi) * DWORD(bi.biHeight)
         GDI_DIBSIZE = lambda bi: (-1 * GDI__DIBSIZE(bi) if bi.biHeight < 0 else GDI__DIBSIZE(bi))
 
-        CreateDIBSection = declare(gdi32.CreateDIBSection, HBITMAP, HDC, UINT, PVOID, HANDLE, DWORD)
+        CreateDIBSection = declare(gdi32.CreateDIBSection, HBITMAP, HDC, LPBITMAPINFO, UINT, PVOID, HANDLE, DWORD)
         GetDIBColorTable = declare(gdi32.GetDIBColorTable, UINT, HDC, UINT, UINT, PRGBQUAD)
         SetDIBColorTable = declare(gdi32.SetDIBColorTable, UINT, HDC, UINT, UINT, PRGBQUAD)
         # Flags value for COLORADJUSTMENT
@@ -4066,6 +4138,18 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("caColorfulness", SHORT),
                 ("caRedGreenTint", SHORT)
             ]
+            caIlluminantIndex: int
+            caReferenceBlack: int
+            caReferenceWhite: int
+            caColorfulness: int
+            caRedGreenTint: int
+            caGreenGamma: int
+            caBrightness: int
+            caBlueGamma: int
+            caRedGamma: int
+            caContrast: int
+            caFlags: int
+            caSize: int
         COLORADJUSTMENT = tagCOLORADJUSTMENT
         PCOLORADJUSTMENT = POINTER(COLORADJUSTMENT)
         LPCOLORADJUSTMENT = PCOLORADJUSTMENT
@@ -4084,6 +4168,11 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("lpszDatatype", LPCSTR),
                 ("fwType", DWORD)
             ]
+            lpszDatatype: LPSTR
+            lpszDocName: LPSTR
+            lpszOutput: LPSTR
+            cbSize: int
+            fwType: int
         DOCINFOA = _DOCINFOA
         PDOCINFOA = POINTER(DOCINFOA)
         LPDOCINFOA = PDOCINFOA
@@ -4096,6 +4185,11 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("lpszDatatype", LPCWSTR),
                 ("fwType", DWORD)
             ]
+            lpszDatatype: LPWSTR
+            lpszDocName: LPWSTR
+            lpszOutput: LPWSTR
+            cbSize: int
+            fwType: int
         DOCINFOW = _DOCINFOW
         PDOCINFOW = POINTER(DOCINFOW)
         LPDOCINFOW = PDOCINFOW
@@ -4181,6 +4275,9 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("wSecond", WORD),
                 ("iKernAmount", INT)
             ]
+            wFirst: int
+            wSecond: int
+            iKernAmount: int
         KERNINGPAIR = tagKERNINGPAIR
         LPKERNINGPAIR = POINTER(KERNINGPAIR)
 

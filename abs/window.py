@@ -3,9 +3,61 @@ from win.libloaderapi import *
 from win.commctrl import *
 from .core.handle import *
 from .core.event import *
+from .core.absutils import *
+
+import random
+
+class Menu(Handle):
+    def close(self):
+        DestroyMenu(self)
+        self._closed = True
+    
+    def __init__(self, **kwargs):
+        if 'headless' not in kwargs:
+            super().__init__(CreateMenu())
+            if not self.value:
+                raise WinException()
+        else:
+            super().__init__()
+    
+    def append(self, item: int, lp, flags: int):
+        if isinstance(lp, str):
+            lp = create_unicode_buffer(lp)
+        if not AppendMenuW(self, flags, PtrUtil.get_address(item), i_cast(lp, LPCWSTR)):
+            raise WinException()
+
+    def modify(self, position: int, item: int, lp, flags: int):
+        if isinstance(lp, str):
+            lp = create_unicode_buffer(lp)
+        if not ModifyMenuW(self, position, flags, PtrUtil.get_address(item), i_cast(lp, LPWSTR)):
+            raise WinException()
+
+class PopupMenu(Menu):
+    def __init__(self):
+        super().__init__()
+        self.value = CreatePopupMenu()
+        if not self.value:
+            raise WinException()
+        
+    def track(self, x: int, y: int, hWnd: int | HANDLE, flags: int=0):
+        if not TrackPopupMenu(self, flags, x, y, 0, hWnd, NULL):
+            raise WinException()
 
 class Window(HWND):
-    _class_count: int = 0
+    def __hash__(self):
+        return hash(self.value)
+    
+    def __eq__(self, window: int | HANDLE):
+        if isinstance(window, int):
+            return window == self.value
+        return window.value == self.value
+    
+    @classmethod
+    def foreign(cls, hwnd: int) -> 'Window':
+        if PtrUtil.get_address(hwnd) == 0: return None
+        if not IsWindow(hwnd):
+            raise WinException()
+        return cls(hwnd, headless=True)
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
@@ -22,7 +74,6 @@ class Window(HWND):
             self.running = False
             
             self.on_create = Event()
-            self.on_paint = Event()
             self.on_left_button_down = Event()
             self.on_left_button_up = Event()
             self.on_left_button_double_click = Event()
@@ -31,8 +82,6 @@ class Window(HWND):
             self.on_right_button_double_click = Event()
             self.on_close = Event()
             self.on_destroy = Event()
-            self.on_command = Event()
-            self.on_size = Event()
             self.on_key_down = Event()
             self.on_key_up = Event()
             self.on_move = Event()
@@ -42,7 +91,6 @@ class Window(HWND):
             self.on_user_changed = Event()
             self.on_unknown_message = Event()
             self.on_enable = Event()
-            self.on_erase_background = Event()
             self.on_set_font = Event()
             self.on_mouse_wheel = Event()
             self.on_timer = Event()
@@ -50,6 +98,8 @@ class Window(HWND):
             self.on_notify = Event()
             self.on_message = Event()
             self.on_mouse_move = Event()
+            self.on_draw_item = Event()
+            self.on_palette_changed = Event()
     
     _timers: dict[int, FARPROC]
     class_name: str | None
@@ -81,6 +131,20 @@ class Window(HWND):
         if self.value:
             SetWindowLongW(self, GWL_EXSTYLE, extended_style)
     
+    def remove(self, *styles: int):
+        for style in styles:
+            self.style &= ~style
+    
+    def remove_extended(self, *extended_styles: int):
+        for extended_style in extended_styles:
+            self.extended_style &= ~extended_style
+    
+    def enable(self):
+        EnableWindow(self, True)
+        
+    def disable(self):
+        EnableWindow(self, False)
+    
     def register(self):
         wc = WNDCLASSW()
         
@@ -94,7 +158,7 @@ class Window(HWND):
         wc.hInstance = GetModuleHandleW(NULL)
         wc.style = self.class_style
         
-        class_name = f'Win-Abs/Class-N{str(Window._class_count).zfill(4)}'
+        class_name = f'Win-Abs/Class-N{str(random.randint(0, 10000000)).zfill(8)}'
         
         wc.lpszClassName = class_name
         self.pfnWndProc = wc.lpfnWndProc = WNDPROC(self.window_proc)
@@ -104,7 +168,6 @@ class Window(HWND):
             raise WinException()
         
         self.class_name = class_name
-        Window._class_count += 1
     
     def create(self, width: int = CW_USEDEFAULT, height: int = CW_USEDEFAULT,
                x: int = CW_USEDEFAULT, y: int = CW_USEDEFAULT,
@@ -117,14 +180,35 @@ class Window(HWND):
         if not self.value:
             raise WinException()
     
+    def on_paint(self, dc: PaintDC):
+        pass
+    
+    def on_command(self, identifier: int, notify_code: int, hwnd: int):
+        pass
+    
+    def on_size(self, flags: int, width: int, height: int):
+        pass
+    
+    def on_erase_background(self, dc: DC) -> bool:
+        return False
+    
+    def on_focus_changed(self, previous: 'Window'):
+        pass
+    
+    def on_focus_lost(self, focused: 'Window'):
+        pass
+    
     def window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         if msg == WM_CREATE:
             self.running = True
             self.value = hwnd
-            self.on_create.execute()
+            if not all(self.on_create.execute()):
+                return -1
+            return 0
         elif msg == WM_PAINT:
             with PaintDC(self) as dc:
-                self.on_paint.execute(dc)
+                self.on_paint(dc)
+            return 0
         elif msg == WM_LBUTTONDOWN:
             self.on_left_button_down.execute(wParam, LOWORD(lParam), HIWORD(lParam))
         elif msg == WM_LBUTTONUP:
@@ -145,9 +229,11 @@ class Window(HWND):
             self.running = False
             PostQuitMessage(0)
         elif msg == WM_COMMAND:
-            self.on_command.execute(LOWORD(wParam), HIWORD(wParam), lParam)
+            self.on_command(LOWORD(wParam), HIWORD(wParam), lParam)
+            return 0
         elif msg == WM_SIZE:
-            self.on_size.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            self.on_size(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0
         elif msg == WM_KEYDOWN:
             wVK = LOWORD(wParam)
             fKeyFlags = HIWORD(lParam)
@@ -165,7 +251,7 @@ class Window(HWND):
         elif msg == WM_MOVE:
             self.on_move.execute(LOWORD(lParam), HIWORD(lParam))
         elif msg == WM_SHOWWINDOW:
-            self.on_show.execute(wParam == TRUE, lParam)
+            self.on_show.execute(wParam == TRUE)
         elif msg == WM_STYLECHANGED:
             self.on_style_changed.execute(i_cast(lParam, LPSTYLESTRUCT).contents, wParam == GWL_EXSTYLE)
         elif msg == WM_THEMECHANGED:
@@ -176,10 +262,11 @@ class Window(HWND):
             self.on_enable.execute(wParam == TRUE)
         elif msg == WM_ERASEBKGND:
             dc = DC.foreign_owner(wParam)
-            if not all(self.on_erase_background.execute(dc)):
-                return FALSE
+            if self.on_erase_background(dc):
+                return TRUE
+            return FALSE
         elif msg == WM_SETFONT:
-            self.on_set_font.execute(wParam, LOWORD(lParam) == TRUE)
+            self.on_set_font.execute(Font.foreign_owner(wParam), LOWORD(lParam) == TRUE)
         elif msg == WM_TIMER:
             if not all(self.on_timer.execute(wParam, i_cast(lParam, TIMERPROC))):
                 return FALSE
@@ -188,13 +275,46 @@ class Window(HWND):
             self.on_notify.execute(nmhdr)
         elif msg == WM_MOUSEMOVE:
             self.on_mouse_move.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+        elif msg == WM_DRAWITEM:
+            if not self.on_draw_item.empty():
+                self.on_draw_item.execute(wParam, i_cast_value(lParam, DRAWITEMSTRUCT))
+                return TRUE
+        elif msg == WM_SETFOCUS:
+            self.on_focus_changed(Window.foreign(wParam))
+            return 0
+        elif msg == WM_KILLFOCUS:
+            self.on_focus_lost(Window.foreign(wParam))
+            return 0
+        elif msg == WM_PALETTECHANGED:
+            self.on_palette_changed.execute(Palette.foreign_owner(wParam))
         else:
             result = self.on_unknown_message.execute(msg, wParam, lParam)
             for value in result:
-                if value != -1:
+                if value is not None:
                     return value
                 
         return DefWindowProcW(hwnd, msg, wParam, lParam)
+    
+    def focus(self):
+        SetFocus(self)
+    
+    @property
+    def focused(self) -> bool:
+        return GetFocus() == self.value
+    
+    def capture(self):
+        SetCapture(self)
+    
+    @property
+    def capturing(self) -> bool:
+        return GetCapture() == self.value
+    
+    @capturing.setter
+    def capturing(self, capturing: bool):
+        if capturing:
+            self.capture()
+        else:
+            ReleaseCapture()
     
     def timer(self, function: Callable, elapse: int, event_id: int = 0) -> int:
         @TIMERPROC
@@ -220,10 +340,10 @@ class Window(HWND):
             del self._timers[event_id]
         
     def close(self):
-        SendMessage(self, WM_CLOSE, 0, 0)
+        self.send(WM_CLOSE)
         
     def destroy(self):
-        SendMessage(self, WM_DESTROY, 0, 0)
+        self.send(WM_DESTROY)
         
     def hide(self):
         self.show(SW_HIDE)
@@ -233,8 +353,20 @@ class Window(HWND):
         
     def set_font(self, font: int | HANDLE, redraw: bool = True):
         self.send(WM_SETFONT, font, redraw)
-        
+    
+    def is_child(self, hWnd: int | HANDLE) -> bool:
+        return bool(IsChild(self, hWnd))
+    
+    def is_child_of(self, hWnd: int | HANDLE) -> bool:
+        return bool(IsChild(hWnd, self))
+    
     def send(self, message: int, wParam: int = 0, lParam: int = 0) -> int:
+        if isinstance(wParam, str):
+            wParam = create_unicode_buffer(wParam)
+        
+        if isinstance(lParam, str):
+            lParam = create_unicode_buffer(lParam)
+        
         if wParam != 0: 
             wParam = PtrUtil.get_address(wParam)
             
@@ -243,10 +375,23 @@ class Window(HWND):
             
         return SendMessage(self, message, wParam, lParam)
     
-    def map(self, window: int | HWND, points: Iterable[POINT]):
+    def map(self, window: int | HWND, points: Iterable[GraphicUtils.Point]) -> tuple[POINT, ...]:
+        pointsToMap = [GraphicUtils.point(point) for point in points]
         length = len(points)
-        pPoints = (POINT * length)(*points)
+        pPoints = (POINT * length)(*pointsToMap)
         MapWindowPoints(self, window, pPoints, length)
+        return tuple(pPoints)
+    
+    @property
+    def menu(self) -> 'Menu':
+        hMenu = GetMenu(self)
+        if not hMenu: raise WinException()
+        return Menu.foreign_owner(hMenu)
+    
+    @menu.setter
+    def menu(self, menu: int | HANDLE):
+        if not SetMenu(self, menu):
+            raise WinException()
     
     @property
     def name(self) -> str:
@@ -262,15 +407,15 @@ class Window(HWND):
     
     @property
     def parent(self) -> 'Window':
-        return Window(GetParent(self), headless=True)
+        return Window.foreign(GetParent(self))
     
     @parent.setter
     def parent(self, parent: int | HWND):
         SetParent(self, parent)
         
     @property
-    def rect(self) -> RECT:
-        rc = RECT()
+    def rect(self) -> Rect:
+        rc = Rect()
         if not GetWindowRect(self, byref(rc)):
             raise WinException()
         return rc
@@ -298,16 +443,44 @@ class Window(HWND):
                 rect = self.rect
                 if notw: width = rect.right - rect.left
                 if noth: height = rect.bottom - rect.top
-        SetWindowPos(self, insert_after, x, y, width, height, flags)
-        
+        if not SetWindowPos(self, insert_after, x, y, width, height, flags):
+            raise WinException()
+    
+    @classmethod
+    def foreground(self) -> 'Window':
+        hwnd = GetForegroundWindow()
+        return Window.foreign(hwnd)
+    
+    @classmethod
+    def desktop(self) -> 'Window':
+        hwnd = GetDesktopWindow()
+        return Window.foreign(hwnd)
+    
     def set_foreground(self):
-        SetForegroundWindow(self)
+        if not SetForegroundWindow(self):
+            raise WinException()
         
     def to_client(self, screen: POINT):
-        ScreenToClient(self, byref(screen))
+        if not ScreenToClient(self, byref(screen)):
+            raise WinException()
         
     def to_screen(self, client: POINT):
-        ClientToScreen(self, byref(client))
+        if not ClientToScreen(self, byref(client)):
+            raise WinException()
+        
+    @property
+    def client_rect(self) -> Rect:
+        rc = Rect()
+        if not GetClientRect(self, byref(rc)):
+            raise WinException()
+        return rc
+    
+    @client_rect.setter
+    def client_rect(self, client_rect: RECT):
+        self.set_position(
+            x=client_rect.left, y=client_rect.top, 
+            width=client_rect.right - client_rect.left,
+            height=client_rect.bottom - client_rect.top)
         
     @property
     def valid(self):
@@ -355,7 +528,7 @@ class Window(HWND):
     @y.setter
     def y(self, y: int):
         self.set_position(y=y)
-        
+    
     @property
     def position(self) -> tuple[int, int]:
         rc = self.rect
@@ -364,15 +537,19 @@ class Window(HWND):
         return pt.x, pt.y
     
     @position.setter
-    def position(self, position: tuple[int, int]):
-        self.set_position(x=position[0], y=position[1])
+    def position(self, position: GraphicUtils.Point):
+        point = GraphicUtils.point(position)
+        self.set_position(x=point.x, y=point.y)
         
     def invalidate(self, rect: RECT = None, erase: bool = True):
         InvalidateRect(self, byref(rect) if rect is not None else rect, erase)
     
-    def launch(self):
+    def update(self):
         if not UpdateWindow(self):
             raise WinException()
+    
+    def launch(self):
+        self.update()
         
         msg = MSG()
         pMsg = byref(msg)
@@ -382,23 +559,63 @@ class Window(HWND):
                 TranslateMessage(pMsg)
                 self.on_message.execute(msg)
                 DispatchMessageW(pMsg)
-                
+            
             self.after_message.execute()
+            MsgWaitForMultipleObjects(0, NULL, FALSE, 10, QS_ALLEVENTS)
 
-class ControlsT:
-    _controls: dict[str, int]
+class WindowUtils:
+    @staticmethod
+    def draw_parent_background(window: Window, dc: DC, clip_rect: RECT = None):
+        if clip_rect is not None:
+            region = Region.rect(clip_rect)
+            dc.clip_region.select(region)
+            pClipRect = byref(clip_rect)
+        else:
+            pClipRect = NULL
+            
+        parent = window.parent
+        status = DrawThemeParentBackground(window, dc, pClipRect)
+        
+        if status != S_OK:
+            point, = window.map(parent, [(0, 0)])
+            point = dc.offset_window_origin(point)
+            parent.send(WM_ERASEBKGND, dc)
+            dc.window_origin = point
+        
+        dc.clip_region.select(NULL)
+
+class IdentifiersT:
+    _identifiers: dict[str, int]
     
     def __init__(self):
-        self._controls = {}
+        self._identifiers = {}
     
-    def __getitem__(self, control: str) -> int:
-        control_id = self._controls.get(control, None)
-        if control_id is None:
-            control_id = Control.id()
-            self._controls[control] = control_id
-        return control_id
+    def __getitem__(self, identifier: str) -> int:
+        identifier_id = self._identifiers.get(identifier, None)
+        if identifier_id is None:
+            identifier_id = Control.id()
+            self._identifiers[identifier] = identifier_id
+        return identifier_id
     
-Controls = ControlsT()
+Controls = Identifiers = IdentifiersT()
+
+class MessagesT:
+    _messages: dict[str, int]
+    
+    def __init__(self):
+        self._messages = {}
+    
+    def __getitem__(self, message: str) -> int:
+        message_id = self._messages.get(message, None)
+        if message_id is None:
+            buffer = create_string_buffer(message)
+            message_id = RegisterWindowMessageW(buffer)
+            if not message_id:
+                raise WinException()
+            self._messages[message] = message_id
+        return message_id
+    
+Messages = MessagesT()
 
 class Control(Window):
     _id_last: ClassVar[int] = 0x7ff

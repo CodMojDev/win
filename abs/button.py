@@ -74,3 +74,9 @@ class GroupBox(ButtonBase):
                  identifier: int | HMENU, text: str = ''):
         super().__init__(width, height, parent, identifier, text=text)
         self.style |= BS_GROUPBOX
+        
+class SplitButton(ButtonBase):
+    def __init__(self, width: int, height: int, parent: int | HWND,
+                 identifier: int | HMENU, text: str = 'Button'):
+        super().__init__(width, height, parent, identifier, text=text)
+        self.style |= BS_SPLITBUTTON

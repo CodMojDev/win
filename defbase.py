@@ -152,7 +152,23 @@ __all__ = [
     "pcall",
     "i_getattr", "i_setattr",
     "WinAttribute", "WinProperty", "WinPropertyStore", "attributes",
-    "i_cast_value"
+    "i_cast_value",
+    "IExceptHook",
+    "excepthook_enable",
+    "excepthook_disable",
+    "excepthook_add",
+    "excepthook_remove",
+    "excepthook_super",
+    "IUnraisableHook",
+    "unraisablehook_enable",
+    "unraisablehook_disable",
+    "unraisablehook_add",
+    "unraisablehook_remove",
+    "unraisablehook_super",
+    "IHasInit",
+    "NEVER",
+    "WT_STRUCTURE",
+    "WT_SIMPLESTRUCTURE"
 ]
 
 def pcall(f, *args, **kwargs) -> tuple[Any, BaseException]:
@@ -170,6 +186,38 @@ if _WT_UNSTABLE_API:
         'cbyref', 'CByref',
         'CVoidP'
     ])
+
+class _DEFB_STATE: # internal global state
+    __slots__  = ['_linked_libraries', '_defbase_process', 
+                  '_defbase_module', '_interfacedef', '_unknwn',
+                  '_provider', '_wet_trace', '_prev_trace',
+                  '_trace_enabled', '_trace_entries', '_suppress_winwarning',
+                  '_local_allocator', '_prev_excepthook', '_excepthook_enabled',
+                  '_excepthook_entries', '_prev_unraisablehook', 
+                  '_unraisablehook_enabled', '_unraisablehook_entries']
+    _trace_entries: list['ITraceEntry']
+    _linked_libraries: Dict[str, 'LI']
+    _prev_trace: Any
+    _prev_excepthook: Any
+    _excepthook_entries: list['IExceptHook']
+    _prev_unraisablehook: Any
+    _unraisablehook_entries: list['IUnraisableHook']
+    
+    def __init__(self):
+        self._linked_libraries = {}
+        self._prev_trace = None
+        self._trace_enabled = False
+        self._trace_entries = []
+        self._suppress_winwarning = False
+        self._local_allocator = None
+        self._prev_excepthook = None
+        self._excepthook_enabled = False
+        self._excepthook_entries = []
+        self._prev_unraisablehook = None
+        self._unraisablehook_enabled = False
+        self._unraisablehook_entries = []
+    
+_defb_state: _DEFB_STATE = _DEFB_STATE()
 
 def format_hex(value: int, zeros: int = -1) -> str:
     """
@@ -207,7 +255,7 @@ def unsuppress_WinWarning():
     """
     Unsuppress the `WinWarning`
     """
-    _defb_state._suppress_winwarning
+    _defb_state._suppress_winwarning = False
 
 class IInterface:
     """
@@ -437,7 +485,6 @@ class ITraceEntry(IInterface):
     """
     
     @interface_abstract_method
-    @classmethod
     def on_event(self, frame: types.FrameType, event: str, arg: Any): 
         """
         Callback, called on every trace function call.
@@ -475,6 +522,110 @@ def trace_remove(entry: type[ITraceEntry]):
     Remove the entry from trace listeners.
     """
     _defb_state._trace_entries.remove(entry)
+    
+class IHasInit(IInterface):
+    """
+    Interface describing class is has empty constructor and not an interface at final.
+    """
+    def __init__(*args): ...
+    
+class IExceptHook(IInterface):
+    """
+    Interface for subscribing on except hook.
+    """
+    
+    @interface_abstract_method
+    def on_exception(self, type: type[BaseException], value: BaseException, traceback: types.TracebackType): 
+        """
+        Callback, called on unhandled exception.
+        """
+        
+class IUnraisableHook(IInterface):
+    """
+    Interface for subscribing on unraisable hook.
+    """
+    
+    @interface_abstract_method
+    def on_unraisable_exception(self, args: 'sys.UnraisableHookArgs'): 
+        """
+        Callback, called on unraisable exception.
+        """
+
+def _excepthook_routine(type: type[BaseException], value: BaseException, traceback: types.TracebackType) -> Callable:
+    for entry in _defb_state._excepthook_entries:
+        entry.on_exception(type, value, traceback)
+
+def excepthook_super(type: type[BaseException], value: BaseException, traceback: types.TracebackType):
+    """
+    Call super function on except hook.
+    """
+    return sys.__excepthook__(type, value, traceback)
+
+def excepthook_enable():
+    """
+    Enable except hook.
+    """
+    _defb_state._prev_excepthook = sys.excepthook
+    _defb_state._excepthook_enabled = True
+    sys.excepthook = _excepthook_routine
+    
+def excepthook_disable():
+    """
+    Disable except hook.
+    """
+    sys.excepthook = _defb_state._prev_excepthook
+    _defb_state._excepthook_enabled = False
+    _defb_state._prev_excepthook = None
+    
+def excepthook_add(entry: type[IExceptHook]):
+    """
+    Add the entry to except hook listeners.
+    """
+    _defb_state._excepthook_entries.append(entry)
+    
+def excepthook_remove(entry: type[IExceptHook]):
+    """
+    Remove the entry from except hook listeners.
+    """
+    _defb_state._excepthook_entries.remove(entry)
+    
+def _unraisablehook_routine(args: 'sys.UnraisableHookArgs') -> Callable:
+    for entry in _defb_state._unraisablehook_entries:
+        entry.on_unraisable_exception(args)
+
+def unraisablehook_super(args: 'sys.UnraisableHookArgs'):
+    """
+    Call super function on unraisable hook.
+    """
+    return sys.__unraisablehook__(args)
+
+def unraisablehook_enable():
+    """
+    Enable unraisable hook.
+    """
+    _defb_state._prev_unraisablehook = sys.unraisablehook
+    _defb_state._unraisablehook_enabled = True
+    sys.unraisablehook = _unraisablehook_routine
+    
+def unraisablehook_disable():
+    """
+    Disable unraisable hook.
+    """
+    sys.unraisablehook = _defb_state._prev_unraisablehook
+    _defb_state._unraisablehook_enabled = False
+    _defb_state._prev_unraisablehook = None
+    
+def unraisablehook_add(entry: type[IUnraisableHook]):
+    """
+    Add the entry to unraisable hook listeners.
+    """
+    _defb_state._unraisablehook_entries.append(entry)
+    
+def unraisablehook_remove(entry: type[IUnraisableHook]):
+    """
+    Remove the entry from unraisable hook listeners.
+    """
+    _defb_state._unraisablehook_entries.remove(entry)
     
 from ctypes import Structure, byref, POINTER as _POINTER, pointer, c_int, c_void_p
 from _ctypes import CFuncPtr
@@ -1428,12 +1579,14 @@ class PtrArithmetic:
 from ctypes import Union, c_wchar_p, c_int
 from .cpreproc import _CPreprocState
 
-ucrtbased = W_WinDLL('ucrtbased.dll')
+ucrtbase = W_WinDLL('ucrtbase.dll')
 msvcrt = W_WinDLL('msvcrt.dll')
+
+suppress_WinWarning()
 
 class AssertTool:
     @staticmethod
-    @ucrtbased.foreign(None, c_wchar_p, c_wchar_p, 
+    @ucrtbase.foreign(None, c_wchar_p, c_wchar_p, 
                        c_wchar_p, c_int, c_void_p,
                        name='_invoke_watson')
     def invoke_watson(_Expression: str,
@@ -1447,7 +1600,7 @@ class AssertTool:
         """
         
     @staticmethod
-    @ucrtbased.foreign(c_int, c_int, c_wchar_p, c_int,
+    @ucrtbase.foreign(c_int, c_int, c_wchar_p, c_int,
                        c_wchar_p, c_wchar_p, 
                        name='_CrtDbgReportW')
     def CrtDbgReport(reportType: int, filename: str,
@@ -1465,18 +1618,22 @@ class AssertTool:
         """
         
     @staticmethod
-    @ucrtbased.foreign(None, c_wchar_p, c_wchar_p, 
+    @ucrtbase.foreign(None, c_wchar_p, c_wchar_p, 
                        c_int, name='_wassert')
     def wassert(message: str, filename: str, line: int): 
         """
         Evaluates an expression and, when the result is false, prints a diagnostic message and aborts the program.
         """
+        
+unsuppress_WinWarning()
 
 def _ASSERT_NoFrame(expr: bool):
     warnings.warn('ASSERT functionality is not accessed, '
                     'cannot get caller frame.',
                     category=WinWarning, stacklevel=1)
     assert expr
+
+NEVER = None
 
 def ASSERT(expr: bool):
     """
@@ -2397,6 +2554,7 @@ class CClass(CStructure):
    
 from typing import overload
 
+WT_SIMPLESTRUCTURE = TypeVar('_WT_SIMPLESTRUCTURE', bound=Structure)
 WT_STRUCTURE = TypeVar('_WT_STRUCTURE', bound=CStructure)
 
 def i_getattr(obj: object, attr: str) -> object:
@@ -2411,7 +2569,7 @@ def i_setattr(obj: object, attr: str, value: object) -> object:
     """
     return object.__setattr__(obj, attr, value)
 
-def i_cast_structure(obj: CStructure, typ: Type[WT_STRUCTURE]) -> WT_STRUCTURE:
+def i_cast_structure(obj: CStructure, typ: Type[WT]) -> WT:
     """
     Cast the given structure to another structure.
     """
@@ -2778,26 +2936,6 @@ def unicode(wide: WT, ansi: WT) -> WT:
     return ansi
 
 LI = TypeVar('LI', bound=CDLL)
-
-class _DEFB_STATE: # internal global state
-    __slots__  = ['_linked_libraries', '_defbase_process', 
-                  '_defbase_module', '_interfacedef', '_unknwn',
-                  '_provider', '_wet_trace', '_prev_trace',
-                  '_trace_enabled', '_trace_entries', '_suppress_winwarning',
-                  '_local_allocator']
-    _trace_entries: list[type[ITraceEntry]]
-    _linked_libraries: Dict[str, LI]
-    _prev_trace: Any
-    
-    def __init__(self):
-        self._linked_libraries = {}
-        self._prev_trace = None
-        self._trace_enabled = False
-        self._trace_entries = []
-        self._suppress_winwarning = False
-        self._local_allocator = None
-    
-_defb_state: _DEFB_STATE = _DEFB_STATE()
 
 def link_library(library: str, library_type: Type[LI] = W_CDLL):
     """

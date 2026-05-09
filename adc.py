@@ -26,12 +26,12 @@ if cpreproc.pragma_once("ADC_INCLUDED"):
     # REGION *** Desktop Family ***
 	
     CLSID_FoxRowset          = CLSID("{3ff292b6-b204-11cf-8d23-00aa005ffe58}")
-    DBPROPSET_ADC            = GUID( "{b68e3cc1-6deb-11d0-8df6-00aa005ffe58}")
-    IID_IAsyncAllowed        = GUID( "{f5f2893a-ba9e-11d0-abb9-00c04fc29f8f}")
-    IID_IRowsetADCExtensions = IID(  "{f17324c4-68E0-11d0-ad45-00c04fc29863}")
-    IID_IUpdateInfo          = IID(  "{a0385420-62b8-11d1-9a06-00a0c903aa45}")
-    IID_IRowsetSynchronize   = IID(  "{1be41e60-807a-11d1-9a14-00a0c903aa45}")
-    IID_IRowsetProperties    = IID(  "{1e837070-bcfc-11d1-9a2c-00a0c903aa45}")
+    DBPROPSET_ADC            = GUID.string("{b68e3cc1-6deb-11d0-8df6-00aa005ffe58}")
+    IID_IAsyncAllowed        = GUID.string("{f5f2893a-ba9e-11d0-abb9-00c04fc29f8f}")
+    IID_IRowsetADCExtensions = IID("{f17324c4-68E0-11d0-ad45-00c04fc29863}")
+    IID_IUpdateInfo          = IID("{a0385420-62b8-11d1-9a06-00a0c903aa45}")
+    IID_IRowsetSynchronize   = IID("{1be41e60-807a-11d1-9a14-00a0c903aa45}")
+    IID_IRowsetProperties    = IID("{1e837070-bcfc-11d1-9a2c-00a0c903aa45}")
 
     ADCPROPENUM = INT
     if True:

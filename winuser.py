@@ -2310,6 +2310,9 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("key", WORD),
                 ("cmd", WORD)
             ]
+            fVirt: int
+            key: int
+            cmd: int
         ACCEL = tagACCEL
         LPACCEL = POINTER(ACCEL)
 
@@ -2322,6 +2325,12 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("fIncUpdate", BOOL),
                 ("rgbReserved", BYTE * 32)
             ]
+            hdc: int
+            fErase: int
+            rcPaint: RECT
+            fRestore: int
+            fIncUpdate: int
+            rgbReserved: IArray[int]
         PAINTSTRUCT = tagPAINTSTRUCT
         PPAINTSTRUCT = POINTER(PAINTSTRUCT)
         NPPAINTSTRUCT = PPAINTSTRUCT
@@ -2340,6 +2349,12 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("ptMaxPosition", POINT),
                 ("rcNormalPosition", RECT)
             ]
+            length: int
+            flags: int
+            showCmd: int
+            ptMinPosition: POINT
+            ptMaxPosition: POINT
+            rcNormalPosition: RECT
         WINDOWPLACEMENT = tagWINDOWPLACEMENT
         PWINDOWPLACEMENT = POINTER(WINDOWPLACEMENT)
         LPWINDOWPLACEMENT = PWINDOWPLACEMENT
@@ -2377,6 +2392,8 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("styleOld", DWORD),
                 ("styleNew", DWORD)
             ]
+            styleOld: int
+            styleNew: int
         STYLESTRUCT = tagSTYLESTRUCT
         LPSTYLESTRUCT = POINTER(STYLESTRUCT)
 
@@ -2430,6 +2447,12 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("itemHeight", UINT),
                 ("itemData", ULONG_PTR)
             ]
+            CtlType: int
+            CtlID: int
+            itemID: int
+            itemWidth: int
+            itemHeight: int
+            itemData: int
         MEASUREITEMSTRUCT = tagMEASUREITEMSTRUCT
         PMEASUREITEMSTRUCT = POINTER(MEASUREITEMSTRUCT)
         LPMEASUREITEMSTRUCT = PMEASUREITEMSTRUCT
@@ -2449,6 +2472,15 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("rcItem", RECT),
                 ("itemData", ULONG_PTR)
             ]
+            CtlType: int
+            CtlID: int
+            itemID: int
+            itemAction: int
+            itemState: int
+            hwndItem: int
+            hDC: int
+            rcItem: RECT
+            itemData: int
         DRAWITEMSTRUCT = tagDRAWITEMSTRUCT
         PDRAWITEMSTRUCT = POINTER(DRAWITEMSTRUCT)
         LPDRAWITEMSTRUCT = PDRAWITEMSTRUCT
@@ -2464,6 +2496,11 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("hwndItem", HWND),
                 ("itemData", ULONG_PTR)
             ]
+            CtlType: int
+            CtlID: int
+            itemID: int
+            hwndItem: int
+            itemData: int
         DELETEITEMSTRUCT = tagDELETEITEMSTRUCT
         PDELETEITEMSTRUCT = POINTER(DELETEITEMSTRUCT)
         LPDELETEITEMSTRUCT = PDELETEITEMSTRUCT
@@ -2482,6 +2519,14 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("itemData2", ULONG_PTR),
                 ("dwLocaleId", DWORD)
             ]
+            CtlType: int
+            CtlID: int
+            hwndItem: int
+            itemID1: int
+            itemData1: int
+            itemID2: int
+            itemData2: int
+            dwLocaleId: int
         COMPAREITEMSTRUCT = tagCOMPAREITEMSTRUCT
         PCOMPAREITEMSTRUCT = POINTER(COMPAREITEMSTRUCT)
         LPCOMPAREITEMSTRUCT = PCOMPAREITEMSTRUCT
@@ -2663,6 +2708,10 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("hwnd", HWND),
                 ("luid", LUID)
             ]
+            cbSize: int
+            hdesk: int
+            hwnd: int
+            luid: int
         PBSMINFO = POINTER(BSMINFO)
 
         BroadcastSystemMessageExA = declare(user32.BroadcastSystemMessageExA, LONG, DWORD, LPDWORD, UINT, WPARAM, LPARAM, PBSMINFO)
@@ -2916,6 +2965,16 @@ if cpreproc.pragma_once("_WINUSER_"):
                         ("dwFlags", DWORD),
                         ("prcDirty", PRECT)
                     ]
+                    cbSize: int
+                    hdcDst: int
+                    pptDst: PPOINT
+                    psize: PSIZE
+                    hdcSrc: int
+                    pptSrc: PPOINT
+                    crKey: int
+                    pblend: FARPROC
+                    dwFlags: int
+                    prcDirty: RECT
                 UPDATELAYEREDWINDOWINFO = tagUPDATELAYEREDWINDOWINFO
                 PUPDATELAYEREDWINDOWINFO = POINTER(UPDATELAYEREDWINDOWINFO)
 
@@ -2964,6 +3023,11 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("uCount", UINT),
                 ("dwTimeout", DWORD)
             ]
+            cbSize: int
+            hwnd: int
+            dwFlags: int
+            uCount: int
+            dwTimeout: int
         PFLASHWINFO = POINTER(FLASHWINFO)
 
         FlashWindowEx = declare(user32.FlashWindowEx, BOOL, PFLASHWINFO)
@@ -3070,6 +3134,13 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("cx", SHORT),
                     ("cy", SHORT)
                 ]
+                dwExtendedStyle: int
+                style: int
+                cdit: int
+                cx: int
+                cy: int
+                x: int
+                y: int
 
             # REGION ***
 
@@ -3105,6 +3176,13 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("cy", SHORT),
                     ("id", DWORD)
                 ]
+                dwExtendedStyle: int
+                style: int
+                cx: int
+                cy: int
+                id: int
+                x: int
+                y: int
             PDLGITEMTEMPLATEA = POINTER(DLGITEMTEMPLATE)
             PDLGITEMTEMPLATEW = POINTER(DLGITEMTEMPLATE)
             PDLGITEMTEMPLATE = unicode(PDLGITEMTEMPLATEW, PDLGITEMTEMPLATEA)
@@ -3447,6 +3525,12 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("time", DWORD),
                 ("dwExtraInfo", ULONG_PTR)
             ]
+            dwExtraInfo: int
+            mouseData: int
+            dwFlags: int
+            time: int
+            dx: int
+            dy: int
         MOUSEINPUT = tagMOUSEINPUT
         PMOUSEINPUT = POINTER(MOUSEINPUT)
         LPMOUSEINPUT = PMOUSEINPUT
@@ -3469,6 +3553,11 @@ if cpreproc.pragma_once("_WINUSER_"):
 
                 ("dwExtraInfo", ULONG_PTR)
             ]
+            dwExtraInfo: int
+            dwFlags: int
+            wScan: int
+            time: int
+            wVk: int
         KEYBDINPUT = tagKEYBDINPUT
         PKEYBDINPUT = POINTER(KEYBDINPUT)
 
@@ -3480,6 +3569,9 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("wParamL", WORD),
                 ("wParamH", WORD)
             ]
+            wParamL: int
+            wParamH: int
+            uMsg: int
         HARDWAREINPUT = tagHARDWAREINPUT
         PHARDWAREINPUT = POINTER(HARDWAREINPUT)
         LPHARDWAREINPUT = PHARDWAREINPUT
@@ -3500,6 +3592,11 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("type", DWORD),
                 ("u", _U_MKH)
             ]
+            _anonymous_ = ['u']
+            hi: HARDWAREINPUT
+            mi: MOUSEINPUT
+            ki: KEYBDINPUT
+            type: int
         INPUT = tagINPUT
         PINPUT = POINTER(INPUT)
         LPINPUT = PINPUT
@@ -3536,6 +3633,16 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("cxContact", DWORD),
                 ("cyContact", DWORD)
             ]
+            dwExtraInfo: int
+            cxContact: int
+            cyContact: int
+            hSource: int
+            dwFlags: int
+            dwMask: int
+            dwTime: int
+            dwID: int
+            x: int
+            y: int
         TOUCHINPUT = tagTOUCHINPUT
         PTOUCHINPUT = POINTER(TOUCHINPUT)
         PCTOUCHINPUT = PTOUCHINPUT
@@ -3670,6 +3777,22 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("PerformanceCount", UINT64),
                 ("ButtonChangeType", POINTER_BUTTON_CHANGE_TYPE)
             ]
+            ptHimetricLocationRaw: POINT
+            ptHimetricLocation: POINT
+            ptPixelLocationRaw: POINT
+            ptPixelLocation: POINT
+            PerformanceCount: int
+            ButtonChangeType: int
+            pointerFlags: int
+            historyCount: int
+            sourceDevice: int
+            pointerType: int
+            dwKeyStates: int
+            hwndTarget: int
+            pointerId: int
+            inputData: int
+            frameId: int
+            dwTime: int
         POINTER_INFO = tagPOINTER_INFO
 
         TOUCH_FLAGS = UINT32
@@ -3692,6 +3815,13 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("orientation", UINT32),
                 ("pressure", UINT32)
             ]
+            pointerInfo: POINTER_INFO
+            rcContactRaw: RECT
+            orientation: int
+            rcContact: RECT
+            touchFlags: int
+            touchMask: int
+            pressure: int
         POINTER_TOUCH_INFO = tagPOINTER_TOUCH_INFO
 
         PEN_FLAGS = UINT32
@@ -3717,6 +3847,13 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("tiltX", INT32),
                 ("tiltY", INT32)
             ]
+            pointerInfo: POINTER_INFO
+            penFlags: int
+            pressure: int
+            rotation: int
+            penMask: int
+            tiltX: int
+            tiltY: int
         POINTER_PEN_INFO = tagPOINTER_PEN_INFO
         
         # REGION ***
@@ -3766,10 +3903,11 @@ if cpreproc.pragma_once("_WINUSER_"):
         TOUCH_FEEDBACK_INDIRECT = 0x2
         TOUCH_FEEDBACK_NONE = 0x3
 
-        class POINTER_FEEDBACK_MODE(CStructure):
+        if True:
             POINTER_FEEDBACK_DEFAULT = 1   # The injected pointer input feedback may get suppressed by the end-user settings in the Pen and Touch control panel.
             POINTER_FEEDBACK_INDIRECT = 2  # The injected pointer input feedback overrides the end-user settings in the Pen and Touch control panel.
             POINTER_FEEDBACK_NONE = 3      # No touch visualizations.
+        POINTER_FEEDBACK_MODE = INT
 
         # REGION *** Desktop Family ***
 
@@ -3789,10 +3927,20 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("physicalMinimum", INT32),
                 ("physicalMaximum", INT32)
             ]
+            physicalMinimum: int
+            physicalMaximum: int
+            logicalMinimum: int
+            logicalMaximum: int
+            exponent: int
+            level: int
+            usage: int
+            count: int
+            page: int
+            uint: int
         USAGE_PROPERTIES = tagUSAGE_PROPERTIES
         PUSAGE_PROPERTIES = POINTER(USAGE_PROPERTIES)
 
-        class _U_TP(CStructure):
+        class _U_TP(CUnion):
             _fields_ = [
                 ("touchInfo", POINTER_TOUCH_INFO),
                 ("penInfo", POINTER_PEN_INFO)
@@ -3803,6 +3951,10 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("type", POINTER_INPUT_TYPE),
                 ("u", _U_TP)
             ]
+            _anonymous_ = ['u']
+            touchInfo: POINTER_TOUCH_INFO
+            penInfo: POINTER_PEN_INFO
+            type: int
         POINTER_TYPE_INFO = tagPOINTER_TYPE_INFO
         PPOINTER_TYPE_INFO = POINTER(POINTER_TYPE_INFO)
 
@@ -3813,6 +3965,10 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("value", INT32),
                 ("index", USHORT)
             ]
+            page: int
+            usage: int
+            value: int
+            index: int
         INPUT_INJECTION_VALUE = tagINPUT_INJECTION_VALUE
         PINPUT_INJECTION_VALUE = POINTER(INPUT_INJECTION_VALUE)
 
@@ -4241,6 +4397,8 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("cbSize", UINT), # Size of structure
                     ("rcExclude", RECT) # Screen coordinates of rectangle to exclude when positioning
                 ]
+                rcExclude: RECT
+                cbSize: int
             TPMPARAMS = tagTPMPARAMS
             LPTPMPARAMS = POINTER(TPMPARAMS)
 
@@ -4269,6 +4427,13 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("dwContextHelpID", DWORD),
                     ("dwMenuData", ULONG_PTR)
                 ]
+                dwContextHelpID: int
+                dwMenuData: int
+                hbrBack: int
+                dwStyle: int
+                cbSize: int
+                fMask: int
+                cyMax: int
             MENUINFO = tagMENUINFO
             LPMENUINFO = POINTER(MENUINFO)
             LPCMENUINFO = LPMENUINFO
@@ -4292,6 +4457,11 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("riid", PVOID),
                     ("pvObj", PVOID)
                 ]
+                hmenu: int
+                pvObj: int
+                dwFlags: int
+                riid: int
+                uPos: int
             MENUGETOBJECTINFO = tagMENUGETOBJECTINFO
             PMENUGETOBJECTINFO = POINTER(MENUGETOBJECTINFO)
 
@@ -4345,6 +4515,18 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("cch", UINT), # used if MIIM_TYPE (4.0) or MIIM_STRING (>4.0)
                     ("hbmpItem", HBITMAP), # used if MIIM_BITMAP
                 ]
+                hbmpUnchecked: int
+                dwTypeData: LPSTR
+                hbmpChecked: int
+                dwItemData: int
+                hbmpItem: int
+                hSubMenu: int
+                cbSize: int
+                fState: int
+                fMask: int
+                fType: int
+                wID: int
+                cch: int
             MENUITEMINFOA = tagMENUITEMINFOA
             LPMENUITEMINFOA = POINTER(MENUITEMINFOA)
 
@@ -4363,6 +4545,18 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("cch", UINT), # used if MIIM_TYPE (4.0) or MIIM_STRING (>4.0)
                     ("hbmpItem", HBITMAP), # used if MIIM_BITMAP
                 ]
+                hbmpUnchecked: int
+                dwTypeData: LPWSTR
+                hbmpChecked: int
+                dwItemData: int
+                hbmpItem: int
+                hSubMenu: int
+                cbSize: int
+                fState: int
+                fMask: int
+                fType: int
+                wID: int
+                cch: int
             MENUITEMINFOW = tagMENUITEMINFOW
             LPMENUITEMINFOW = POINTER(MENUITEMINFOW)
 
@@ -4437,6 +4631,12 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("ptDrop", POINT),
                 ("dwControlData", DWORD)
             ]
+            dwControlData: int
+            hwndSource: int
+            ptDrop: POINT
+            hwndSink: int
+            dwData: int
+            wFmt: int
         DROPSTRUCT = tagDROPSTRUCT
         PDROPSTRUCT = POINTER(DROPSTRUCT)
         LPDROPSTRUCT = PDROPSTRUCT
@@ -4505,6 +4705,11 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("iRightMargin", INT),
                     ("uiLengthDrawn", UINT)
                 ]
+                uiLengthDrawn: int
+                iRightMargin: int
+                iLeftMargin: int
+                iTabLength: int
+                cbSize: int
             DRAWTEXTPARAMS = tagDRAWTEXTPARAMS
             LPDRAWTEXTPARAMS = POINTER(DRAWTEXTPARAMS)
 
@@ -4744,6 +4949,12 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("dwContextId", DWORD_PTR), # Context Id associated with this item 
                 ("MousePos", POINT) # Mouse Position in screen co-ordinates 
             ]
+            iContextType: int
+            hItemHandle: int
+            dwContextId: int
+            MousePos: POINT
+            iCtrlId: int
+            cbSize: int
         HELPINFO = tagHELPINFO
         LPHELPINFO = POINTER(HELPINFO)
 
@@ -4827,6 +5038,16 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("lpfnMsgBoxCallback", MSGBOXCALLBACK),
                 ("dwLanguageId", DWORD)
             ]
+            lpfnMsgBoxCallback: FARPROC
+            dwContextHelpId: int
+            lpszCaption: LPSTR
+            dwLanguageId: int
+            lpszText: LPSTR
+            lpszIcon: LPSTR
+            hwndOwner: int
+            hInstance: int
+            dwStyle: int
+            cbSize: int
         MSGBOXPARAMSA = tagMSGBOXPARAMSA
         PMSGBOXPARAMSA = POINTER(MSGBOXPARAMSA)
         LPMSGBOXPARAMSA = PMSGBOXPARAMSA
@@ -4844,6 +5065,16 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("lpfnMsgBoxCallback", MSGBOXCALLBACK),
                 ("dwLanguageId", DWORD)
             ]
+            lpfnMsgBoxCallback: FARPROC
+            dwContextHelpId: int
+            lpszCaption: LPWSTR
+            dwLanguageId: int
+            lpszText: LPWSTR
+            lpszIcon: LPWSTR
+            hwndOwner: int
+            hInstance: int
+            dwStyle: int
+            cbSize: int
         MSGBOXPARAMSW = tagMSGBOXPARAMSW
         PMSGBOXPARAMSW = POINTER(MSGBOXPARAMSW)
         LPMSGBOXPARAMSW = PMSGBOXPARAMSW
@@ -5356,6 +5587,11 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("hbmMask", HBITMAP),
                 ("hbmColor", HBITMAP)
             ]
+            hbmColor: int
+            xHotspot: int
+            yHotspot: int
+            hbmMask: int
+            fIcon: int
         ICONINFO = _ICONINFO
         PICONINFO = POINTER(ICONINFO)
 
@@ -5385,6 +5621,13 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("Planes", BYTE),
                 ("BitsPixel", BYTE)
             ]
+            BitsPixel: int
+            xHotSpot: int
+            yHotSpot: int
+            cbWidth: int
+            Planes: int
+            cx: int
+            cy: int
         CURSORSHAPE = tagCURSORSHAPE
         LPCURSORSHAPE = POINTER(CURSORSHAPE)
 
@@ -5441,6 +5684,15 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("szModName", CHAR * MAX_PATH),
                 ("szResName", CHAR * MAX_PATH)
             ]
+            szModName: ICharArrayFixedSize[260]
+            szResName: ICharArrayFixedSize[260]
+            hbmColor: int
+            xHotspot: int
+            yHotspot: int
+            hbmMask: int
+            cbSize: int
+            wResID: int
+            fIcon: int
         ICONINFOEXA = _ICONINFOEXA
         PICONINFOEXA = POINTER(ICONINFOEXA)
 
@@ -5456,6 +5708,15 @@ if cpreproc.pragma_once("_WINUSER_"):
                 ("szModName", WCHAR * MAX_PATH),
                 ("szResName", WCHAR * MAX_PATH)
             ]
+            szModName: IWideCharArrayFixedSize[260]
+            szResName: IWideCharArrayFixedSize[260]
+            hbmColor: int
+            xHotspot: int
+            yHotspot: int
+            hbmMask: int
+            cbSize: int
+            wResID: int
+            fIcon: int
         ICONINFOEXW = _ICONINFOEXW
         PICONINFOEXW = POINTER(ICONINFOEXW)
 

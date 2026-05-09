@@ -2,6 +2,7 @@ from .processthreadsapi import *
 from .defbase_process import *
 from .wow64apiset import *
 from .handleapi import *
+from .winbase import *
 from .winnt import *
 
 from datetime import datetime, timedelta
@@ -24,10 +25,28 @@ THREAD_PRIORITY_IDLE            = THREAD_BASE_PRIORITY_IDLE
 THREAD_MODE_BACKGROUND_BEGIN    = 0x00010000
 THREAD_MODE_BACKGROUND_END      = 0x00020000
 
+INFINITE = 0xffffffff
+
 class CThread:
     handle: WT_ADDRLIKE
     is_wow64: bool
     tid: int
+    
+    @property
+    def alive(self) -> bool:
+        try:
+            self.join(0)
+        except Exception:
+            return False
+        return True
+    
+    def join(self, timeout: int = INFINITE):
+        dwRet = WaitForSingleObject(self.handle, timeout)
+        if dwRet == WAIT_TIMEOUT:
+            raise TimeoutError('Time elapsed, object is not signaled.')
+        elif dwRet == WAIT_OBJECT_0: pass
+        else:
+            raise WinException()
     
     @classmethod
     def remote(cls, process: CProcess, start_routine: WT_ADDRLIKE, 
@@ -40,9 +59,10 @@ class CThread:
             thread_attributes = thread_attributes.ptr()
             
         remote_tid = DWORD()
-        remote_handle = CreateRemoteThread(process.handle, thread_attributes, 
-                                           stack_size, start_routine, 
-                                           param, flags, byref(remote_tid))
+        remote_handle = CreateRemoteThread(
+            process.handle, thread_attributes,
+            stack_size, start_routine, 
+            param, flags, byref(remote_tid))
         
         is_wow64_process = BOOL()
         is_wow64 = IsWow64Process(process.handle, byref(is_wow64_process))
@@ -53,6 +73,30 @@ class CThread:
         remote_thread.tid = remote_tid.value
         
         return remote_thread
+    
+    @classmethod
+    def create(cls, start_routine: WT_ADDRLIKE, stack_size: int = 0, 
+               param: Optional[WT_ADDRLIKE] = NULL, flags: int = 0,
+               thread_attributes: SECURITY_ATTRIBUTES = NULL):
+        start_routine = i_cast2(start_routine, LPTHREAD_START_ROUTINE)
+        
+        if thread_attributes is not NULL:
+            thread_attributes = thread_attributes.ptr()
+            
+        tid = DWORD()
+        handle = CreateThread(
+            thread_attributes, stack_size, 
+            start_routine, param, flags, 
+            byref(tid))
+        is_wow64_process = BOOL()
+        is_wow64 = IsWow64Process(GetCurrentProcess(), byref(is_wow64_process))
+        if is_wow64: is_wow64 = bool(is_wow64_process.value)
+        
+        thread = cls(-1, is_wow64=is_wow64)
+        thread.handle = handle
+        thread.tid = tid.value
+        
+        return thread
     
     def __init__(self, tid: int = None, is_wow64: bool = False):
         if tid == -1:
@@ -84,7 +128,14 @@ class CThread:
         self.handle = OpenThread(THREAD_ALL_ACCESS, False, tid)
         self.is_wow64 = is_wow64
         self.tid = tid
-        
+    
+    @property
+    def exit_code(self) -> int:
+        dwExitCode = DWORD()
+        if not GetExitCodeThread(self.handle, byref(dwExitCode)):
+            raise WinException()
+        return dwExitCode.value
+    
     @classmethod
     def from_hwnd(cls, hwnd: int) -> Self:
         if not IsWindow(hwnd):
@@ -195,6 +246,7 @@ class CThread:
     def user_time(self) -> datetime:
         return self.times[3]
     
+    """
     @property
     def description(self) -> str:
         from ctypes import POINTER
@@ -208,6 +260,7 @@ class CThread:
     @description.setter
     def description(self, description: str):
         SetThreadDescription(self.handle, description)
+    """
     
     def close(self):
         if self.handle:

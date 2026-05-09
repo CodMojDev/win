@@ -50,7 +50,7 @@ if cpreproc.pragma_once("_ADODEF_H_"):
     ADOMD_LIBRARYNAME   = "Microsoft ActiveX Data Objects (Multi-dimensional) 6.0 Library"
     JRO_LIBRARYNAME     = "Microsoft Jet and Replication Objects 2.6 Library"
 
-    ADOMD_TYPELIB_UUID  = GUID("{22813728-8BD3-11D0-B4EF-00A0C9138CA4}")
-    JRO_TYPELIB_UUID    = GUID("{AC3B8B4C-B6CA-11d1-9F31-00C04FC29D52}")
+    ADOMD_TYPELIB_UUID  = GUID.string("{22813728-8BD3-11D0-B4EF-00A0C9138CA4}")
+    JRO_TYPELIB_UUID    = GUID.string("{AC3B8B4C-B6CA-11d1-9F31-00C04FC29D52}")
 
 # _ADODEF_H_

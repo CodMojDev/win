@@ -14,7 +14,7 @@ Abstract:
 
 from . import cpreproc
 
-from .minwindef import FLOAT, Structure, POINTER, Union, INT
+from .minwindef import FLOAT, CStructure, POINTER, Union, INT, IArray
 
 # The following flag is required to prevent structure redefinition with WpSensor.h
 # we keep the #pragma above to benefit from the speed advantages this pragma brings.
@@ -25,6 +25,9 @@ if cpreproc.pragma_once("_SENSORS_STRUCTURES"):
             ("Y", FLOAT),
             ("Z", FLOAT)
         ]
+        X: float
+        Y: float
+        Z: float
     PVEC3D = POINTER(VEC3D)
 
     class MATRIX3X3(Union):
@@ -52,9 +55,24 @@ if cpreproc.pragma_once("_SENSORS_STRUCTURES"):
                 ("s2", S2),
                 ("M", FLOAT * 3 * 3)
             ]
+            _anonymous_ = ['s1', 's2']
         _fields_ = [
             ("u", U)
         ]
+        _anonymous_ = ['u']
+        A11: float
+        A12: float
+        A13: float
+        A21: float
+        A22: float
+        A23: float
+        A31: float
+        A32: float
+        A33: float
+        V1: VEC3D
+        V2: VEC3D
+        V3: VEC3D
+        M: IArray[IArray[float]]
     PMATRIX3X3 = POINTER(MATRIX3X3)
 
     
@@ -71,6 +89,10 @@ if cpreproc.pragma_once("_SENSORS_STRUCTURES"):
             ("Z", FLOAT),     # z component of rotation axis vector * sin(theta/2) also k coefficient
             ("W", FLOAT)      # real coefficient = cos(theta/2)
         ]
+        X: float
+        Y: float
+        Z: float
+        W: float
     PQUATERNION = POINTER(QUATERNION)
 
 

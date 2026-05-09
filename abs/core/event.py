@@ -27,19 +27,45 @@ class Event:
     
     def __iadd__(self, callback):
         callback = self._wrap_callback(callback)
-        self._callbacks.append(callback)    
+        self._callbacks.append(callback)
+        self._callbacks = sorted(self._callbacks, key=lambda callback: callback._priority)
         return self
     
     def __isub__(self, callback):
         callback = self._wrap_callback(callback)
         self._callbacks.remove(callback)
+        self._callbacks = sorted(self._callbacks, key=lambda callback: callback._priority)
         return self
+    
+    def empty(self) -> bool:
+        return (not not self._callbacks) or self._blocked
     
     def execute(self, *args, **kwargs) -> tuple[Any, ...]:
         if self._blocked:
             return ()
-        callbacks = sorted(self._callbacks, key=lambda callback: callback._priority)
-        return tuple(callback.execute(*args, **kwargs) for callback in callbacks)
+        return tuple(callback.execute(*args, **kwargs) for callback in self._callbacks)
+    
+    def block(self):
+        self._blocked = True
+        
+    def unblock(self):
+        self._blocked = False
+        
+class SingleEvent:
+    _callback: Callable
+    _blocked: bool
+    
+    def __init__(self):
+        self._callback = None
+        self._blocked = False
+    
+    def set(self, callback: Callable):
+        self._callback = callback
+        
+    def execute(self, *args, **kwargs) -> Any:
+        if self._blocked or self._callback is None:
+            return None
+        return self._callback(*args, **kwargs)
     
     def block(self):
         self._blocked = True

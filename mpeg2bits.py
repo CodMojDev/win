@@ -21,11 +21,6 @@ if cpreproc.pragma_once():
     
     # REGION *** Desktop Family ***
 
-    #pragma pack(push)
-    #pragma pack(1)
-
-    
-
     class PID_BITS(CStructure):
         """
         PID structure
@@ -35,6 +30,8 @@ if cpreproc.pragma_once():
             ("Reserved", WORD, 3),
             ("ProgramId", WORD, 13)
         ]
+        Reserved: int
+        ProgramId: int
     PPID_BITS = POINTER(PID_BITS)
 
     class MPEG_HEADER_BITS(CStructure):
@@ -43,23 +40,30 @@ if cpreproc.pragma_once():
         """
         _pack_ = 1
         _fields_ = [
-            ("SectionLength")
+            ("SectionLength", WORD, 12),
+            ("Reserved", WORD, 2),
+            ("PrivateIndicator", WORD, 1),
+            ("SectionSyntaxIndicator", WORD, 1)
         ]
-        WORD SectionLength          : 12;
-        WORD Reserved               :  2;
-        WORD PrivateIndicator       :  1;
-        WORD SectionSyntaxIndicator :  1;
-    } , *PMPEG_HEADER_BITS;
+        SectionLength: int
+        Reserved: int
+        PrivateIndicator: int
+        SectionSyntaxIndicator: int
+    PMPEG_HEADER_BITS = PTR(MPEG_HEADER_BITS)
 
     #
     # Long MPEG packet header structure
     #
 
-    typedef struct
-    {
-        BYTE CurrentNextIndicator : 1;
-        BYTE VersionNumber        : 5;
-        BYTE Reserved             : 2;
-    } MPEG_HEADER_VERSION_BITS, *PMPEG_HEADER_VERSION_BITS;
+    class MPEG_HEADER_VERSION_BITS(CStructure):
+        _fields_ = [
+            ('CurrentNextIndicator', BYTE, 1),
+            ('VersionNumber', BYTE, 5),
+            ('Reserved', BYTE, 2)
+        ]
+        CurrentNextIndicator: int
+        VersionNumber: int
+        Reserved: int
+    PMPEG_HEADER_VERSION_BITS = PTR(MPEG_HEADER_VERSION_BITS)
 
     # REGION ***

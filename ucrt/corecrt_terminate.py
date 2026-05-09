@@ -16,16 +16,16 @@ terminate_function = CRTDECL(None)
 __terminate_function_m = CRTDECL(None)
 __terminate_handler_m = CRTDECL(None)
 
-@ucrtbased.foreign(None)
+@ucrtbase.foreign(None)
 def abort(): ...
 
-@ucrtbased.foreign(None)
+@ucrtbase.foreign(None)
 def terminate(): ...
 
 from _ctypes import CFuncPtr
 
-@ucrtbased.foreign(terminate_handler, terminate_handler)
+@ucrtbase.foreign(terminate_handler, terminate_handler)
 def set_terminate(_NewTerminateHandler: CFuncPtr) -> CFuncPtr: ...
 
-@ucrtbased.foreign(terminate_handler)
+@ucrtbase.foreign(terminate_handler)
 def _get_terminate() -> CFuncPtr: ...

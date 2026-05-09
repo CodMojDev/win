@@ -4,6 +4,8 @@ from .errors import *
 from typing import TypeVar, Self
 from ..wtypesbase import *
 
+import types
+
 WT_CI = TypeVar('WT_CI', bound=COMInterface)
 
 class IUnknown(COMInterface):
@@ -51,8 +53,67 @@ class IUnknown(COMInterface):
 IT = TypeVar('IT', bound=IUnknown)
 IT2 = TypeVar('IT2', bound=IUnknown)
 
+class _COM_REF_GUARD:
+    itf: IT
+    
+    def __init__(self, itf: IT):
+        self.itf = itf
+    
+    def __del__(self):
+        self.itf.Release()
+
+def com_interfacespec(spec: type[IT]):
+    def _com_interfacespec(f: Callable):
+        def _specified_method(self: IT, *args, **kwargs):
+            qi_cache = getattr(self, 'qi_cache', None)
+            if qi_cache is None:
+                qi_cache = {}
+                setattr(self, 'qi_cache', qi_cache)
+            itf = qi_cache.get(spec)
+            
+            if itf is None:
+                itf = spec.NULL()
+                hr = self.QueryInterface(spec, byref(itf))
+                if FAILED(hr): raise COMError(hr)
+                qi_cache[spec] = itf
+                guard = _COM_REF_GUARD(itf)
+                setattr(itf, '_com_ref_guard', guard)
+                
+            return getattr(itf, f.__name__)(*args, **kwargs)
+        return _specified_method
+    return _com_interfacespec
+
 class COMClass:
     _clsid_: ClassVar[CLSID]
+    unk: IUnknown
+    
+    def __init__(self, clsctx: int = CLSCTX_INPROC_SERVER):
+        self.unk = self.create_deref(IUnknown._iid_, clsctx, NULL)
+    
+    def QueryInterface(self, itf: type[IT], ppv: IDoublePtr[IT]) -> int:
+        return self.unk.QueryInterface(itf, ppv)
+    
+    def __init_subclass__(cls):
+        interfaces = list(set(COMClass.build_interfaces(cls)))
+        for interface in interfaces:
+            for k, v in interface.__dict__.items():
+                if isinstance(v, types.FunctionType) and hasattr(v, 'proto'):
+                    setattr(cls, k, com_interfacespec(interface)(v))
+        
+    @staticmethod
+    def build_interfaces(cls) -> list[COMInterface]:
+        if issubclass(cls, COMClass):
+            result = []
+        else:
+            if not hasattr(cls, '_iid_'):
+                return []
+            
+            result = [cls]
+            
+        for base in cls.__bases__:
+            result.extend(COMClass.build_interfaces(base))
+        
+        return result
     
     @classmethod
     def clsid(cls) -> CLSID:
@@ -60,16 +121,16 @@ class COMClass:
     
     @overload
     @classmethod
-    def create_deref(cls, iid: IID, clsctx: int = CLSCTX_INPROC_SERVER,
+    def create(cls, iid: IID, clsctx: int = CLSCTX_INPROC_SERVER,
                  pUnkOuter: IPointer[IUnknown] = NULL) -> IPointer[IUnknown]: ...
     
     @overload
     @classmethod
-    def create_deref(cls, itf: type[IT], clsctx: int = CLSCTX_INPROC_SERVER,
-                 pUnkOuter: IPointer[IUnknown] = NULL) -> IT: ...
+    def create(cls, itf: type[IT], clsctx: int = CLSCTX_INPROC_SERVER,
+                 pUnkOuter: IPointer[IUnknown] = NULL) -> IPointer[IT]: ...
     
     @classmethod
-    def create_deref(cls, var, clsctx: int = CLSCTX_INPROC_SERVER,
+    def create(cls, var, clsctx: int = CLSCTX_INPROC_SERVER,
                  pUnkOuter: IPointer[IUnknown] = NULL) -> IPointer[IT]:
         is_interface = isinstance(var, type) and issubclass(var, COMInterface)
         iid: IID
@@ -84,8 +145,26 @@ class COMClass:
                               clsctx, iid, byref(pUnk))
         if FAILED(hr): raise COMError(hr)
         if is_interface:
-            return i_cast(pUnk, var.PTR()).contents
-        return pUnk.contents
+            return i_cast(pUnk, var.PTR())
+        return pUnk
+    
+    @overload
+    @classmethod
+    def create_deref(
+        cls, iid: IID, clsctx: int = CLSCTX_INPROC_SERVER,
+        pUnkOuter: IPointer[IUnknown] = NULL) -> IUnknown: ...
+    
+    @overload
+    @classmethod
+    def create_deref(
+        cls, itf: type[IT], clsctx: int = CLSCTX_INPROC_SERVER,
+        pUnkOuter: IPointer[IUnknown] = NULL) -> IT: ...
+    
+    @classmethod
+    def create_deref(
+        cls, var, clsctx: int = CLSCTX_INPROC_SERVER,
+        pUnkOuter: IPointer[IUnknown] = NULL) -> IPointer[IT]:
+        return cls.create(var, clsctx, pUnkOuter).contents
     
 LPUNKNOWN = POINTER(IUnknown)
 

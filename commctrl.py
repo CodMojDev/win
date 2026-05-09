@@ -19,11 +19,11 @@ from .sdkddkver import *
 
 from .minwindef import *
 
-from .guiddef import LPIID, REFIID
+from .guiddef import LPIID, REFIID, IID
 
 from .winuser import *
 
-from .winnt import TEXT
+from .winnt import TEXT, SYSTEMTIME
 
 if cpreproc.pragma_once("_INC_COMMCTRL"):
     comctl32 = W_WinDLL("comctl32.dll")
@@ -58,7 +58,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
 
     from .prsht import *
 
-    InitCommonControls = declare(comctl32.InitCommonControls, VOID, VOID)
+    @comctl32.foreign(VOID)
+    def InitCommonControls(): ...
 
     class tagINITCOMMONCONTROLSEX(CStructure):
         _fields_ = [
@@ -89,7 +90,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
     ICC_NATIVEFNTCTL_CLASS = 0x00002000 # native font control
     ICC_STANDARD_CLASSES = 0x00004000
     ICC_LINK_CLASS = 0x00008000
-    InitCommonControlsEx = declare(comctl32.InitCommonControlsEx, BOOL, LPINITCOMMONCONTROLSEX)
+    @comctl32.foreign(BOOL, LPINITCOMMONCONTROLSEX)
+    def InitCommonControlsEx(picce: IPointer[INITCOMMONCONTROLSEX]) -> int: ...
     ODT_HEADER = 100
     ODT_TAB = 101
     ODT_LISTVIEW = 102
@@ -176,6 +178,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("hdr", NMHDR),
             ("hwndToolTips", HWND)
         ]
+        hdr: NMHDR
+        hwndToolTips: int
         
         hdr: NMHDR
         
@@ -190,6 +194,11 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("pt", POINT),
             ("dwHitInfo", LPARAM) # any specifics about where on the item or control the mouse is
         ]
+        hdr: NMHDR
+        dwItemSpec: int
+        dwItemData: int
+        pt: POINT
+        dwHitInfo: int
     NMMOUSE = tagNMMOUSE
     LPNMMOUSE = POINTER(NMMOUSE)
 
@@ -207,6 +216,12 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("hResult", HRESULT),
             ("dwFlags", DWORD) # control specific flags (hints as to where in iItem it hit)
         ]
+        hdr: NMHDR
+        iItem: int
+        piid: IPointer[IID]
+        pObject: int
+        hResult: int
+        dwFlags: int
     NMOBJECTNOTIFY = tagNMOBJECTNOTIFY
     LPNMOBJECTNOTIFY = POINTER(NMOBJECTNOTIFY)
 
@@ -218,6 +233,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("nVKey", UINT),
             ("uFlags", UINT)
         ]
+        hdr: NMHDR
+        nVKey: int
+        uFlags: int
     NMKEY = tagNMKEY
     LPNMKEY = POINTER(NMKEY)
 
@@ -230,6 +248,10 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("dwItemPrev", DWORD), # Item previously selected
             ("dwItemNext", DWORD) # Item to be selected
         ]
+        hdr: NMHDR
+        ch: int
+        dwItemPrev: int
+        dwItemNext: int
     NMCHAR = tagNMCHAR
     LPNMCHAR = POINTER(NMCHAR)
 
@@ -243,6 +265,13 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("uFormat", UINT),
             ("fLink", BOOL)
         ]
+        hdr: NMHDR
+        hDC: int
+        lpString: LPCWSTR
+        nCount: int
+        lpRect: LPRECT
+        uFormat: int
+        fLink: int
     NMCUSTOMTEXT = tagNMCUSTOMTEXT
     LPNMCUSTOMTEXT = POINTER(NMCUSTOMTEXT)
 
@@ -283,9 +312,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
     SBN_LAST = (0-899)
     PGN_FIRST = (0-900) # Pager Control
     PGN_LAST = (0-950)
-    if not "WMN_FIRST" in globals():
-        WMN_FIRST = (0-1000)
-        WMN_LAST = (0-1200)
+    WMN_FIRST = (0-1000)
+    WMN_LAST = (0-1200)
     BCN_FIRST = (0-1250)
     BCN_LAST = (0-1350)
     TRBN_FIRST = (0-1501) # trackbar
@@ -348,6 +376,13 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("uItemState", UINT),
             ("lItemlParam", LPARAM)
         ]
+        hdr: NMHDR
+        dwDrawStage: int
+        hdc: int
+        rc: RECT
+        dwItemSpec: int
+        uItemState: int
+        lItemlParam: int
     NMCUSTOMDRAW = tagNMCUSTOMDRAWINFO
     LPNMCUSTOMDRAW = POINTER(NMCUSTOMDRAW)
 
@@ -356,6 +391,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("nmcd", NMCUSTOMDRAW),
             ("uDrawFlags", UINT)
         ]
+        nmcd: NMCUSTOMDRAW
+        uDrawFlags: int
     NMTTCUSTOMDRAW = tagNMTTCUSTOMDRAW
     LPNMTTCUSTOMDRAW = POINTER(NMTTCUSTOMDRAW)
 
@@ -366,6 +403,10 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("rcButton", RECT),
             ("rcSplit", RECT)
         ]
+        hdr: NMHDR
+        rcClient: RECT
+        rcButton: RECT
+        rcSplit: RECT
     NMCUSTOMSPLITRECTINFO = tagNMCUSTOMSPLITRECTINFO
     LPNMCUSTOMSPLITRECTINFO = POINTER(NMCUSTOMSPLITRECTINFO)
 
@@ -400,6 +441,23 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("Frame", DWORD),
                 ("crEffect", COLORREF)
             ]
+            cbSize: int
+            himl: int
+            i: int
+            hdcDst: int
+            x: int
+            y: int
+            cx: int
+            cy: int
+            xBitmap: int
+            yBitmap: int
+            rgbBk: int
+            rgbFg: int
+            fStyle: int
+            dwRop: int
+            fState: int
+            Frame: int
+            crEffect: int
         IMAGELISTDRAWPARAMS = _IMAGELISTDRAWPARAMS
         LPIMAGELISTDRAWPARAMS = POINTER(IMAGELISTDRAWPARAMS)
 
@@ -496,7 +554,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
 
         ImageList_Read = declare(comctl32.ImageList_Read, HIMAGELIST, PIstream)
         ImageList_Write = declare(comctl32.ImageList_Write, BOOL, HIMAGELIST, PIstream)
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
             ILP_NORMAL = 0 # Writes or reads the stream using new sematics for this version of comctl32
             ILP_DOWNLEVEL = 1 # Write or reads the stream using downlevel sematics.
             ImageList_ReadEx = declare(comctl32.ImageList_ReadEx, HRESULT, DWORD, PIstream, REFIID, PPVOID)
@@ -510,6 +568,11 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("Unused2", INT),
                 ("rcImage", RECT)
             ]
+            hbmImage: int
+            hbmMask: int
+            Unused1: int
+            Unused2: int
+            rcImage: RECT
         IMAGEINFO = _IMAGEINFO
         LPIMAGEINFO = POINTER(IMAGEINFO)
 
@@ -519,7 +582,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         ImageList_Merge = declare(comctl32.ImageList_Merge, HIMAGELIST, HIMAGELIST, INT, HIMAGELIST, INT, INT, INT)
         ImageList_Duplicate = declare(comctl32.ImageList_Duplicate, HIMAGELIST, HIMAGELIST)
 
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
             HIMAGELIST_QueryInterface = declare(comctl32.HIMAGELIST_QueryInterface, HRESULT, HIMAGELIST, REFIID, PVOID)
     #====== HEADER CONTROL =======================================================
     if cpreproc.ifndef("NOHEADER"):
@@ -551,6 +614,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("pszText", LPSTR), # [in] pointer to the buffer containing the filter (ANSI)
             ("cchTextMax", INT) # [in] max size of buffer/edit control buffer
         ]
+        pszText: LPSTR
+        cchTextMax: int
     HD_TEXTFILTERA = _HD_TEXTFILTERA
     LPHD_TEXTFILTERA = POINTER(HD_TEXTFILTERA)
 
@@ -559,6 +624,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("pszText", LPWSTR), # [in] pointer to the buffer containing the filter (Unicode)
             ("cchTextMax", INT) # [in] max size of buffer/edit control buffer
         ]
+        pszText: LPWSTR
+        cchTextMax: int
     HD_TEXTFILTERW = _HD_TEXTFILTERW
     LPHD_TEXTFILTERW = POINTER(HD_TEXTFILTERW)
 
@@ -577,8 +644,20 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("pvFilter", PVOID), # [in] filter data see above
             ("state", UINT)
         ]
-    if not cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
-        del _HD_ITEMA.state
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+            _fields_.append(("state", UINT))
+        mask: int
+        cx: int
+        pszText: LPSTR
+        hbm: int
+        cchTextMax: int
+        fmt: int
+        lParam: int
+        iImage: int
+        iOrder: int
+        type: int
+        pvFilter: int
+        state: int
     HDITEMA = _HD_ITEMA
     LPHDITEMA = POINTER(HDITEMA)
 
@@ -594,11 +673,22 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("iImage", INT), # index of bitmap in ImageList
             ("iOrder", INT), # where to draw this item
             ("type", UINT), # [in] filter type (defined what pvFilter is a pointer to)
-            ("pvFilter", PVOID), # [in] filter data see above
-            ("state", UINT)
+            ("pvFilter", PVOID) # [in] filter data see above
         ]
-    if not cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
-        del _HD_ITEMW.state
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+            _fields_.append(("state", UINT))
+        mask: int
+        cx: int
+        pszText: LPWSTR
+        hbm: int
+        cchTextMax: int
+        fmt: int
+        lParam: int
+        iImage: int
+        iOrder: int
+        type: int
+        pvFilter: int
+        state: int
     HDITEMW = _HD_ITEMW
     LPHDITEMW = POINTER(HDITEMW)
 
@@ -679,6 +769,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("prc", PRECT),
             ("pwpos", PWINDOWPOS)
         ]
+        prc: PRECT
+        pwpos: IPointer[WINDOWPOS]
     HDLAYOUT = _HD_LAYOUT
     LPHDLAYOUT = POINTER(HDLAYOUT)
 
@@ -709,6 +801,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("flags", UINT),
             ("iItem", INT)
         ]
+        pt: POINT
+        flags: int
+        iItem: int
     HDHITTESTINFO = _HD_HITTESTINFO
     LPHDHITTESTINFO = POINTER(HDHITTESTINFO)
     
@@ -884,6 +979,10 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("iButton", INT),
             ("pItem", LPHDITEMA)
         ]
+        hdr: int
+        iItem: int
+        iButton: int
+        pItem: IPointer[HDITEMA]
     NMHEADERA = tagNMHEADERA
     LPNMHEADERA = POINTER(NMHEADERA)
 
@@ -894,6 +993,10 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("iButton", INT),
             ("pItem", LPHDITEMW)
         ]
+        hdr: int
+        iItem: int
+        iButton: int
+        pItem: IPointer[HDITEMW]
     NMHEADERW = tagNMHEADERW
     LPNMHEADERW = POINTER(NMHEADERW)
 
@@ -926,6 +1029,13 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("dwData", DWORD_PTR),
                 ("iString", INT_PTR)
             ]
+            iBitmap: int
+            idCommand: int
+            fsState: int
+            fsStyle: int
+            bReserved: IArray[int]
+            dwData: int
+            iString: int
         TBBUTTON = _TBBUTTON
         PTBBUTTON = POINTER(TBBUTTON)
         LPTBBUTTON = PTBBUTTON
@@ -934,9 +1044,11 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
 
         class _COLORMAP(CStructure):
             _fields_ = [
-                ("from", COLORREF),
+                ("from_", COLORREF),
                 ("to", COLORREF)
             ]
+            from_: int
+            to: int
         COLORMAP = _COLORMAP
         LPCOLORMAP = POINTER(COLORMAP)
 
@@ -1005,11 +1117,24 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                                                     # will cause button to highlight like a menu
                 ("rcText", RECT), # Rect for text
                 ("nStringBkMode", INT),
-                ("nHLStringBkMode", INT),
-                ("iListGap", INT)
+                ("nHLStringBkMode", INT)
             ]
-        if not cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
-            del _NMTBCUSTOMDRAW.iListGap
+            if cpreproc.get_version() >= WIN32_WINNT_WINXP:
+                _fields_.append(("iListGap", INT))
+            nmcd: NMCUSTOMDRAW
+            hbrMonoDither: int
+            hbrLines: int
+            hpenLines: int
+            clrText: int
+            clrMark: int
+            clrTextHighlight: int
+            clrBtnFace: int
+            clrBtmHighlight: int
+            clrHighlightHotTrack: int
+            rcText: int
+            nStringBkMode: int
+            nHLStringBkMode: int
+            iListGap: int
         NMTBCUSTOMDRAW = _NMTBCUSTOMDRAW
         LPNMTBCUSTOMDRAW = POINTER(NMTBCUSTOMDRAW)
         
@@ -1043,6 +1168,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("hInst", HINSTANCE),
                 ("nID", UINT_PTR)
             ]
+            hInst: int
+            nID: int
         TBADDBITMAP = tagTBADDBITMAP
         LPTBADDBITMAP = POINTER(TBADDBITMAP)
 
@@ -1105,6 +1232,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pszSubKey", LPCSTR),
                 ("pszValueName", LPCSTR)
             ]
+            hkr: int
+            pszSubKey: LPCSTR
+            pszValueName: LPCSTR
         TBSAVEPARAMSA = tagTBSAVEPARAMSA
         LPTBSAVEPARAMSA = POINTER(TBSAVEPARAMSA)
         
@@ -1114,6 +1244,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pszSubKey", LPCWSTR),
                 ("pszValueName", LPCWSTR)
             ]
+            hkr: int
+            pszSubKey: LPCWSTR
+            pszValueName: LPCWSTR
         TBSAVEPARAMSW = tagTBSAVEPARAMSW
         LPTBSAVEPARAMSW = POINTER(TBSAVEPARAMSW)
 
@@ -1171,6 +1304,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("iButton", INT),
                 ("dwFlags", DWORD)
             ]
+            iButton: int
+            dwFlags: int
         LPTBINSERTMARK = POINTER(TBINSERTMARK)
 
         TBIMHT_AFTER = 0x00000001 # TRUE = insert After iButton, otherwise before
@@ -1201,6 +1336,11 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("nIDNew", UINT_PTR),
                 ("nButtons", INT)
             ]
+            hInstOld: int
+            nIDOld: int
+            hInstNew: int
+            nIDNew: int
+            nButtons: int
         LPTBREPLACEBITMAP = POINTER(TBREPLACEBITMAP)
 
         TBBF_LARGE = 0x0001
@@ -1227,6 +1367,16 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pszText", LPSTR),
                 ("cchText", INT)
             ]
+            cbSize: int
+            dwMask: int
+            idCommand: int
+            iImage: int
+            fsState: int
+            fsStyle: int
+            cx: int
+            lParam: int
+            pszText: LPSTR
+            cchText: int
         LPTBBUTTONINFOA = POINTER(TBBUTTONINFOA)
 
         class TBBUTTONINFOW(CStructure):
@@ -1242,6 +1392,16 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pszText", LPWSTR),
                 ("cchText", INT)
             ]
+            cbSize: int
+            dwMask: int
+            idCommand: int
+            iImage: int
+            fsState: int
+            fsStyle: int
+            cx: int
+            lParam: int
+            pszText: LPWSTR
+            cchText: int
         LPTBBUTTONINFOW = POINTER(TBBUTTONINFOW)
 
         TBBUTTONINFOW = unicode(TBBUTTONINFOW, TBBUTTONINFOA)
@@ -1288,6 +1448,14 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("cxButtonSpacing", INT), # BUTTONSPACING
                 ("cyButtonSpacing", INT)
             ]
+            cbSize: int
+            dwMask: int
+            cxPad: int
+            cyPad: int
+            cxBarPad: int
+            cyBarPad: int
+            cxButtonSpacing: int
+            cyButtonSpacing: int
         LPTBMETRICS = POINTER(TBMETRICS)
 
         TB_GETMETRICS = (WM_USER + 101)
@@ -1316,6 +1484,10 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("idNew", INT),
                 ("dwFlags", DWORD) # HICF_*
             ]
+            hdr: NMHDR
+            idOld: int
+            idNew: int
+            dwFlags: int
         NMTBHOTITEM = tagNMTBHOTITEM
         LPNMTBHOTITEM = POINTER(NMTBHOTITEM)
 
@@ -1359,6 +1531,13 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("cButtons", INT),
                 ("tbButton", TBBUTTON)
             ]
+            hdr: NMHDR
+            pData: PDWORD
+            pCurrent: PDWORD
+            cbData: int
+            iItem: int
+            cButtons: int
+            tbButton: TBBUTTON
         NMTBSAVE = tagNMTBSAVE
         LPNMTBSAVE = POINTER(NMTBSAVE)
 
@@ -1373,6 +1552,14 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("cbBytesPerRecord", INT),
                 ("tbButton", TBBUTTON)
             ]
+            hdr: NMHDR
+            pData: PDWORD
+            pCurrent: PDWORD
+            cbData: int
+            iItem: int
+            cButtons: int
+            cbBytesPerRecord: int
+            tbButton: TBBUTTON
         NMTBRESTORE = tagNMTBRESTORE
         LPNMTBRESTORE = POINTER(NMTBRESTORE)
 
@@ -1384,6 +1571,11 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("iItem", INT),
                 ("lParam", LPARAM)
             ]
+            hdr: NMHDR
+            pszText: LPSTR
+            cchTextMax: int
+            iItem: int
+            lParam: int
         NMTBGETINFOTIPA = tagNMTBGETINFOTIPA
         LPNMTBGETINFOTIPA = POINTER(NMTBGETINFOTIPA)
 
@@ -1395,6 +1587,11 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("iItem", INT),
                 ("lParam", LPARAM)
             ]
+            hdr: NMHDR
+            pszText: LPWSTR
+            cchTextMax: int
+            iItem: int
+            lParam: int
         NMTBGETINFOTIPW = tagNMTBGETINFOTIPW
         LPNMTBGETINFOTIPW = POINTER(NMTBGETINFOTIPW)
 
@@ -1416,6 +1613,13 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pszText", LPSTR), # [out] new text for item
                 ("cchText", INT) # [in] size of buffer pointed to by pszText
             ]
+            hdr: NMHDR
+            dwMask: int
+            idCommand: int
+            lParam: int
+            iImage: int
+            pszText: LPSTR
+            cchText: int
         LPNMTBDISPINFOA = POINTER(NMTBDISPINFOA)
 
         class NMTBDISPINFOW(CStructure):
@@ -1428,6 +1632,13 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pszText", LPWSTR), # [out] new text for item
                 ("cchText", INT) # [in] size of buffer pointed to by pszText
             ]
+            hdr: NMHDR
+            dwMask: int
+            idCommand: int
+            lParam: int
+            iImage: int
+            pszText: LPWSTR
+            cchText: int
         LPNMTBDISPINFOW = POINTER(NMTBDISPINFOW)
 
         TBN_GETDISPINFO = unicode(TBN_GETDISPINFOW, TBN_GETDISPINFOA)
@@ -1449,6 +1660,12 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pszText", LPSTR),
                 ("rcButton", RECT)
             ]
+            hdr: NMHDR
+            iItem: int
+            tbButton: TBBUTTON
+            cchText: int
+            pszText: LPSTR
+            rcButton: RECT
         NMTOOLBARA = tagNMTOOLBARA
         LPNMTOOLBARA = POINTER(NMTOOLBARA)
 
@@ -1461,6 +1678,12 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pszText", LPWSTR),
                 ("rcButton", RECT)
             ]
+            hdr: NMHDR
+            iItem: int
+            tbButton: TBBUTTON
+            cchText: int
+            pszText: LPWSTR
+            rcButton: RECT
         NMTOOLBARW = tagNMTOOLBARW
         LPNMTOOLBARW = POINTER(NMTOOLBARW)
 
@@ -1498,6 +1721,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("fMask", UINT),
                 ("himl", HANDLE)
             ]
+            cbSize: int
+            fMask: int
+            himl: int
         REBARINFO = tagREBARINFO
         LPREBARINFO = POINTER(REBARINFO)
 
@@ -1549,13 +1775,35 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("cyIntegral", UINT),
                 ("cxIdeal", UINT), 
                 ("lParam", LPARAM),
-                ("cxHeader", UINT),
-                ("rcChevronLocation", RECT), # the rect is in client co-ord wrt hwndChild
-                ("uChevronState", UINT), # STATE_SYSTEM_*
+                ("cxHeader", UINT)
             ]
-        if not cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
-            del tagREBARBANDINFOA.rcChevronLocation
-            del tagREBARBANDINFOA.uChevronState
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                _fields_.extend([
+                    ("rcChevronLocation", RECT), # the rect is in client co-ord wrt hwndChild
+                    ("uChevronState", UINT) # STATE_SYSTEM_*
+                ])
+            cbSize: int
+            fMask: int
+            fStyle: int
+            clrFore: int
+            clrBack: int
+            lpText: LPSTR
+            cch: int
+            iImage: int
+            hwndChild: int
+            cxMinChild: int
+            cyMinChild: int
+            cx: int
+            hbmBack: int
+            wID: int
+            cyChild: int
+            cyMaxChild: int
+            cyIntegral: int
+            cxIdeal: int
+            lParam: int
+            cxHeader: int
+            rcChevronLocation: RECT
+            uChevronState: int
         REBARBANDINFOA = tagREBARBANDINFOA
         LPREBARBANDINFOA = POINTER(REBARBANDINFOA)
 
@@ -1584,9 +1832,33 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("rcChevronLocation", RECT), # the rect is in client co-ord wrt hwndChild
                 ("uChevronState", UINT), # STATE_SYSTEM_*
             ]
-        if not cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
-            del tagREBARBANDINFOW.rcChevronLocation
-            del tagREBARBANDINFOW.uChevronState
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                _fields_.extend([
+                    ("rcChevronLocation", RECT), # the rect is in client co-ord wrt hwndChild
+                    ("uChevronState", UINT) # STATE_SYSTEM_*
+                ])
+            cbSize: int
+            fMask: int
+            fStyle: int
+            clrFore: int
+            clrBack: int
+            lpText: LPWSTR
+            cch: int
+            iImage: int
+            hwndChild: int
+            cxMinChild: int
+            cyMinChild: int
+            cx: int
+            hbmBack: int
+            wID: int
+            cyChild: int
+            cyMaxChild: int
+            cyIntegral: int
+            cxIdeal: int
+            lParam: int
+            cxHeader: int
+            rcChevronLocation: RECT
+            uChevronState: int
         REBARBANDINFOW = tagREBARBANDINFOW
         LPREBARBANDINFOW = POINTER(REBARBANDINFOW)
 
@@ -1677,6 +1949,11 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("rcChild", RECT),
                 ("rcBand", RECT)
             ]
+            hdr: NMHDR
+            uBand: int
+            wID: int
+            rcChild: RECT
+            rcBand: RECT
         NMREBARCHILDSIZE = tagNMREBARCHILDSIZE
         LPNMREBARCHILDSIZE = POINTER(NMREBARCHILDSIZE)
 
@@ -1689,6 +1966,12 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("wID", UINT), # RBNM_*
                 ("lParam", LPARAM)
             ]
+            hdr: NMHDR
+            dwMask: int
+            uBand: int
+            fStyle: int
+            wID: int
+            lParam: int
         NMREBAR = tagNMREBAR
         LPNMREBAR = POINTER(NMREBAR)
 
@@ -1705,6 +1988,10 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("rcTarget", RECT),
                 ("rcActual", RECT)
             ]
+            hdr: NMHDR
+            fChanged: int
+            rcTarget: RECT
+            rcActual: RECT
         NMRBAUTOSIZE = tagNMRBAUTOSIZE
         LPNMRBAUTOSIZE = POINTER(NMRBAUTOSIZE)
 
@@ -1717,6 +2004,12 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("rc", RECT),
                 ("lParamNM", LPARAM)
             ]
+            hdr: NMHDR
+            uBand: int
+            wID: int
+            lParam: int
+            rc: RECT
+            lParamNM: int
         NMREBARCHEVRON = tagNMREBARCHEVRON
         LPNMREBARCHEVRON = POINTER(NMREBARCHEVRON)
 
@@ -1725,6 +2018,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("hdr", NMHDR),
                 ("rcSizing", RECT)
             ]
+            hdr: NMHDR
+            rcSizing: RECT
         NMREBARSPLITTER = tagNMREBARSPLITTER
         LPNMREBARSPLITTER = POINTER(NMREBARSPLITTER)
 
@@ -1741,6 +2036,13 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("fStyleCurrent", UINT),
                 ("fAutoBreak", BOOL)
             ]
+            hdr: int
+            uBand: int
+            wID: int
+            lParam: int
+            uMsg: int
+            fStyleCurrent: int
+            fAutoBreak: int
         NMREBARAUTOBREAK = tagNMREBARAUTOBREAK
         LPNMREBARAUTOBREAK = POINTER(NMREBARAUTOBREAK)
 
@@ -1757,6 +2059,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("flags", UINT),
                 ("iBand", INT)
             ]
+            pt: POINT
+            flags: int
+            iBand: int
         RBHITTESTINFO = _RB_HITTESTINFO
         LPRBHITTESTINFO = POINTER(RBHITTESTINFO)
     #====== TOOLTIPS CONTROL =====================================================
@@ -1777,11 +2082,19 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("rect", RECT),
                 ("hinst", HINSTANCE),
                 ("lpszText", LPSTR),
-                ("lParam", LPARAM),
-                ("lpReserved", PVOID)
+                ("lParam", LPARAM)
             ]
-        if not cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
-            del tagTOOLINFOA.lpReserved
+            if cpreproc.get_version() >= WIN32_WINNT_WINXP:
+                _fields_.append(("lpReserved", PVOID))
+            cbSize: int
+            uFlags: int
+            hwnd: int
+            uId: int
+            rect: RECT
+            hinst: int
+            lpszText: LPSTR
+            lParam: int
+            lpReserved: int
         TTTOOLINFOA = tagTOOLINFOA
         PTOOLINFOA = POINTER(TTTOOLINFOA)
         LPTTTOOLINFOA = PTOOLINFOA
@@ -1795,11 +2108,20 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("rect", RECT),
                 ("hinst", HINSTANCE),
                 ("lpszText", LPWSTR),
-                ("lParam", LPARAM),
-                ("lpReserved", PVOID)
+                ("lParam", LPARAM)
             ]
-        if not cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
-            del tagTOOLINFOW.lpReserved
+            if (cpreproc.get_version() >= WIN32_WINNT_WINXP):
+                _fields_.append(("lpReserved", PVOID))
+            cbSize: int
+            uFlags: int
+            hwnd: int
+            uId: int
+            rect: RECT
+            hinst: int
+            lpszText: LPWSTR
+            lParam: int
+            lpReserved: int
+        
         TTTOOLINFOW = tagTOOLINFOW
         PTOOLINFOW = POINTER(TTTOOLINFOW)
         LPTTTOOLINFOW = PTOOLINFOW
@@ -1909,6 +2231,10 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("cch", UINT),
                 ("pszTitle", PWCHAR)
             ]
+            dwSize: int
+            uTitleBitmap: int
+            cch: int
+            pszTitle: LPWSTR
         TTGETTITLE = _TTGETTITLE
         PTTGETTITLE = POINTER(TTGETTITLE)
 
@@ -1924,7 +2250,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         TTM_GETCURRENTTOOL = unicode(TTM_GETCURRENTTOOLW, TTM_GETCURRENTTOOLA)
         TTM_SETTITLE = unicode(TTM_SETTITLEW, TTM_SETTITLEA)
 
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
             TTM_SETWINDOWTHEME = CCM_SETWINDOWTHEME
 
         class _TT_HITTESTINFOA(CStructure):
@@ -1933,6 +2259,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pt", POINT),
                 ("ti", TTTOOLINFOA)
             ]
+            hwnd: int
+            pt: POINT
+            ti: TTTOOLINFOA
         TTHITTESTINFOA = _TT_HITTESTINFOA
         LPTTHITTESTINFOA = POINTER(TTHITTESTINFOA)
 
@@ -1942,6 +2271,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pt", POINT),
                 ("ti", TTTOOLINFOW)
             ]
+            hwnd: int
+            pt: POINT
+            ti: TTTOOLINFOW
         TTHITTESTINFOW = _TT_HITTESTINFOW
         LPTTHITTESTINFOW = POINTER(TTHITTESTINFOW)
 
@@ -1971,6 +2303,12 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("uFlags", UINT),
                 ("lParam", LPARAM)
             ]
+            hdr: NMHDR
+            lpszText: LPSTR
+            szText: IWideCharArray
+            hinst: int
+            uFlags: int
+            lParam: int
         NMTTDISPINFOA = tagNMTTDISPINFOA
         LPNMTTDISPINFOA = POINTER(NMTTDISPINFOA)
 
@@ -1983,6 +2321,12 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("uFlags", UINT),
                 ("lParam", LPARAM)
             ]
+            hdr: NMHDR
+            lpszText: LPWSTR
+            szText: IWideCharArray
+            hinst: int
+            uFlags: int
+            lParam: int
         NMTTDISPINFOW = tagNMTTDISPINFOW
         LPNMTTDISPINFOW = POINTER(NMTTDISPINFOW)
 
@@ -2154,6 +2498,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("dwPos", DWORD),
                 ("nReason", INT)
             ]
+            hdr: NMHDR
+            dwPos: int
+            nReason: int
 
         # trackbar
 
@@ -2166,6 +2513,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("hWnd", HWND),
                 ("ptCursor", POINT)
             ]
+            uNotification: int
+            hWnd: int
+            ptCursor: POINT
         LPDRAGLISTINFO = POINTER(DRAGLISTINFO)
 
         DL_BEGINDRAG = (WM_USER+133)
@@ -2193,6 +2543,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("nSec", UINT),
                 ("nInc", UINT)
             ]
+            nSec: int
+            nInc: int
         LPUDACCEL = POINTER(UDACCEL)
         UD_MAXVAL = 0x7fff
         UD_MINVAL = (-UD_MAXVAL)
@@ -2231,6 +2583,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("iPos", INT),
                 ("iDelta", INT)
             ]
+            hdr: NMHDR
+            iPos: int
+            iDelta: int
         LPNMUPDOWN = POINTER(NMUPDOWN)
         
         NM_UPDOWN = NMUPDOWN
@@ -2240,12 +2595,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
     # NOUPDOWN
     #====== PROGRESS CONTROL =====================================================
     if cpreproc.ifndef("NOPROGRESS"):
-        if cpreproc.ifdef("_WIN32"):
-            PROGRESS_CLASSA = "msctls_progress32"
-            PROGRESS_CLASSW = u"msctls_progress32"
-            PROGRESS_CLASS = unicode(PROGRESS_CLASSW, PROGRESS_CLASSA)
-        else:
-            PROGRESS_CLASS = "msctls_progress"
+        PROGRESS_CLASSA = b"msctls_progress32"
+        PROGRESS_CLASSW = u"msctls_progress32"
+        PROGRESS_CLASS = PROGRESS_CLASSW
         # begin_r_commctrl
         PBS_SMOOTH = 0x01
         PBS_VERTICAL = 0x04
@@ -2262,6 +2614,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("iLow", INT),
                 ("iHigh", INT)
             ]
+            iLow: int
+            iHigh: int
         PPBRANGE = POINTER(PBRANGE)
 
         PBM_GETRANGE = (WM_USER+7) # wParam = return (TRUE ? low : high). lParam = PPBRANGE or NULL
@@ -2355,6 +2709,13 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("szID", WCHAR * MAX_LINKID_TEXT),
                 ("szUrl", WCHAR * L_MAX_URL_LENGTH)
             ]
+            mask: int
+            iLink: int
+            state: int
+            stateMask: int
+            szID: IWideCharArray
+            szUrl: IWideCharArray
+            
         PLITEM = POINTER(LITEM)
 
         class LHITTESTINFO(CStructure):
@@ -2362,6 +2723,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pt", POINT),
                 ("item", LITEM)
             ]
+            pt: POINT
+            item: LITEM
         PLHITTESTINFO = POINTER(LHITTESTINFO)
 
         class NMLINK(CStructure):
@@ -2369,6 +2732,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("hdr", NMHDR),
                 ("item", LITEM)
             ]
+            hdr: NMHDR
+            item: LITEM
+            
         PNMLINK = POINTER(NMLINK)
 
         #  SysLink notifications
@@ -2382,12 +2748,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
     #====== End SysLink control =========================================
     #====== LISTVIEW CONTROL =====================================================
     if cpreproc.ifndef("NOLISTVIEW"):
-        if cpreproc.ifdef("_WIN32"):
-            WC_LISTVIEWA = "SysListView32"
-            WC_LISTVIEWW = u"SysListView32"
-            WC_LISTVIEW = unicode(WC_LISTVIEWW, WC_LISTVIEWA)
-        else:
-            WC_LISTVIEW = "SysListView"
+        WC_LISTVIEWA = "SysListView32"
+        WC_LISTVIEWW = u"SysListView32"
+        WC_LISTVIEW = WC_LISTVIEWW
         # begin_r_commctrl
         LVS_ICON = 0x0000
         LVS_REPORT = 0x0001
@@ -2484,15 +2847,31 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("lParam", LPARAM),
             ("iIndent", INT)
         ]
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
             LVITEMA__fields_.append(("iGroupId", INT))
             LVITEMA__fields_.append(("cColumns", UINT)) # tile view columns
             LVITEMA__fields_.append(("puColumns", PUINT))
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA: # Will be unused downlevel, but sizeof(LVITEMA) must be equal to sizeof(LVITEMW)
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA: # Will be unused downlevel, but sizeof(LVITEMA) must be equal to sizeof(LVITEMW)
             LVITEMA__fields_.append(("piColFmt", PINT))
             LVITEMA__fields_.append(("iGroup", INT)) # readonly. only valid for owner data.
         class LVITEMA(CStructure):
             _fields_ = LVITEMA__fields_
+            mask: int
+            iItem: int
+            iSubItem: int
+            state: int
+            stateMask: int
+            pszText: LPSTR
+            cchTextMax: int
+            iImage: int
+            lParam: int
+            iIndent: int
+            iGroupId: int
+            cColumns: int
+            puColumns: PUINT
+            piColFmt: PINT
+            iGroup: int
+            
         LPLVITEMA = POINTER(LVITEMA)
 
         LVITEMW__fields_ = [
@@ -2507,15 +2886,30 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             ("lParam", LPARAM),
             ("iIndent", INT)
         ]
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
             LVITEMW__fields_.append(("iGroupId", INT))
             LVITEMW__fields_.append(("cColumns", UINT)) # tile view columns
             LVITEMW__fields_.append(("puColumns", PUINT))
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA: # Will be unused downlevel, but sizeof(LVITEMA) must be equal to sizeof(LVITEMW)
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA: # Will be unused downlevel, but sizeof(LVITEMA) must be equal to sizeof(LVITEMW)
             LVITEMW__fields_.append(("piColFmt", PINT))
             LVITEMW__fields_.append(("iGroup", INT)) # readonly. only valid for owner data.
         class LVITEMW(CStructure):
             _fields_ = LVITEMW__fields_
+            mask: int
+            iItem: int
+            iSubItem: int
+            state: int
+            stateMask: int
+            pszText: LPWSTR
+            cchTextMax: int
+            iImage: int
+            lParam: int
+            iIndent: int
+            iGroupId: int
+            cColumns: int
+            puColumns: PUINT
+            piColFmt: PINT
+            iGroup: int
         LPLVITEMW = POINTER(LVITEMW)
         LVITEM = unicode(LVITEMW, LVITEMA)
 
@@ -2614,6 +3008,12 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pt", POINT),
                 ("vkDirection", UINT)
             ]
+            flags: int
+            psz: LPCSTR
+            lParam: int
+            pt: POINT
+            vkDirection: int
+            
         LPFINDINFOA = POINTER(LVFINDINFOA)
 
         class LVFINDINFOW(CStructure):
@@ -2624,6 +3024,12 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("pt", POINT),
                 ("vkDirection", UINT)
             ]
+            flags: int
+            psz: LPCWSTR
+            lParam: int
+            pt: POINT
+            vkDirection: int
+            
         LPFINDINFOW = POINTER(LVFINDINFOW)
 
         LVFINDINFO = unicode(LVFINDINFOW, LVFINDINFOA)
@@ -2703,13 +3109,18 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("iItem", INT),
                 ("iSubItem", INT) # this is was NOT in win95.  valid only for LVM_SUBITEMHITTEST
             ]
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
             _LVHITTESTINFO_fields_.append(
                 ("iGroup", INT) # readonly. index of group. only valid for owner data.
                                 # supports single item in multiple groups.
             )
         
         class LVHITTESTINFO(CStructure):
+            pt: POINT
+            flags: int
+            iItem: int
+            iSubItem: int
+            iGroup: int
             _fields_ = _LVHITTESTINFO_fields_
         LPLVHITTESTINFO = POINTER(LVHITTESTINFO)
         
@@ -2774,13 +3185,24 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("iOrder", INT)
             ]
 
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
             _LVCOLUMNA_fields_.append(("cxMin", INT))      # min snap point
             _LVCOLUMNA_fields_.append(("cxDefault", INT))  # default snap point
             _LVCOLUMNA_fields_.append(("cxIdeal", INT))    # read only. ideal may not eqaul current width if auto sized (LVS_EX_AUTOSIZECOLUMNS) to a lesser width.
         
         class LVCOLUMNA(CStructure):
             _fields_ = _LVCOLUMNA_fields_
+            mask: int
+            fmt: int
+            cx: int
+            pszText: LPSTR
+            cchTextMax: int
+            iSubItem: int
+            iImage: int
+            iOrder: int
+            cxMin: int
+            cxDefault: int
+            cxIdeal: int
         LPLVCOLUMNA = POINTER(LVCOLUMNA)
 
         _LVCOLUMNW_fields_ = [
@@ -2794,13 +3216,25 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("iOrder", INT)
             ]
 
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
             _LVCOLUMNW_fields_.append(("cxMin", INT))      # min snap point
             _LVCOLUMNW_fields_.append(("cxDefault", INT))  # default snap point
             _LVCOLUMNW_fields_.append(("cxIdeal", INT))    # read only. ideal may not eqaul current width if auto sized (LVS_EX_AUTOSIZECOLUMNS) to a lesser width.
         
         class LVCOLUMNW(CStructure):
             _fields_ = _LVCOLUMNW_fields_
+            mask: int
+            fmt: int
+            cx: int
+            pszText: LPWSTR
+            cchTextMax: int
+            iSubItem: int
+            iImage: int
+            iOrder: int
+            cxMin: int
+            cxDefault: int
+            cxIdeal: int
+            
         LPLVCOLUMNW = POINTER(LVCOLUMNW)
         LVCOLUMN = unicode(LVCOLUMNW, LVCOLUMNA)
         LPLVCOLUMN = unicode(LPLVCOLUMNW, LPLVCOLUMNA)
@@ -2819,7 +3253,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         LVCF_SUBITEM = 0x0008
         LVCF_IMAGE = 0x0010
         LVCF_ORDER = 0x0020
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
             LVCF_MINWIDTH = 0x0040
             LVCF_DEFAULTWIDTH = 0x0080
             LVCF_IDEALWIDTH = 0x0100
@@ -2832,7 +3266,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         LVCFMT_IMAGE = 0x0800 # Same as HDF_IMAGE
         LVCFMT_BITMAP_ON_RIGHT = 0x1000 # Same as HDF_BITMAP_ON_RIGHT
         LVCFMT_COL_HAS_IMAGES = 0x8000 # Same as HDF_OWNERDRAW
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
             LVCFMT_FIXED_WIDTH = 0x00100 # Can't resize the column; same as HDF_FIXEDWIDTH
             LVCFMT_NO_DPI_SCALE = 0x40000 # If not set, CCM_DPISCALE will govern scaling up fixed width
             LVCFMT_FIXED_RATIO = 0x80000 # Width will augment with the row height
@@ -2962,13 +3396,13 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         LVS_EX_MULTIWORKAREAS = 0x00002000
         LVS_EX_LABELTIP = 0x00004000 # listview unfolds partly hidden labels if it does not have infotip text
         LVS_EX_BORDERSELECT = 0x00008000 # border selection style instead of highlight
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
             LVS_EX_DOUBLEBUFFER = 0x00010000
             LVS_EX_HIDELABELS = 0x00020000
             LVS_EX_SINGLEROW = 0x00040000
             LVS_EX_SNAPTOGRID = 0x00080000 # Icons automatically snap to grid.
             LVS_EX_SIMPLESELECT = 0x00100000 # Also changes overlay rendering to top right for icon mode.
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
             LVS_EX_JUSTIFYCOLUMNS = 0x00200000 # Icons are lined up in columns that use up the whole view area.
             LVS_EX_TRANSPARENTBKGND = 0x00400000 # Background is painted by the parent via WM_PRINTCLIENT
             LVS_EX_TRANSPARENTSHADOWTEXT = 0x00800000 # Enable shadow text on transparent backgrounds only(useful with bitmaps)
@@ -3044,7 +3478,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         LVBKIF_STYLE_NORMAL = 0x00000000
         LVBKIF_STYLE_TILE = 0x00000010
         LVBKIF_STYLE_MASK = 0x00000010
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
             LVBKIF_FLAG_TILEOFFSET = 0x00000100
             LVBKIF_TYPE_WATERMARK = 0x10000000
             LVBKIF_FLAG_ALPHABLEND = 0x20000000
@@ -3052,7 +3486,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         LVM_SETBKIMAGEW = (LVM_FIRST + 138)
         LVM_GETBKIMAGEA = (LVM_FIRST + 69)
         LVM_GETBKIMAGEW = (LVM_FIRST + 139)
-        if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP:
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
             LVM_SETSELECTEDCOLUMN = (LVM_FIRST + 140)
             LV_VIEW_ICON = 0x0000
             LV_VIEW_DETAILS = 0x0001
@@ -3068,7 +3502,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             LVGF_STATE = 0x00000004
             LVGF_ALIGN = 0x00000008
             LVGF_GROUPID = 0x00000010
-            if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
                 LVGF_SUBTITLE = 0x00000100 # pszSubtitle is valid
                 LVGF_TASK = 0x00000200 # pszTask is valid
                 LVGF_DESCRIPTIONTOP = 0x00000400 # pszDescriptionTop is valid
@@ -3148,4 +3582,2862 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             
             LVGROUP_V5_SIZE = CCSIZEOF_STRUCT(LVGROUP, 'uAlign')
             PLVGROUP = LVGROUP.PTR()
+            LVM_INSERTGROUP = (LVM_FIRST + 145)
+            LVM_SETGROUPINFO = (LVM_FIRST + 147)
+            LVM_GETGROUPINFO = (LVM_FIRST + 149)
+            LVM_REMOVEGROUP = (LVM_FIRST + 150)
+            LVM_MOVEGROUP = (LVM_FIRST + 151)
+            LVM_GETGROUPCOUNT = (LVM_FIRST + 152)
+            LVM_GETGROUPINFOBYINDEX = (LVM_FIRST + 153)
+            LVM_MOVEITEMTOGROUP = (LVM_FIRST + 154)
+            LVGGR_GROUP = 0 # Entire expanded group
+            LVGGR_HEADER = 1 # Header only(collapsed group)
+            LVGGR_LABEL = 2 # Label only
+            LVGGR_SUBSETLINK = 3 # subset link only
+            LVM_GETGROUPRECT = (LVM_FIRST + 98)
+            LVGMF_NONE = 0x00000000
+            LVGMF_BORDERSIZE = 0x00000001
+            LVGMF_BORDERCOLOR = 0x00000002
+            LVGMF_TEXTCOLOR = 0x00000004
+
+            class LVGROUPMETRICS(CStructure):
+                _fields_ = [
+                    ('cbSize', UINT),
+                    ('mask', UINT),
+                    ('Left', UINT),
+                    ('Top', UINT),
+                    ('Right', UINT),
+                    ('Bottom', UINT),
+                    ('crLeft', COLORREF),
+                    ('crTop', COLORREF),
+                    ('crRight', COLORREF),
+                    ('crBottom', COLORREF),
+                    ('crHeader', COLORREF),
+                    ('crFooter', COLORREF)
+                ]
+                cbSize: int
+                mask: int
+                Left: int
+                Top: int
+                Right: int
+                Bottom: int
+                crLeft: int
+                crTop: int
+                crRight: int
+                crBottom: int
+                crHeader: int
+                crFooter: int
+            PLVGROUPMETRICS = LVGROUPMETRICS.PTR()
+
+            LVM_SETGROUPMETRICS = (LVM_FIRST + 155)
+            LVM_GETGROUPMETRICS = (LVM_FIRST + 156)
+            LVM_ENABLEGROUPVIEW = (LVM_FIRST + 157)
+            # typedef int(CALLBACK *PFNLVGROUPCOMPARE)(int, int, void *);
+            PFNLVGROUPCOMPARE = CALLBACK(INT, INT, INT, PVOID)
+            LVM_SORTGROUPS = (LVM_FIRST + 158)
+
+            class LVINSERTGROUPSORTED(CStructure):
+                _fields_ = [
+                    ('pfnGroupCompare', PFNLVGROUPCOMPARE),
+                    ('pvData', PVOID),
+                    ('lvGroup', LVGROUP)
+                ]
+                pfnGroupCompare: FARPROC
+                pvData: int
+                lvGroup: LVGROUP
+            PLVINSERTGROUPSORTED = LVINSERTGROUPSORTED.PTR()
+
+            LVM_INSERTGROUPSORTED = (LVM_FIRST + 159)
+            LVM_REMOVEALLGROUPS = (LVM_FIRST + 160)
+            LVM_HASGROUP = (LVM_FIRST + 161)
+            LVM_GETGROUPSTATE = (LVM_FIRST + 92)
+            LVM_GETFOCUSEDGROUP = (LVM_FIRST + 93)
+            LVTVIF_AUTOSIZE = 0x00000000
+            LVTVIF_FIXEDWIDTH = 0x00000001
+            LVTVIF_FIXEDHEIGHT = 0x00000002
+            LVTVIF_FIXEDSIZE = 0x00000003
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                LVTVIF_EXTENDED = 0x00000004
+            LVTVIM_TILESIZE = 0x00000001
+            LVTVIM_COLUMNS = 0x00000002
+            LVTVIM_LABELMARGIN = 0x00000004
+
+            class LVTILEVIEWINFO(CStructure):
+                _fields_ = [
+                    ('cbSize', UINT),
+                    ('dwMask', DWORD),
+                    ('dwFlags', DWORD),
+                    ('sizeTile', SIZE),
+                    ('cLines', INT),
+                    ('rcLabelMargin', RECT)
+                ]
+                cbSize: int
+                dwMask: int
+                dwFlags: int
+                sizeTile: SIZE
+                cLines: int
+                rcLabelMargin: RECT
+            PLVTILEVIEWINFO = LVTILEVIEWINFO.PTR()
+
+            class LVTILEINFO(CStructure):
+                _fields_ = [
+                    ('cbSize', UINT),
+                    ('iItem', INT),
+                    ('cColumns', UINT),
+                    ('puColumns', PUINT)
+                ]
+                if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                    _fields_.append(('piColFmt', PINT))
+                cbSize: int
+                iItem: int
+                cColumns: int
+                puColumns: PUINT
+                piColFmt: PINT
+            PLVTILEINFO = LVTILEINFO.PTR()
+
+            LVTILEINFO_V5_SIZE = CCSIZEOF_STRUCT(LVTILEINFO, 'puColumns')
+            LVM_SETTILEVIEWINFO = (LVM_FIRST + 162)
+            LVM_GETTILEVIEWINFO = (LVM_FIRST + 163)
+            LVM_SETTILEINFO = (LVM_FIRST + 164)
+            LVM_GETTILEINFO = (LVM_FIRST + 165)
+
+            class LVINSERTMARK(CStructure):
+                _fields_ = [
+                    ('cbSize', UINT),
+                    ('dwFlags', DWORD),
+                    ('iItem', INT),
+                    ('dwReserved', DWORD)
+                ]
+                cbSize: int
+                dwFlags: int
+                iItem: int
+                dwReserved: int
+            LPLVINSERTMARK = LVINSERTMARK.PTR()
+
+            LVIM_AFTER = 0x00000001 # TRUE = insert After iItem, otherwise before
+            LVM_SETINSERTMARK = (LVM_FIRST + 166)
+            LVM_GETINSERTMARK = (LVM_FIRST + 167)
+            LVM_INSERTMARKHITTEST = (LVM_FIRST + 168)
+            LVM_GETINSERTMARKRECT = (LVM_FIRST + 169)
+            LVM_SETINSERTMARKCOLOR = (LVM_FIRST + 170)
+            LVM_GETINSERTMARKCOLOR = (LVM_FIRST + 171)
+
+            class LVSETINFOTIP(CStructure):
+                _fields_ = [
+                    ('cbSize', UINT),
+                    ('dwFlags', DWORD),
+                    ('pszText', LPWSTR),
+                    ('iItem', INT),
+                    ('iSubItem', INT)
+                ]
+                cbSize: int
+                dwFlags: int
+                pszText: LPWSTR
+                iItem: int
+                iSubItem: int
+            PLVSETINFOTIP = LVSETINFOTIP.PTR()
+
+            LVM_SETINFOTIP = (LVM_FIRST + 173)
+            LVM_GETSELECTEDCOLUMN = (LVM_FIRST + 174)
+            LVM_ISGROUPVIEWENABLED = (LVM_FIRST + 175)
+            LVM_GETOUTLINECOLOR = (LVM_FIRST + 176)
+            LVM_SETOUTLINECOLOR = (LVM_FIRST + 177)
+            LVM_CANCELEDITLABEL = (LVM_FIRST + 179)
+            # These next to methods make it easy to identify an item that can be repositioned
+            # within listview. For example: Many developers use the lParam to store an identifier that is
+            # unique. Unfortunatly, in order to find this item, they have to iterate through all of the items
+            # in the listview. Listview will maintain a unique identifier.  The upper bound is the size of a DWORD.
+            LVM_MAPINDEXTOID = (LVM_FIRST + 180)
+            LVM_MAPIDTOINDEX = (LVM_FIRST + 181)
+            LVM_ISITEMVISIBLE = (LVM_FIRST + 182)
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                LVM_GETEMPTYTEXT = (LVM_FIRST + 204)
+                LVM_GETFOOTERRECT = (LVM_FIRST + 205)
+                # footer flags
+                LVFF_ITEMCOUNT = 0x00000001
+
+                class LVFOOTERINFO(CStructure):
+                    _fields_ = [
+                        ('mask', UINT),
+                        ('pszText', LPWSTR),
+                        ('cchTextMax', INT),
+                        ('cItems', UINT)
+                    ]
+                    mask: int
+                    pszText: LPWSTR
+                    cchTextMax: int
+                    cItems: int
+                LPLVFOOTERINFO = LVFOOTERINFO.PTR()
+
+                LVM_GETFOOTERINFO = (LVM_FIRST + 206)
+                LVM_GETFOOTERITEMRECT = (LVM_FIRST + 207)
+                # footer item flags
+                LVFIF_TEXT = 0x00000001
+                LVFIF_STATE = 0x00000002
+                # footer item state
+                LVFIS_FOCUSED = 0x0001
+
+                class LVFOOTERITEM(CStructure):
+                    _fields_ = [
+                        ('mask', UINT),
+                        ('iItem', INT),
+                        ('pszText', LPWSTR),
+                        ('cchTextMax', INT),
+                        ('state', UINT),
+                        ('stateMask', UINT)
+                    ]
+                    mask: int
+                    iItem: int
+                    pszText: LPWSTR
+                    cchTextMax: int
+                    state: int
+                    stateMask: int
+                LPLVFOOTERITEM = LVFOOTERITEM.PTR()
+
+                LVM_GETFOOTERITEM = (LVM_FIRST + 208)
+                # supports a single item in multiple groups.
+
+                class LVITEMINDEX(CStructure):
+                    _fields_ = [
+                        ('iItem', INT),
+                        ('iGroup', INT)
+                    ]
+                    iItem: int
+                    iGroup: int
+                PLVITEMINDEX = LVITEMINDEX.PTR()
+
+                LVM_GETITEMINDEXRECT = (LVM_FIRST + 209)
+                LVM_SETITEMINDEXSTATE = (LVM_FIRST + 210)
+                LVM_GETNEXTITEMINDEX = (LVM_FIRST + 211)
+            LVBKIMAGE = unicode(LVBKIMAGEW, LVBKIMAGEA)
+            LPLVBKIMAGE = unicode(LPLVBKIMAGEW, LPLVBKIMAGEA)
+            LVM_SETBKIMAGE = unicode(LVM_SETBKIMAGEW, LVM_SETBKIMAGEA)
+            LVM_GETBKIMAGE = unicode(LVM_GETBKIMAGEW, LVM_GETBKIMAGEA)
+
+            class NMLISTVIEW(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('iItem', INT),
+                    ('iSubItem', INT),
+                    ('uNewState', UINT),
+                    ('uOldState', UINT),
+                    ('uChanged', UINT),
+                    ('ptAction', POINT),
+                    ('lParam', LPARAM)
+                ]
+                hdr: NMHDR
+                iItem: int
+                iSubItem: int
+                uNewState: int
+                uNewState: int
+                uOldState: int
+                uChanged: int
+                ptAction: POINT
+                lParam: int
+            LPNMLISTVIEW = NMLISTVIEW.PTR()
+            LPNM_LISTVIEW = LPNMLISTVIEW
+            NM_LISTVIEW = NMLISTVIEW
+
+            # NMITEMACTIVATE is used instead of NMLISTVIEW in IE >= 0x400
+            # therefore all the fields are the same except for extra uKeyFlags
+            # they are used to store key flags at the time of the single click with
+            # delayed activation - because by the time the timer goes off a user may
+            # not hold the keys(shift, ctrl) any more
+
+            class NMITEMACTIVATE(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('iItem', INT),
+                    ('iSubItem', INT),
+                    ('uNewState', UINT),
+                    ('uOldState', UINT),
+                    ('uChanged', UINT),
+                    ('ptAction', POINT),
+                    ('lParam', LPARAM),
+                    ('uKeyFlags', UINT)
+                ]
+                hdr: NMHDR
+                iItem: int
+                iSubItem: int
+                uNewState: int
+                uOldState: int
+                uChanged: int
+                ptAction: POINT
+                lParam: int
+                uKeyFlags: int
+            LPNMITEMACTIVATE = NMITEMACTIVATE.PTR()
             
+            # key flags stored in uKeyFlags
+            LVKF_ALT = 0x0001
+            LVKF_CONTROL = 0x0002
+            LVKF_SHIFT = 0x0004
+
+            class NMLVCUSTOMDRAW(CStructure):
+                _fields_ = [
+                    ('nmcd', NMCUSTOMDRAW),
+                    ('clrText', COLORREF),
+                    ('clrTextBk', COLORREF),
+                    ('iSubItem', INT)
+                ]
+                if cpreproc.get_version() >= WIN32_WINNT_WINXP:
+                    _fields_.extend([
+                        ('dwItemType', DWORD),
+                        ('clrFace', COLORREF),
+                        ('iIconEffect', INT),
+                        ('iIconPhase', INT),
+                        ('iPartId', INT),
+                        ('iStateId', INT),
+                        ('rcText', RECT),
+                        ('uAlign', UINT)
+                    ])
+                nmcd: NMCUSTOMDRAW
+                clrText: int
+                clrTextBk: int
+                iSubItem: int
+                dwItemType: int
+                clrFace: int
+                iIconEffect: int
+                iIconPhase: int
+                iPartId: int
+                iStateId: int
+                rcText: RECT
+                uAlign: int
+            LPNMLVCUSTOMDRAW = NMLVCUSTOMDRAW.PTR()
+            NMLVCUSTOMDRAW_V3_SIZE = CCSIZEOF_STRUCT(NMLVCUSTOMDRAW, 'clrTextBk')
+
+            # dwItemType
+            LVCDI_ITEM = 0x00000000
+            LVCDI_GROUP = 0x00000001
+            LVCDI_ITEMSLIST = 0x00000002
+            # ListView custom draw return values
+            LVCDRF_NOSELECT = 0x00010000
+            LVCDRF_NOGROUPFRAME = 0x00020000
+
+            class NMLVCACHEHINT(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('iFrom', INT),
+                    ('iTo', INT)
+                ]
+                hdr: NMHDR
+                iFrom: int
+                iTo: int
+            LPNMLVCACHEHINT = NMLVCACHEHINT.PTR()
+
+            LPNM_CACHEHINT = LPNMLVCACHEHINT
+            PNM_CACHEHINT = LPNMLVCACHEHINT
+            NM_CACHEHINT = NMLVCACHEHINT
+
+            class NMLVFINDITEMA(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('iStart', INT),
+                    ('lvfi', LVFINDINFOA)
+                ]
+                hdr: NMHDR
+                iStart: int
+                lvfi: LVFINDINFOA
+            LPNMLVFINDITEMA = NMLVFINDITEMA.PTR()
+
+            class NMLVFINDITEMW(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('iStart', INT),
+                    ('lvfi', LVFINDINFOW)
+                ]
+                hdr: NMHDR
+                iStart: int
+                lvfi: LVFINDINFOW
+            LPNMLVFINDITEMW = NMLVFINDITEMW.PTR()
+
+            PNM_FINDITEMA = LPNMLVFINDITEMA
+            LPNM_FINDITEMA = LPNMLVFINDITEMA
+            NM_FINDITEMA = NMLVFINDITEMA
+            PNM_FINDITEMW = LPNMLVFINDITEMW
+            LPNM_FINDITEMW = LPNMLVFINDITEMW
+            NM_FINDITEMW = NMLVFINDITEMW
+            PNM_FINDITEM = unicode(PNM_FINDITEMW, PNM_FINDITEMA)
+            LPNM_FINDITEM = unicode(LPNM_FINDITEMW, LPNM_FINDITEMA)
+            NM_FINDITEM = unicode(NM_FINDITEMW, NM_FINDITEMA)
+            NMLVFINDITEM = unicode(NMLVFINDITEMW, NMLVFINDITEMA)
+            LPNMLVFINDITEM = unicode(LPNMLVFINDITEMW, LPNMLVFINDITEMA)
+
+            class NMLVODSTATECHANGE(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('iFrom', INT),
+                    ('iTo', INT),
+                    ('uNewState', UINT),
+                    ('uOldState', UINT)
+                ]
+                hdr: NMHDR
+                iFrom: int
+                iTo: int
+                uNewState: int
+                uOldState: int
+            LPNMLVODSTATECHANGE = NMLVODSTATECHANGE.PTR()
+
+            PNM_ODSTATECHANGE = LPNMLVODSTATECHANGE
+            LPNM_ODSTATECHANGE = LPNMLVODSTATECHANGE
+            NM_ODSTATECHANGE = NMLVODSTATECHANGE
+            LVN_ITEMCHANGING = (LVN_FIRST-0)
+            LVN_ITEMCHANGED = (LVN_FIRST-1)
+            LVN_INSERTITEM = (LVN_FIRST-2)
+            LVN_DELETEITEM = (LVN_FIRST-3)
+            LVN_DELETEALLITEMS = (LVN_FIRST-4)
+            LVN_BEGINLABELEDITA = (LVN_FIRST-5)
+            LVN_BEGINLABELEDITW = (LVN_FIRST-75)
+            LVN_ENDLABELEDITA = (LVN_FIRST-6)
+            LVN_ENDLABELEDITW = (LVN_FIRST-76)
+            LVN_COLUMNCLICK = (LVN_FIRST-8)
+            LVN_BEGINDRAG = (LVN_FIRST-9)
+            LVN_BEGINRDRAG = (LVN_FIRST-11)
+            LVN_ODCACHEHINT = (LVN_FIRST-13)
+            LVN_ODFINDITEMA = (LVN_FIRST-52)
+            LVN_ODFINDITEMW = (LVN_FIRST-79)
+            LVN_ITEMACTIVATE = (LVN_FIRST-14)
+            LVN_ODSTATECHANGED = (LVN_FIRST-15)
+            LVN_ODFINDITEM = unicode(LVN_ODFINDITEMW, LVN_ODFINDITEMA)
+            LVN_HOTTRACK = (LVN_FIRST-21)
+            LVN_GETDISPINFOA = (LVN_FIRST-50)
+            LVN_GETDISPINFOW = (LVN_FIRST-77)
+            LVN_SETDISPINFOA = (LVN_FIRST-51)
+            LVN_SETDISPINFOW = (LVN_FIRST-78)
+            LVN_BEGINLABELEDIT = unicode(LVN_BEGINLABELEDITW, LVN_BEGINLABELEDITA)
+            LVN_ENDLABELEDIT = unicode(LVN_ENDLABELEDITW, LVN_ENDLABELEDITA)
+            LVN_GETDISPINFO = unicode(LVN_GETDISPINFOW, LVN_GETDISPINFOA)
+            LVN_SETDISPINFO = unicode(LVN_SETDISPINFOW, LVN_SETDISPINFOA)
+            LVIF_DI_SETITEM = 0x1000
+
+            class NMLVDISPINFOA(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('item', LVITEMA)
+                ]
+                hdr: NMHDR
+                item: LVITEMA
+            LPNMLVDISPINFOA = NMLVDISPINFOA.PTR()
+
+            class NMLVDISPINFOW(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('item', LVITEMW)
+                ]
+                hdr: NMHDR
+                item: LVITEMW
+            LPNMLVDISPINFOW = NMLVDISPINFOW.PTR()
+
+            NMLVDISPINFO = unicode(NMLVDISPINFOW, NMLVDISPINFOA)
+            LV_DISPINFOA = NMLVDISPINFOA
+            LV_DISPINFOW = NMLVDISPINFOW
+            LV_DISPINFO = NMLVDISPINFO
+            LVN_KEYDOWN = (LVN_FIRST-55)
+
+            class NMLVKEYDOWN(CStructure):
+                _pack_ = 1
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('wVKey', WORD),
+                    ('flags', UINT)
+                ]
+                hdr: NMHDR
+                wVKey: int
+                flags: int
+            LPNMLVKEYDOWN = NMLVKEYDOWN.PTR()
+            LV_KEYDOWN = NMLVKEYDOWN
+
+            LVN_MARQUEEBEGIN = (LVN_FIRST-56)
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+
+                class NMLVLINK(CStructure):
+                    _fields_ = [
+                        ('hdr', NMHDR),
+                        ('link', LITEM),
+                        ('iItem', INT),
+                        ('iSubItem', INT)
+                    ]
+                    hdr: NMHDR
+                    link: LITEM
+                    iItem: int
+                    iSubItem: int
+                PNMLVLINK = NMLVLINK.PTR()
+
+
+            class NMLVGETINFOTIPA(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('dwFlags', DWORD),
+                    ('pszText', LPSTR),
+                    ('cchTextMax', INT),
+                    ('iItem', INT),
+                    ('iSubItem', INT),
+                    ('lParam', LPARAM)
+                ]
+                hdr: NMHDR
+                dwFlags: int
+                pszText: LPSTR
+                cchTextMax: int
+                iItem: int
+                iSubItem: int
+                lParam: int
+            LPNMLVGETINFOTIPA = NMLVGETINFOTIPA.PTR()
+
+
+            class NMLVGETINFOTIPW(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('dwFlags', DWORD),
+                    ('pszText', LPWSTR),
+                    ('cchTextMax', INT),
+                    ('iItem', INT),
+                    ('iSubItem', INT),
+                    ('lParam', LPARAM)
+                ]
+                hdr: NMHDR
+                dwFlags: int
+                pszText: LPWSTR
+                cchTextMax: int
+                iItem: int
+                iSubItem: int
+                lParam: int
+            LPNMLVGETINFOTIPW = NMLVGETINFOTIPW.PTR()
+
+            # NMLVGETINFOTIPA.dwFlag values
+            LVGIT_UNFOLDED = 0x0001
+            LVN_GETINFOTIPA = (LVN_FIRST-57)
+            LVN_GETINFOTIPW = (LVN_FIRST-58)
+            LVN_GETINFOTIP = unicode(LVN_GETINFOTIPW, LVN_GETINFOTIPA)
+            NMLVGETINFOTIP = unicode(NMLVGETINFOTIPW, NMLVGETINFOTIPA)
+            LPNMLVGETINFOTIP = unicode(LPNMLVGETINFOTIPW, LPNMLVGETINFOTIPA)
+            #
+            #  LVN_INCREMENTALSEARCH gives the app the opportunity to customize
+            #  incremental search.  For example, if the items are numeric,
+            #  the app can do numerical search instead of string search.
+            #
+            #  ListView notifies the app with NMLVFINDITEM.
+            #  The app sets pnmfi->lvfi.lParam to the result of the incremental search,
+            #  or to LVNSCH_DEFAULT if ListView should do the default search,
+            #  or to LVNSCH_ERROR to fail the search and just beep,
+            #  or to LVNSCH_IGNORE to stop all ListView processing.
+            #
+            #  The return value is not used.
+            LVNSCH_DEFAULT = -1
+            LVNSCH_ERROR = -2
+            LVNSCH_IGNORE = -3
+            LVN_INCREMENTALSEARCHA = (LVN_FIRST-62)
+            LVN_INCREMENTALSEARCHW = (LVN_FIRST-63)
+            LVN_INCREMENTALSEARCH = unicode(LVN_INCREMENTALSEARCHW, LVN_INCREMENTALSEARCHA)
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                LVN_COLUMNDROPDOWN = (LVN_FIRST-64)
+                LVN_COLUMNOVERFLOWCLICK = (LVN_FIRST-66)
+            #(WIN32_WINNT_VERSION >= WIN32_WINNT_VISTA)
+            if cpreproc.get_version() >= WIN32_WINNT_WINXP:
+                class NMLVSCROLL(CStructure):
+                    _fields_ = [
+                        ('hdr', NMHDR),
+                        ('dx', INT),
+                        ('dy', INT)
+                    ]
+                    hdr: NMHDR
+                    dx: int
+                    dy: int
+                LPNMLVSCROLL = NMLVSCROLL.PTR()
+
+                LVN_BEGINSCROLL = (LVN_FIRST-80)
+                LVN_ENDSCROLL = (LVN_FIRST-81)
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                LVN_LINKCLICK = (LVN_FIRST-84)
+                EMF_CENTERED = 0x00000001 # render markup centered in the listview area
+
+                class NMLVEMPTYMARKUP(CStructure):
+                    _fields_ = [
+                        ('hdr', NMHDR),
+                        ('dwFlags', DWORD),
+                        ('szMarkup', WCHAR * L_MAX_URL_LENGTH)
+                    ]
+                    hdr: NMHDR
+                    dwFlags: int
+                    szMarkup: IWideCharArray
+
+                LVN_GETEMPTYMARKUP = (LVN_FIRST-87)
+    
+    #====== TREEVIEW CONTROL =====================================================
+    if cpreproc.ifndef("NOTREEVIEW"):
+        WC_TREEVIEWA = b"SysTreeView32"
+        WC_TREEVIEWW = u"SysTreeView32"
+        WC_TREEVIEW = WC_TREEVIEWW
+        # begin_r_commctrl
+        TVS_HASBUTTONS = 0x0001
+        TVS_HASLINES = 0x0002
+        TVS_LINESATROOT = 0x0004
+        TVS_EDITLABELS = 0x0008
+        TVS_DISABLEDRAGDROP = 0x0010
+        TVS_SHOWSELALWAYS = 0x0020
+        TVS_RTLREADING = 0x0040
+        TVS_NOTOOLTIPS = 0x0080
+        TVS_CHECKBOXES = 0x0100
+        TVS_TRACKSELECT = 0x0200
+        TVS_SINGLEEXPAND = 0x0400
+        TVS_INFOTIP = 0x0800
+        TVS_FULLROWSELECT = 0x1000
+        TVS_NOSCROLL = 0x2000
+        TVS_NONEVENHEIGHT = 0x4000
+        TVS_NOHSCROLL = 0x8000 # TVS_NOSCROLL overrides this
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
+            TVS_EX_NOSINGLECOLLAPSE = 0x0001
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+            TVS_EX_MULTISELECT = 0x0002
+            TVS_EX_DOUBLEBUFFER = 0x0004
+            TVS_EX_NOINDENTSTATE = 0x0008
+            TVS_EX_RICHTOOLTIP = 0x0010
+            TVS_EX_AUTOHSCROLL = 0x0020
+            TVS_EX_FADEINOUTEXPANDOS = 0x0040
+            TVS_EX_PARTIALCHECKBOXES = 0x0080
+            TVS_EX_EXCLUSIONCHECKBOXES = 0x0100
+            TVS_EX_DIMMEDCHECKBOXES = 0x0200
+            TVS_EX_DRAWIMAGEASYNC = 0x0400
+        # end_r_commctrl
+        HTREEITEM = HANDLE
+
+        TVIF_TEXT = 0x0001
+        TVIF_IMAGE = 0x0002
+        TVIF_PARAM = 0x0004
+        TVIF_STATE = 0x0008
+        TVIF_HANDLE = 0x0010
+        TVIF_SELECTEDIMAGE = 0x0020
+        TVIF_CHILDREN = 0x0040
+        TVIF_INTEGRAL = 0x0080
+        if WIN32_IE >= WIN32_IE_IE60:
+            TVIF_STATEEX = 0x0100
+            TVIF_EXPANDEDIMAGE = 0x0200
+        TVIS_SELECTED = 0x0002
+        TVIS_CUT = 0x0004
+        TVIS_DROPHILITED = 0x0008
+        TVIS_BOLD = 0x0010
+        TVIS_EXPANDED = 0x0020
+        TVIS_EXPANDEDONCE = 0x0040
+        TVIS_EXPANDPARTIAL = 0x0080
+        TVIS_OVERLAYMASK = 0x0F00
+        TVIS_STATEIMAGEMASK = 0xF000
+        TVIS_USERMASK = 0xF000
+        if WIN32_IE >= WIN32_IE_IE60:
+            TVIS_EX_FLAT = 0x0001
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                TVIS_EX_DISABLED = 0x0002
+            TVIS_EX_ALL = 0x0002
+            # Structure for TreeView's NM_TVSTATEIMAGECHANGING notification
+
+            class NMTVSTATEIMAGECHANGING(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('hti', HTREEITEM),
+                    ('iOldStateImageIndex', INT),
+                    ('iNewStateImageIndex', INT)
+                ]
+                hdr: NMHDR
+                hti: int
+                iOldStateImageIndex: int
+                iNewStateImageIndex: int
+            LPNMTVSTATEIMAGECHANGING = NMTVSTATEIMAGECHANGING.PTR()
+
+        I_CHILDRENCALLBACK = (-1)
+        I_CHILDRENAUTO = (-2)
+
+        class TVITEMA(CStructure):
+            _fields_ = [
+                ('mask', UINT),
+                ('hItem', HTREEITEM),
+                ('state', UINT),
+                ('stateMask', UINT),
+                ('pszText', LPSTR),
+                ('cchTextMax', INT),
+                ('iImage', INT),
+                ('iSelectedImage', INT),
+                ('cChildren', INT),
+                ('lParam', LPARAM)
+            ]
+            mask: int
+            hItem: int
+            state: int
+            stateMask: int
+            pszText: LPSTR
+            cchTextMax: int
+            iImage: int
+            iSelectedImage: int
+            cChildren: int
+            lParam: int
+
+        LPTVITEMA = TVITEMA.PTR()
+
+        class TVITEMW(CStructure):
+            _fields_ = [
+                ('mask', UINT),
+                ('hItem', HTREEITEM),
+                ('state', UINT),
+                ('stateMask', UINT),
+                ('pszText', LPWSTR),
+                ('cchTextMax', INT),
+                ('iImage', INT),
+                ('iSelectedImage', INT),
+                ('cChildren', INT),
+                ('lParam', LPARAM)
+            ]
+            mask: int
+            hItem: int
+            state: int
+            stateMask: int
+            pszText: LPWSTR
+            cchTextMax: int
+            iImage: int
+            iSelectedImage: int
+            cChildren: int
+            lParam: int
+            
+        LPTVITEMW = TVITEMW.PTR()
+
+        class TVITEMEXA(CStructure):
+            fields = [
+                ('mask', UINT),
+                ('hItem', HTREEITEM),
+                ('state', UINT),
+                ('stateMask', UINT),
+                ('pszText', LPSTR),
+                ('cchTextMax', INT),
+                ('iImage', INT),
+                ('iSelectedImage', INT),
+                ('cChildren', INT),
+                ('lParam', LPARAM),
+                ('iIntegral', INT)
+            ]
+            if WIN32_IE >= WIN32_IE_IE60:
+                fields.extend([
+                    ('uStateEx', UINT),
+                    ('hwnd', HWND),
+                    ('iExpandedImage', INT)
+                ])
+            if cpreproc.get_version() >= WIN32_WINNT_WIN7:
+                fields.append(('iReserved', INT))
+            mask: int
+            hItem: int
+            state: int
+            stateMask: int
+            pszText: LPSTR
+            cchTextMax: int
+            iImage: int
+            iSelectedImage: int
+            cChildren: int
+            lParam: int
+            iIntegral: int
+            uStateEx: int
+            hwnd: int
+            iExpandedImage: int
+            iReserved: int
+        declare_fields(TVITEMEXA)
+        LPTVITEMEXA = TVITEMEXA.PTR()
+
+        class TVITEMEXW(CStructure):
+            fields = [
+                ('mask', UINT),
+                ('hItem', HTREEITEM),
+                ('state', UINT),
+                ('stateMask', UINT),
+                ('pszText', LPWSTR),
+                ('cchTextMax', INT),
+                ('iImage', INT),
+                ('iSelectedImage', INT),
+                ('cChildren', INT),
+                ('lParam', LPARAM),
+                ('iIntegral', INT)
+            ]
+            if WIN32_IE >= WIN32_IE_IE60:
+                fields.extend([
+                    ('uStateEx', UINT),
+                    ('hwnd', HWND),
+                    ('iExpandedImage', INT)
+                ])
+            if cpreproc.get_version() >= WIN32_WINNT_WIN7:
+                fields.append(('iReserved', INT))
+            mask: int
+            hItem: int
+            state: int
+            stateMask: int
+            pszText: LPWSTR
+            cchTextMax: int
+            iImage: int
+            iSelectedImage: int
+            cChildren: int
+            lParam: int
+            iIntegral: int
+            uStateEx: int
+            hwnd: int
+            iExpandedImage: int
+            iReserved: int
+        declare_fields(TVITEMEXW)
+        LPTVITEMEXW = TVITEMEXW.PTR()
+
+        # UNICODE
+        TVITEM = unicode(TVITEMW, TVITEMA)
+        LPTVITEM = unicode(LPTVITEMW, LPTVITEMA)
+        
+        LPTV_ITEMW = LPTVITEMW
+        LPTV_ITEMA = LPTVITEMA
+        TV_ITEMW = TVITEMW
+        TV_ITEMA = TVITEMA
+        LPTV_ITEM = LPTVITEM
+        TV_ITEM = TVITEM
+        
+        LPTVITEMW = TVITEMW.PTR()
+        LPTV_ITEMW = LPTVITEMW
+        LPTV_ITEMA = LPTVITEMA
+        TV_ITEMW = TVITEMW
+        TV_ITEMA = TVITEMA
+        LPTV_ITEM = LPTVITEM
+        TV_ITEM = TVITEM
+        TVI_ROOT = HTREEITEM(ULONG_PTR(-0x10000).value).value
+        TVI_FIRST = HTREEITEM(ULONG_PTR(-0x0FFFF).value).value
+        TVI_LAST = HTREEITEM(ULONG_PTR(-0x0FFFE).value).value
+        TVI_SORT = HTREEITEM(ULONG_PTR(-0x0FFFD).value).value
+
+        class TVINSERTSTRUCTA(CStructure):
+            class _U(CUnion):
+                _fields_ = [
+                    ('itemex', TVITEMEXA),
+                    ('item', TVITEMA)
+                ]
+            _fields_ = [
+                ('hParent', HTREEITEM),
+                ('hInsertAfter', HTREEITEM),
+                ('_u', _U)
+            ]
+            _anonymous_ = ['_u']
+            itemex: TVITEMEXA
+            item: TVITEMA
+            hParent: int
+            hInsertAfter: int
+        
+        LPTVINSERTSTRUCTA = TVINSERTSTRUCTA.PTR()
+
+        class TVINSERTSTRUCTW(CStructure):
+            class _U(CUnion):
+                _fields_ = [
+                    ('itemex', TVITEMEXW),
+                    ('item', TVITEMW)
+                ]
+            _fields_ = [
+                ('hParent', HTREEITEM),
+                ('hInsertAfter', HTREEITEM),
+                ('_u', _U)
+            ]
+            _anonymous_ = ['_u']
+            itemex: TVITEMEXW
+            item: TVITEMW
+            hParent: int
+            hInsertAfter: int
+        
+        LPTVINSERTSTRUCTW = TVINSERTSTRUCTW.PTR()
+        TVINSERTSTRUCT = unicode(TVINSERTSTRUCTW, TVINSERTSTRUCTA)
+        LPTVINSERTSTRUCT = unicode(LPTVINSERTSTRUCTW, LPTVINSERTSTRUCTA)
+
+        LPTV_INSERTSTRUCTA = LPTVINSERTSTRUCTA
+        LPTV_INSERTSTRUCTW = LPTVINSERTSTRUCTW
+        TV_INSERTSTRUCTA = TVINSERTSTRUCTA
+        TV_INSERTSTRUCTW = TVINSERTSTRUCTW
+        TV_INSERTSTRUCT = TVINSERTSTRUCT
+        LPTV_INSERTSTRUCT = LPTVINSERTSTRUCT
+        TVINSERTSTRUCTA_V1_SIZE = CCSIZEOF_STRUCT(TVINSERTSTRUCTA, 'item')
+        TVINSERTSTRUCTW_V1_SIZE = CCSIZEOF_STRUCT(TVINSERTSTRUCTW, 'item')
+
+        TVM_INSERTITEMA = (TV_FIRST + 0)
+        TVM_INSERTITEMW = (TV_FIRST + 50)
+        TVM_INSERTITEM = unicode(TVM_INSERTITEMW, TVM_INSERTITEMA)
+        TVM_DELETEITEM = (TV_FIRST + 1)
+        TVM_EXPAND = (TV_FIRST + 2)
+        TVE_COLLAPSE = 0x0001
+        TVE_EXPAND = 0x0002
+        TVE_TOGGLE = 0x0003
+        TVE_EXPANDPARTIAL = 0x4000
+        TVE_COLLAPSERESET = 0x8000
+        TVM_GETITEMRECT = (TV_FIRST + 4)
+        TVM_GETCOUNT = (TV_FIRST + 5)
+        TVM_GETINDENT = (TV_FIRST + 6)
+        TVM_SETINDENT = (TV_FIRST + 7)
+        TVM_GETIMAGELIST = (TV_FIRST + 8)
+        TVSIL_NORMAL = 0
+        TVSIL_STATE = 2
+        TVM_SETIMAGELIST = (TV_FIRST + 9)
+        TVM_GETNEXTITEM = (TV_FIRST + 10)
+        TVGN_ROOT = 0x0000
+        TVGN_NEXT = 0x0001
+        TVGN_PREVIOUS = 0x0002
+        TVGN_PARENT = 0x0003
+        TVGN_CHILD = 0x0004
+        TVGN_FIRSTVISIBLE = 0x0005
+        TVGN_NEXTVISIBLE = 0x0006
+        TVGN_PREVIOUSVISIBLE = 0x0007
+        TVGN_DROPHILITE = 0x0008
+        TVGN_CARET = 0x0009
+        TVGN_LASTVISIBLE = 0x000A
+        if WIN32_IE >= WIN32_IE_IE60:
+            TVGN_NEXTSELECTED = 0x000B
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
+            TVSI_NOSINGLEEXPAND = 0x8000 # Should not conflict with TVGN flags.
+        TVM_SELECTITEM = (TV_FIRST + 11)
+        TVM_GETITEMA = (TV_FIRST + 12)
+        TVM_GETITEMW = (TV_FIRST + 62)
+        TVM_GETITEM = unicode(TVM_GETITEMW, TVM_GETITEMA)
+        TVM_SETITEMA = (TV_FIRST + 13)
+        TVM_SETITEMW = (TV_FIRST + 63)
+        TVM_SETITEM = unicode(TVM_SETITEMW, TVM_SETITEMA)
+        TVM_EDITLABELA = (TV_FIRST + 14)
+        TVM_EDITLABELW = (TV_FIRST + 65)
+        TVM_EDITLABEL = unicode(TVM_EDITLABELW, TVM_EDITLABELA)
+        TVM_GETEDITCONTROL = (TV_FIRST + 15)
+        TVM_GETVISIBLECOUNT = (TV_FIRST + 16)
+        TVM_HITTEST = (TV_FIRST + 17)
+
+        class TVHITTESTINFO(CStructure):
+            _fields_ = [
+                ('pt', POINT),
+                ('flags', UINT),
+                ('hItem', HTREEITEM)
+            ]
+            pt: POINT
+            flags: int
+            hItem: int
+        
+        LPTVHITTESTINFO = TVHITTESTINFO.PTR()
+        LPTV_HITTESTINFO = LPTVHITTESTINFO
+        TV_HITTESTINFO = TVHITTESTINFO
+
+        TVHT_NOWHERE = 0x0001
+        TVHT_ONITEMICON = 0x0002
+        TVHT_ONITEMLABEL = 0x0004
+        TVHT_ONITEMSTATEICON = 0x0040
+        TVHT_ONITEM = (TVHT_ONITEMICON | TVHT_ONITEMLABEL | TVHT_ONITEMSTATEICON)
+        TVHT_ONITEMINDENT = 0x0008
+        TVHT_ONITEMBUTTON = 0x0010
+        TVHT_ONITEMRIGHT = 0x0020
+        TVHT_ABOVE = 0x0100
+        TVHT_BELOW = 0x0200
+        TVHT_TORIGHT = 0x0400
+        TVHT_TOLEFT = 0x0800
+        TVM_CREATEDRAGIMAGE = (TV_FIRST + 18)
+        TVM_SORTCHILDREN = (TV_FIRST + 19)
+        TVM_ENSUREVISIBLE = (TV_FIRST + 20)
+        TVM_SORTCHILDRENCB = (TV_FIRST + 21)
+        TVM_ENDEDITLABELNOW = (TV_FIRST + 22)
+        TVM_GETISEARCHSTRINGA = (TV_FIRST + 23)
+        TVM_GETISEARCHSTRINGW = (TV_FIRST + 64)
+        TVM_GETISEARCHSTRING = unicode(TVM_GETISEARCHSTRINGW, TVM_GETISEARCHSTRINGA)
+        TVM_SETTOOLTIPS = (TV_FIRST + 24)
+        TVM_GETTOOLTIPS = (TV_FIRST + 25)
+        TVM_SETINSERTMARK = (TV_FIRST + 26)
+        TVM_SETUNICODEFORMAT = CCM_SETUNICODEFORMAT
+        TVM_GETUNICODEFORMAT = CCM_GETUNICODEFORMAT
+        TVM_SETITEMHEIGHT = (TV_FIRST + 27)
+        TVM_GETITEMHEIGHT = (TV_FIRST + 28)
+        TVM_SETBKCOLOR = (TV_FIRST + 29)
+        TVM_SETTEXTCOLOR = (TV_FIRST + 30)
+        TVM_GETBKCOLOR = (TV_FIRST + 31)
+        TVM_GETTEXTCOLOR = (TV_FIRST + 32)
+        TVM_SETSCROLLTIME = (TV_FIRST + 33)
+        TVM_GETSCROLLTIME = (TV_FIRST + 34)
+        TVM_SETINSERTMARKCOLOR = (TV_FIRST + 37)
+        TVM_GETINSERTMARKCOLOR = (TV_FIRST + 38)
+        TVM_SETBORDER = (TV_FIRST + 35)
+        TVSBF_XBORDER = 0x00000001
+        TVSBF_YBORDER = 0x00000002
+        # tvm_?etitemstate only uses mask, state and stateMask.
+        # so unicode or ansi is irrelevant.
+        TVM_GETITEMSTATE = (TV_FIRST + 39)
+        TVM_SETLINECOLOR = (TV_FIRST + 40)
+        TVM_GETLINECOLOR = (TV_FIRST + 41)
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
+            TVM_MAPACCIDTOHTREEITEM = (TV_FIRST + 42)
+            TVM_MAPHTREEITEMTOACCID = (TV_FIRST + 43)
+            TVM_SETEXTENDEDSTYLE = (TV_FIRST + 44)
+            TVM_GETEXTENDEDSTYLE = (TV_FIRST + 45)
+            TVM_SETAUTOSCROLLINFO = (TV_FIRST + 59)
+        TVM_SETHOT = (TV_FIRST + 58)
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+            TVM_GETSELECTEDCOUNT = (TV_FIRST + 70)
+            TVM_SHOWINFOTIP = (TV_FIRST + 71)
+
+            if True:
+                TVGIPR_BUTTON  = 0x0001
+            TVITEMPART = INT
+
+            class TVGETITEMPARTRECTINFO(CStructure):
+                _fields_ = [
+                    ('hti', HTREEITEM),
+                    ('prc', PRECT),
+                    ('partID', TVITEMPART)
+                ]
+                hti: int
+                prc: PRECT
+                partID: TVITEMPART
+
+            TVM_GETITEMPARTRECT = (TV_FIRST + 72)
+        # typedef int(CALLBACK *)(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
+        PFNTVCOMPARE = CALLBACK(INT, LPARAM, LPARAM, LPARAM)
+
+        class TVSORTCB(CStructure):
+            _fields_ = [
+                ('hParent', HTREEITEM),
+                ('lpfnCompare', PFNTVCOMPARE),
+                ('lParam', LPARAM)
+            ]
+            hParent: int
+            lpfnCompare: FARPROC
+            lParam: int
+            
+        LPTVSORTCB = TVSORTCB.PTR()
+        LPTV_SORTCB = LPTVSORTCB
+        TV_SORTCB = TVSORTCB
+
+        class NMTREEVIEWA(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('action', UINT),
+                ('itemOld', TVITEMA),
+                ('itemNew', TVITEMA),
+                ('ptDrag', POINT)
+            ]
+            hdr: NMHDR
+            action: int
+            itemOld: TVITEMA
+            itemNew: TVITEMA
+            ptDrag: POINT
+        LPNMTREEVIEWA = NMTREEVIEWA.PTR()
+
+        class NMTREEVIEWW(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('action', UINT),
+                ('itemOld', TVITEMW),
+                ('itemNew', TVITEMW),
+                ('ptDrag', POINT)
+            ]
+            hdr: NMHDR
+            action: int
+            itemOld: TVITEMW
+            itemNew: TVITEMW
+            ptDrag: POINT
+        LPNMTREEVIEWW = NMTREEVIEWW.PTR()
+
+        NMTREEVIEW = unicode(NMTREEVIEWW, NMTREEVIEWA)
+        LPNMTREEVIEW = unicode(LPNMTREEVIEWW, LPNMTREEVIEWA)
+
+        LPNM_TREEVIEWA = LPNMTREEVIEWA
+        LPNM_TREEVIEWW = LPNMTREEVIEWW
+        NM_TREEVIEWW = NMTREEVIEWW
+        NM_TREEVIEWA = NMTREEVIEWA
+        LPNM_TREEVIEW = LPNMTREEVIEW
+        NM_TREEVIEW = NMTREEVIEW
+        TVN_SELCHANGINGA = (TVN_FIRST-1)
+        TVN_SELCHANGINGW = (TVN_FIRST-50)
+        TVN_SELCHANGEDA = (TVN_FIRST-2)
+        TVN_SELCHANGEDW = (TVN_FIRST-51)
+        TVC_UNKNOWN = 0x0000
+        TVC_BYMOUSE = 0x0001
+        TVC_BYKEYBOARD = 0x0002
+        TVN_GETDISPINFOA = (TVN_FIRST-3)
+        TVN_GETDISPINFOW = (TVN_FIRST-52)
+        TVN_SETDISPINFOA = (TVN_FIRST-4)
+        TVN_SETDISPINFOW = (TVN_FIRST-53)
+        TVIF_DI_SETITEM = 0x1000
+
+        class NMTVDISPINFOA(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('item', TVITEMA)
+            ]
+            hdr: NMHDR
+            item: TVITEMA
+            
+        LPNMTVDISPINFOA = NMTVDISPINFOA.PTR()
+
+        class NMTVDISPINFOW(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('item', TVITEMW)
+            ]
+            hdr: NMHDR
+            item: TVITEMW
+            
+        LPNMTVDISPINFOW = NMTVDISPINFOW.PTR()
+
+        NMTVDISPINFO = unicode(NMTVDISPINFOW, NMTVDISPINFOA)
+        LPNMTVDISPINFO = unicode(LPNMTVDISPINFOW, LPNMTVDISPINFOA)
+        TV_DISPINFOA = NMTVDISPINFOA
+        TV_DISPINFOW = NMTVDISPINFOW
+        TV_DISPINFO = NMTVDISPINFO
+        if WIN32_IE >= WIN32_IE_IE60:
+            class NMTVDISPINFOEXA(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('item', TVITEMEXA)
+                ]
+                hdr: NMHDR
+                item: TVITEMEXA
+            LPNMTVDISPINFOEXA = NMTVDISPINFOEXA.PTR()
+            
+            class NMTVDISPINFOEXW(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('item', TVITEMEXW)
+                ]
+                hdr: NMHDR
+                item: TVITEMEXW
+            LPNMTVDISPINFOEXW = NMTVDISPINFOEXW.PTR()
+
+        NMTVDISPINFOEX = unicode(NMTVDISPINFOEXW, NMTVDISPINFOEXA)
+        LPNMTVDISPINFOEX = unicode(LPNMTVDISPINFOEXW, LPNMTVDISPINFOEXA)
+        TV_DISPINFOEXA = NMTVDISPINFOEXA
+        TV_DISPINFOEXW = NMTVDISPINFOEXW
+        TV_DISPINFOEX = NMTVDISPINFOEX
+        TVN_ITEMEXPANDINGA = (TVN_FIRST-5)
+        TVN_ITEMEXPANDINGW = (TVN_FIRST-54)
+        TVN_ITEMEXPANDEDA = (TVN_FIRST-6)
+        TVN_ITEMEXPANDEDW = (TVN_FIRST-55)
+        TVN_BEGINDRAGA = (TVN_FIRST-7)
+        TVN_BEGINDRAGW = (TVN_FIRST-56)
+        TVN_BEGINRDRAGA = (TVN_FIRST-8)
+        TVN_BEGINRDRAGW = (TVN_FIRST-57)
+        TVN_DELETEITEMA = (TVN_FIRST-9)
+        TVN_DELETEITEMW = (TVN_FIRST-58)
+        TVN_BEGINLABELEDITA = (TVN_FIRST-10)
+        TVN_BEGINLABELEDITW = (TVN_FIRST-59)
+        TVN_ENDLABELEDITA = (TVN_FIRST-11)
+        TVN_ENDLABELEDITW = (TVN_FIRST-60)
+        TVN_KEYDOWN = (TVN_FIRST-12)
+        TVN_GETINFOTIPA = (TVN_FIRST-13)
+        TVN_GETINFOTIPW = (TVN_FIRST-14)
+        TVN_SINGLEEXPAND = (TVN_FIRST-15)
+        TVNRET_DEFAULT = 0
+        TVNRET_SKIPOLD = 1
+        TVNRET_SKIPNEW = 2
+        if WIN32_IE >= WIN32_IE_IE60:
+            TVN_ITEMCHANGINGA = (TVN_FIRST-16)
+            TVN_ITEMCHANGINGW = (TVN_FIRST-17)
+            TVN_ITEMCHANGEDA = (TVN_FIRST-18)
+            TVN_ITEMCHANGEDW = (TVN_FIRST-19)
+            TVN_ASYNCDRAW = (TVN_FIRST-20)
+        
+        class NMTVKEYDOWN(CStructure):
+            _pack_ = 1
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('wVKey', WORD),
+                ('flags', UINT)
+            ]
+            hdr: NMHDR
+            wVKey: int
+            flags: int
+        LPNMTVKEYDOWN = NMTVKEYDOWN.PTR()
+        TV_KEYDOWN = NMTVKEYDOWN
+
+        # pack-end
+        TVN_SELCHANGING = unicode(TVN_SELCHANGINGW, TVN_SELCHANGINGA)
+        TVN_SELCHANGED = unicode(TVN_SELCHANGEDW, TVN_SELCHANGEDA)
+        TVN_GETDISPINFO = unicode(TVN_GETDISPINFOW, TVN_GETDISPINFOA)
+        TVN_SETDISPINFO = unicode(TVN_SETDISPINFOW, TVN_SETDISPINFOA)
+        TVN_ITEMEXPANDING = unicode(TVN_ITEMEXPANDINGW, TVN_ITEMEXPANDINGA)
+        TVN_ITEMEXPANDED = unicode(TVN_ITEMEXPANDEDW, TVN_ITEMEXPANDEDA)
+        TVN_BEGINDRAG = unicode(TVN_BEGINDRAGW, TVN_BEGINDRAGA)
+        TVN_BEGINRDRAG = unicode(TVN_BEGINRDRAGW, TVN_BEGINRDRAGA)
+        TVN_DELETEITEM = unicode(TVN_DELETEITEMW, TVN_DELETEITEMA)
+        TVN_BEGINLABELEDIT = unicode(TVN_BEGINLABELEDITW, TVN_BEGINLABELEDITA)
+        TVN_ENDLABELEDIT = unicode(TVN_ENDLABELEDITW, TVN_ENDLABELEDITA)
+
+        class NMTVCUSTOMDRAW(CStructure):
+            _fields_ = [
+                ('nmcd', NMCUSTOMDRAW),
+                ('clrText', COLORREF),
+                ('clrTextBk', COLORREF),
+                ('iLevel', INT)
+            ]
+            nmcd: NMCUSTOMDRAW
+            clrText: int
+            clrTextBk: int
+            iLevel: int
+        
+        NMTVCUSTOMDRAW_V3_SIZE = CCSIZEOF_STRUCT(NMTVCUSTOMDRAW, 'clrTextBk')
+        LPNMTVCUSTOMDRAW = NMTVCUSTOMDRAW.PTR()
+
+        # for tooltips
+
+        class NMTVGETINFOTIPA(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('pszText', LPSTR),
+                ('cchTextMax', INT),
+                ('hItem', HTREEITEM),
+                ('lParam', LPARAM)
+            ]
+            hdr: NMHDR
+            pszText: LPSTR
+            cchTextMax: int
+            hItem: int
+            lParam: int
+            
+        LPNMTVGETINFOTIPA = NMTVGETINFOTIPA.PTR()
+
+        class NMTVGETINFOTIPW(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('pszText', LPWSTR),
+                ('cchTextMax', INT),
+                ('hItem', HTREEITEM),
+                ('lParam', LPARAM)
+            ]
+            hdr: NMHDR
+            pszText: LPWSTR
+            cchTextMax: int
+            hItem: int
+            lParam: int
+            
+        LPNMTVGETINFOTIPW = NMTVGETINFOTIPW.PTR()
+
+        TVN_GETINFOTIP = unicode(TVN_GETINFOTIPW, TVN_GETINFOTIPA)
+        NMTVGETINFOTIP = unicode(NMTVGETINFOTIPW, NMTVGETINFOTIPA)
+        LPNMTVGETINFOTIP = unicode(LPNMTVGETINFOTIPW, LPNMTVGETINFOTIPA)
+        # treeview's customdraw return meaning don't draw images.  valid on CDRF_NOTIFYITEMPREPAINT
+        TVCDRF_NOIMAGES = 0x00010000
+        if WIN32_IE > WIN32_IE_IE60:
+            class NMTVITEMCHANGE(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('uChanged', UINT),
+                    ('hItem', HTREEITEM),
+                    ('uStateNew', UINT),
+                    ('uStateOld', UINT),
+                    ('lParam', LPARAM)
+                ]
+                hdr: NMHDR
+                uChanged: int
+                hItem: int
+                uStateNew: int
+                uStateOld: int
+                lParam: int
+                
+            class NMTVASYNCDRAW(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('pimldp', IMAGELISTDRAWPARAMS.PTR()),
+                    ('hr', HRESULT),
+                    ('hItem', HTREEITEM),
+                    ('lParam', LPARAM),
+                    ('dwRetFlags', DWORD),
+                    ('iRetImageIndex', INT)
+                ]
+                hdr: NMHDR
+                pimldp: IPointer[IMAGELISTDRAWPARAMS]
+                hr: int
+                hItem: int
+                lParam: int
+                dwRetFlags: int
+                iRetImageIndex: int
+
+        TVN_ITEMCHANGING = unicode(TVN_ITEMCHANGINGW, TVN_ITEMCHANGINGA)
+        TVN_ITEMCHANGED = unicode(TVN_ITEMCHANGEDW, TVN_ITEMCHANGEDA)
+        # _WIN32_IE >= 0x0600
+    # NOTREEVIEW
+    ##########  ComboBoxEx ################
+    if cpreproc.ifndef('NOUSEREXCONTROLS'):
+        WC_COMBOBOXEXW = u"ComboBoxEx32"
+        WC_COMBOBOXEXA = b"ComboBoxEx32"
+        WC_COMBOBOXEX = WC_COMBOBOXEXW
+        CBEIF_TEXT = 0x00000001
+        CBEIF_IMAGE = 0x00000002
+        CBEIF_SELECTEDIMAGE = 0x00000004
+        CBEIF_OVERLAY = 0x00000008
+        CBEIF_INDENT = 0x00000010
+        CBEIF_LPARAM = 0x00000020
+        CBEIF_DI_SETITEM = 0x10000000
+
+        class COMBOBOXEXITEMA(CStructure):
+            _fields_ = [
+                ('mask', UINT),
+                ('iItem', INT_PTR),
+                ('pszText', LPSTR),
+                ('cchTextMax', INT),
+                ('iImage', INT),
+                ('iSelectedImage', INT),
+                ('iOverlay', INT),
+                ('iIndent', INT),
+                ('lParam', LPARAM)
+            ]
+            mask: int
+            iItem: int
+            pszText: LPSTR
+            cchTextMax: int
+            iImage: int
+            iSelectedImage: int
+            iOverlay: int
+            iIndent: int
+            lParam: int
+        
+        PCCOMBOBOXEXITEMA = PCOMBOBOXEXITEMA = COMBOBOXEXITEMA.PTR()
+
+        class COMBOBOXEXITEMW(CStructure):
+            _fields_ = [
+                ('mask', UINT),
+                ('iItem', INT_PTR),
+                ('pszText', LPWSTR),
+                ('cchTextMax', INT),
+                ('iImage', INT),
+                ('iSelectedImage', INT),
+                ('iOverlay', INT),
+                ('iIndent', INT),
+                ('lParam', LPARAM)
+            ]
+            mask: int
+            iItem: int
+            pszText: LPWSTR
+            cchTextMax: int
+            iImage: int
+            iSelectedImage: int
+            iOverlay: int
+            iIndent: int
+            lParam: int
+            
+        PCCOMBOBOXEXITEMW = PCOMBOBOXEXITEMW = COMBOBOXEXITEMW.PTR()
+
+        COMBOBOXEXITEM = unicode(COMBOBOXEXITEMW, COMBOBOXEXITEMA)
+        PCOMBOBOXEXITEM = unicode(PCOMBOBOXEXITEMW, PCOMBOBOXEXITEMA)
+        PCCOMBOBOXEXITEM = unicode(PCCOMBOBOXEXITEMW, PCCOMBOBOXEXITEMA)
+        CBEM_INSERTITEMA = (WM_USER + 1)
+        CBEM_SETIMAGELIST = (WM_USER + 2)
+        CBEM_GETIMAGELIST = (WM_USER + 3)
+        CBEM_GETITEMA = (WM_USER + 4)
+        CBEM_SETITEMA = (WM_USER + 5)
+        CBEM_DELETEITEM = CB_DELETESTRING
+        CBEM_GETCOMBOCONTROL = (WM_USER + 6)
+        CBEM_GETEDITCONTROL = (WM_USER + 7)
+        CBEM_SETEXSTYLE = (WM_USER + 8) # use  SETEXTENDEDSTYLE instead
+        CBEM_SETEXTENDEDSTYLE = (WM_USER + 14) # lparam == new style, wParam(optional) == mask
+        CBEM_GETEXSTYLE = (WM_USER + 9) # use GETEXTENDEDSTYLE instead
+        CBEM_GETEXTENDEDSTYLE = (WM_USER + 9)
+        CBEM_SETUNICODEFORMAT = CCM_SETUNICODEFORMAT
+        CBEM_GETUNICODEFORMAT = CCM_GETUNICODEFORMAT
+        CBEM_HASEDITCHANGED = (WM_USER + 10)
+        CBEM_INSERTITEMW = (WM_USER + 11)
+        CBEM_SETITEMW = (WM_USER + 12)
+        CBEM_GETITEMW = (WM_USER + 13)
+        CBEM_INSERTITEM = unicode(CBEM_INSERTITEMW, CBEM_INSERTITEMA)
+        CBEM_SETITEM = unicode(CBEM_SETITEMW, CBEM_SETITEMA)
+        CBEM_GETITEM = unicode(CBEM_GETITEMW, CBEM_GETITEMA)
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
+            CBEM_SETWINDOWTHEME = CCM_SETWINDOWTHEME
+        CBES_EX_NOEDITIMAGE = 0x00000001
+        CBES_EX_NOEDITIMAGEINDENT = 0x00000002
+        CBES_EX_PATHWORDBREAKPROC = 0x00000004
+        CBES_EX_NOSIZELIMIT = 0x00000008
+        CBES_EX_CASESENSITIVE = 0x00000010
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+            CBES_EX_TEXTENDELLIPSIS = 0x00000020
+
+        class NMCOMBOBOXEXA(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('ceItem', COMBOBOXEXITEMA)
+            ]
+            hdr: NMHDR
+            ceItem: COMBOBOXEXITEMA
+            
+        PNMCOMBOBOXEXA = NMCOMBOBOXEXA.PTR()
+
+        class NMCOMBOBOXEXW(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('ceItem', COMBOBOXEXITEMW)
+            ]
+            hdr: NMHDR
+            ceItem: COMBOBOXEXITEMW
+            
+        PNMCOMBOBOXEXW = NMCOMBOBOXEXW.PTR()
+
+        NMCOMBOBOXEX = unicode(NMCOMBOBOXEXW, NMCOMBOBOXEXA)
+        PNMCOMBOBOXEX = unicode(PNMCOMBOBOXEXW, PNMCOMBOBOXEXA)
+        CBEN_GETDISPINFOA = (CBEN_FIRST - 0)
+        CBEN_INSERTITEM = (CBEN_FIRST - 1)
+        CBEN_DELETEITEM = (CBEN_FIRST - 2)
+        CBEN_BEGINEDIT = (CBEN_FIRST - 4)
+        CBEN_ENDEDITA = (CBEN_FIRST - 5)
+        CBEN_ENDEDITW = (CBEN_FIRST - 6)
+        CBEN_GETDISPINFOW = (CBEN_FIRST - 7)
+        CBEN_GETDISPINFO = unicode(CBEN_GETDISPINFOW, CBEN_GETDISPINFOA)
+        CBEN_DRAGBEGINA = (CBEN_FIRST - 8)
+        CBEN_DRAGBEGINW = (CBEN_FIRST - 9)
+        CBEN_DRAGBEGIN = unicode(CBEN_DRAGBEGINW, CBEN_DRAGBEGINA)
+        # lParam specifies why the endedit is happening
+        CBEN_ENDEDIT = unicode(CBEN_ENDEDITW, CBEN_ENDEDITA)
+        CBENF_KILLFOCUS = 1
+        CBENF_RETURN = 2
+        CBENF_ESCAPE = 3
+        CBENF_DROPDOWN = 4
+        CBEMAXSTRLEN = 260
+        # CBEN_DRAGBEGIN sends this information ...
+
+        class NMCBEDRAGBEGINW(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('iItemid', INT),
+                ('szText', WCHAR * CBEMAXSTRLEN)
+            ]
+            hdr: NMHDR
+            iItemid: int
+            szText: IWideCharArray
+            
+        LPNMCBEDRAGBEGINW = PNMCBEDRAGBEGINW = NMCBEDRAGBEGINW.PTR()
+
+        class NMCBEDRAGBEGINA(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('iItemid', INT),
+                ('szText', CHAR * CBEMAXSTRLEN)
+            ]
+            hdr: NMHDR
+            iItemid: int
+            szText: ICharArray
+            
+        LPNMCBEDRAGBEGINA = PNMCBEDRAGBEGINA = NMCBEDRAGBEGINA.PTR()
+
+        NMCBEDRAGBEGIN = unicode(NMCBEDRAGBEGINW, NMCBEDRAGBEGINA)
+        LPNMCBEDRAGBEGIN = unicode(LPNMCBEDRAGBEGINW, LPNMCBEDRAGBEGINA)
+        PNMCBEDRAGBEGIN = unicode(PNMCBEDRAGBEGINW, PNMCBEDRAGBEGINA)
+        # CBEN_ENDEDIT sends this information...
+        # fChanged if the user actually did anything
+        # iNewSelection gives what would be the new selection unless the notify is failed
+        #                      iNewSelection may be CB_ERR if there's no match
+
+        class NMCBEENDEDITW(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('fChanged', BOOL),
+                ('iNewSelection', INT),
+                ('szText', WCHAR * CBEMAXSTRLEN),
+                ('iWhy', INT)
+            ]
+            hdr: NMHDR
+            fChanged: int
+            iNewSelection: int
+            szText: IWideCharArray
+            iWhy: int
+        
+        LPNMCBEENDEDITW = PNMCBEENDEDITW = NMCBEENDEDITW.PTR()
+
+        class NMCBEENDEDITA(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('fChanged', BOOL),
+                ('iNewSelection', INT),
+                ('szText', CHAR * CBEMAXSTRLEN),
+                ('iWhy', INT)
+            ]
+            hdr: NMHDR
+            fChanged: int
+            iNewSelection: int
+            szText: ICharArray
+            iWhy: int
+        
+        LPNMCBEENDEDITA = PNMCBEENDEDITA = NMCBEENDEDITA.PTR()
+
+        NMCBEENDEDIT = unicode(NMCBEENDEDITW, NMCBEENDEDITA)
+        LPNMCBEENDEDIT = unicode(LPNMCBEENDEDITW, LPNMCBEENDEDITA)
+        PNMCBEENDEDIT = unicode(PNMCBEENDEDITW, PNMCBEENDEDITA)
+    # NOUSEREXCONTROLS
+    #====== TAB CONTROL ==========================================================
+    if cpreproc.ifndef("NOTABCONTROL"):
+        WC_TABCONTROLA = b"SysTabControl32"
+        WC_TABCONTROLW = u"SysTabControl32"
+        WC_TABCONTROL = "SysTabControl"
+        # begin_r_commctrl
+        TCS_SCROLLOPPOSITE = 0x0001 # assumes multiline tab
+        TCS_BOTTOM = 0x0002
+        TCS_RIGHT = 0x0002
+        TCS_MULTISELECT = 0x0004 # allow multi-select in button mode
+        TCS_FLATBUTTONS = 0x0008
+        TCS_FORCEICONLEFT = 0x0010
+        TCS_FORCELABELLEFT = 0x0020
+        TCS_HOTTRACK = 0x0040
+        TCS_VERTICAL = 0x0080
+        TCS_TABS = 0x0000
+        TCS_BUTTONS = 0x0100
+        TCS_SINGLELINE = 0x0000
+        TCS_MULTILINE = 0x0200
+        TCS_RIGHTJUSTIFY = 0x0000
+        TCS_FIXEDWIDTH = 0x0400
+        TCS_RAGGEDRIGHT = 0x0800
+        TCS_FOCUSONBUTTONDOWN = 0x1000
+        TCS_OWNERDRAWFIXED = 0x2000
+        TCS_TOOLTIPS = 0x4000
+        TCS_FOCUSNEVER = 0x8000
+        # end_r_commctrl
+        # EX styles for use with TCM_SETEXTENDEDSTYLE
+        TCS_EX_FLATSEPARATORS = 0x00000001
+        TCS_EX_REGISTERDROP = 0x00000002
+        TCM_GETIMAGELIST = (TCM_FIRST + 2)
+        TCM_SETIMAGELIST = (TCM_FIRST + 3)
+        TCM_GETITEMCOUNT = (TCM_FIRST + 4)
+        TCIF_TEXT = 0x0001
+        TCIF_IMAGE = 0x0002
+        TCIF_RTLREADING = 0x0004
+        TCIF_PARAM = 0x0008
+        TCIF_STATE = 0x0010
+        TCIS_BUTTONPRESSED = 0x0001
+        TCIS_HIGHLIGHTED = 0x0002
+
+        class TCITEMHEADERA(CStructure):
+            _fields_ = [
+                ('mask', UINT),
+                ('lpReserved1', UINT),
+                ('lpReserved2', UINT),
+                ('pszText', LPSTR),
+                ('cchTextMax', INT),
+                ('iImage', INT)
+            ]
+            
+            mask: int
+            lpReserved1: int
+            lpReserved2: int
+            pszText: LPSTR
+            cchTextMax: int
+            iImage: int
+            
+        LPTCITEMHEADERA = TCITEMHEADERA.PTR()
+
+        class TCITEMHEADERW(CStructure):
+            _fields_ = [
+                ('mask', UINT),
+                ('lpReserved1', UINT),
+                ('lpReserved2', UINT),
+                ('pszText', LPWSTR),
+                ('cchTextMax', INT),
+                ('iImage', INT)
+            ]
+            
+            mask: int
+            lpReserved1: int
+            lpReserved2: int
+            pszText: LPWSTR
+            cchTextMax: int
+            iImage: int
+            
+        LPTCITEMHEADERW = TCITEMHEADERW.PTR()
+
+        TCITEMHEADER = unicode(TCITEMHEADERW, TCITEMHEADERA)
+        LPTCITEMHEADER = unicode(LPTCITEMHEADERW, LPTCITEMHEADERA)
+        TC_ITEMHEADERA = TCITEMHEADERA
+        TC_ITEMHEADERW = TCITEMHEADERW
+        TC_ITEMHEADER = TCITEMHEADER
+
+        class TCITEMA(CStructure):
+            _fields_ = [
+                ('mask', UINT),
+                ('dwState', DWORD),
+                ('dwStateMask', DWORD),
+                ('pszText', LPSTR),
+                ('cchTextMax', INT),
+                ('iImage', INT)
+            ]
+            
+            mask: int
+            dwState: int
+            dwStateMask: int
+            pszText: LPSTR
+            cchTextMax: int
+            iImage: int
+
+        LPTCITEMA = TCITEMA.PTR()
+
+        class TCITEMW(CStructure):
+            _fields_ = [
+                ('mask', UINT),
+                ('dwState', DWORD),
+                ('dwStateMask', DWORD),
+                ('pszText', LPWSTR),
+                ('cchTextMax', INT),
+                ('iImage', INT)
+            ]
+            
+            mask: int
+            dwState: int
+            dwStateMask: int
+            pszText: LPWSTR
+            cchTextMax: int
+            iImage: int
+            
+        LPTCITEMW = TCITEMW.PTR()
+
+        TCITEM = unicode(TCITEMW, TCITEMA)
+        LPTCITEM = unicode(LPTCITEMW, LPTCITEMA)
+        TCM_GETITEMA = (TCM_FIRST + 5)
+        TCM_GETITEMW = (TCM_FIRST + 60)
+        TCM_GETITEM = unicode(TCM_GETITEMW, TCM_GETITEMA)
+
+        TC_ITEMA = TCITEMA
+        TC_ITEMW = TCITEMW
+        TC_ITEM = TCITEM
+        TCM_SETITEMA = (TCM_FIRST + 6)
+        TCM_SETITEMW = (TCM_FIRST + 61)
+        TCM_SETITEM = unicode(TCM_SETITEMW, TCM_SETITEMA)
+        TCM_INSERTITEMA = (TCM_FIRST + 7)
+        TCM_INSERTITEMW = (TCM_FIRST + 62)
+        TCM_INSERTITEM = unicode(TCM_INSERTITEMW, TCM_INSERTITEMA)
+        TCM_DELETEITEM = (TCM_FIRST + 8)
+        TCM_DELETEALLITEMS = (TCM_FIRST + 9)
+        TCM_GETITEMRECT = (TCM_FIRST + 10)
+        TCM_GETCURSEL = (TCM_FIRST + 11)
+        TCM_SETCURSEL = (TCM_FIRST + 12)
+        TCHT_NOWHERE = 0x0001
+        TCHT_ONITEMICON = 0x0002
+        TCHT_ONITEMLABEL = 0x0004
+        TCHT_ONITEM = (TCHT_ONITEMICON | TCHT_ONITEMLABEL)
+
+        class TCHITTESTINFO(CStructure):
+            _fields_ = [
+                ('pt', POINT),
+                ('flags', UINT)
+            ]
+            
+            pt: POINT
+            flags: int
+        
+        LPTC_HITTESTINFO = LPTCHITTESTINFO = TCHITTESTINFO.PTR()
+        TC_HITTESTINFO = TCHITTESTINFO
+
+        TCM_HITTEST = (TCM_FIRST + 13)
+        TCM_SETITEMEXTRA = (TCM_FIRST + 14)
+        TCM_ADJUSTRECT = (TCM_FIRST + 40)
+        TCM_SETITEMSIZE = (TCM_FIRST + 41)
+        TCM_REMOVEIMAGE = (TCM_FIRST + 42)
+        TCM_SETPADDING = (TCM_FIRST + 43)
+        TCM_GETROWCOUNT = (TCM_FIRST + 44)
+        TCM_GETTOOLTIPS = (TCM_FIRST + 45)
+        TCM_SETTOOLTIPS = (TCM_FIRST + 46)
+        TCM_GETCURFOCUS = (TCM_FIRST + 47)
+        TCM_SETCURFOCUS = (TCM_FIRST + 48)
+        TCM_SETMINTABWIDTH = (TCM_FIRST + 49)
+        TCM_DESELECTALL = (TCM_FIRST + 50)
+        TCM_HIGHLIGHTITEM = (TCM_FIRST + 51)
+        TCM_SETEXTENDEDSTYLE = (TCM_FIRST + 52) # optional wParam == mask
+        TCM_GETEXTENDEDSTYLE = (TCM_FIRST + 53)
+        TCM_SETUNICODEFORMAT = CCM_SETUNICODEFORMAT
+        TCM_GETUNICODEFORMAT = CCM_GETUNICODEFORMAT
+        TCN_KEYDOWN = (TCN_FIRST - 0)
+
+        class NMTCKEYDOWN(CStructure):
+            _pack_ = 1
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('wVKey', WORD),
+                ('flags', UINT)
+            ]
+            
+            hdr: NMHDR
+            wVKey: int
+            flags: int
+        TC_KEYDOWN = NMTCKEYDOWN
+
+        TCN_SELCHANGE = (TCN_FIRST - 1)
+        TCN_SELCHANGING = (TCN_FIRST - 2)
+        TCN_GETOBJECT = (TCN_FIRST - 3)
+        TCN_FOCUSCHANGE = (TCN_FIRST - 4)
+    # NOTABCONTROL
+    if cpreproc.ifndef("NOANIMATE"):
+        ANIMATE_CLASSW = u"SysAnimate32"
+        ANIMATE_CLASSA = b"SysAnimate32"
+        ANIMATE_CLASS = "SysAnimate32"
+        # begin_r_commctrl
+        ACS_CENTER = 0x0001
+        ACS_TRANSPARENT = 0x0002
+        ACS_AUTOPLAY = 0x0004
+        ACS_TIMER = 0x0008 # don't use threads... use timers
+        # end_r_commctrl
+        ACM_OPENA = (WM_USER+100)
+        ACM_OPENW = (WM_USER+103)
+        ACM_OPEN = unicode(ACM_OPENW, ACM_OPENA)
+        ACM_PLAY = (WM_USER+101)
+        ACM_STOP = (WM_USER+102)
+        ACM_ISPLAYING = (WM_USER+104)
+        ACN_START = 1
+        ACN_STOP = 2
+    # NOANIMATE
+    #====== MONTHCAL CONTROL ======================================================
+    if cpreproc.ifndef("NOMONTHCAL"):
+        MONTHCAL_CLASSW = u"SysMonthCal32"
+        MONTHCAL_CLASSA = b"SysMonthCal32"
+        MONTHCAL_CLASS = MONTHCAL_CLASSW
+        # bit-packed array of "bold" info for a month
+        # if a bit is on, that day is drawn bold
+        MONTHDAYSTATE = DWORD
+        LPMONTHDAYSTATE = PDWORD
+        MCM_FIRST = 0x1000
+        # BOOL MonthCal_GetCurSel(HWND hmc, LPSYSTEMTIME pst)
+        #   returns FALSE if MCS_MULTISELECT
+        #   returns TRUE and sets *pst to the currently selected date otherwise
+        MCM_GETCURSEL = (MCM_FIRST + 1)
+        # BOOL MonthCal_SetCurSel(HWND hmc, LPSYSTEMTIME pst)
+        #   returns FALSE if MCS_MULTISELECT
+        #   returns TURE and sets the currently selected date to *pst otherwise
+        MCM_SETCURSEL = (MCM_FIRST + 2)
+        # DWORD MonthCal_GetMaxSelCount(HWND hmc)
+        #   returns the maximum number of selectable days allowed
+        MCM_GETMAXSELCOUNT = (MCM_FIRST + 3)
+        # BOOL MonthCal_SetMaxSelCount(HWND hmc, UINT n)
+        #   sets the max number days that can be selected iff MCS_MULTISELECT
+        MCM_SETMAXSELCOUNT = (MCM_FIRST + 4)
+        # BOOL MonthCal_GetSelRange(HWND hmc, LPSYSTEMTIME rgst)
+        #   sets rgst[0] to the first day of the selection range
+        #   sets rgst[1] to the last day of the selection range
+        MCM_GETSELRANGE = (MCM_FIRST + 5)
+        # BOOL MonthCal_SetSelRange(HWND hmc, LPSYSTEMTIME rgst)
+        #   selects the range of days from rgst[0] to rgst[1]
+        MCM_SETSELRANGE = (MCM_FIRST + 6)
+        # DWORD MonthCal_GetMonthRange(HWND hmc, DWORD gmr, LPSYSTEMTIME rgst)
+        #   if rgst specified, sets rgst[0] to the starting date and
+        #      and rgst[1] to the ending date of the the selectable(non-grayed)
+        #      days if GMR_VISIBLE or all the displayed days(including grayed)
+        #      if GMR_DAYSTATE.
+        #   returns the number of months spanned by the above range.
+        MCM_GETMONTHRANGE = (MCM_FIRST + 7)
+        # BOOL MonthCal_SetDayState(HWND hmc, int cbds, DAYSTATE *rgds)
+        #   cbds is the count of DAYSTATE items in rgds and it must be equal
+        #   to the value returned from MonthCal_GetMonthRange(hmc, GMR_DAYSTATE, NULL)
+        #   This sets the DAYSTATE bits for each month(grayed and non-grayed
+        #   days) displayed in the calendar. The first bit in a month's DAYSTATE
+        #   corresponts to bolding day 1, the second bit affects day 2, etc.
+        MCM_SETDAYSTATE = (MCM_FIRST + 8)
+        # BOOL MonthCal_GetMinReqRect(HWND hmc, LPRECT prc)
+        #   sets *prc the minimal size needed to display one month
+        #   To display two months, undo the AdjustWindowRect calculation already done to
+        #   this rect, double the width, and redo the AdjustWindowRect calculation --
+        #   the monthcal control will display two calendars in this window(if you also
+        #   double the vertical size, you will get 4 calendars)
+        #   NOTE: if you want to gurantee that the "Today" string is not clipped,
+        #   get the MCM_GETMAXTODAYWIDTH and use the max of that width and this width
+        MCM_GETMINREQRECT = (MCM_FIRST + 9)
+        # set colors to draw control with -- see MCSC_ bits below
+        MCM_SETCOLOR = (MCM_FIRST + 10)
+        MCM_GETCOLOR = (MCM_FIRST + 11)
+        MCSC_BACKGROUND = 0 # the background color(between months)
+        MCSC_TEXT = 1 # the dates
+        MCSC_TITLEBK = 2 # background of the title
+        MCSC_TITLETEXT = 3
+        MCSC_MONTHBK = 4 # background within the month cal
+        MCSC_TRAILINGTEXT = 5 # the text color of header & trailing days
+        # set what day is "today"   send NULL to revert back to real date
+        MCM_SETTODAY = (MCM_FIRST + 12)
+        # get what day is "today"
+        # returns BOOL for success/failure
+        MCM_GETTODAY = (MCM_FIRST + 13)
+        # determine what pinfo->pt is over
+        MCM_HITTEST = (MCM_FIRST + 14)
+
+        class MCHITTESTINFO(CStructure):
+            fields = [
+                ('cbSize', UINT),
+                ('pt', POINT),
+                ('uHit', UINT),
+                ('st', SYSTEMTIME)
+            ]
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                fields.extend([
+                    ('rc', RECT),
+                    ('iOffset', INT),
+                    ('iRow', INT),
+                    ('iCol', INT)
+                ])
+            cbSize: int
+            pt: POINT
+            uHit: int
+            st: SYSTEMTIME
+            rc: RECT
+            iOffset: int
+            iRow: int
+            iCol: int
+        
+        declare_fields(MCHITTESTINFO)
+        
+        PMCHITTESTINFO = MCHITTESTINFO.PTR()
+        MCHITTESTINFO_V1_SIZE = CCSIZEOF_STRUCT(MCHITTESTINFO, 'st')
+        
+        MCHT_TITLE = 0x00010000
+        MCHT_CALENDAR = 0x00020000
+        MCHT_TODAYLINK = 0x00030000
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+            MCHT_CALENDARCONTROL = 0x00100000
+        MCHT_NEXT = 0x01000000 # these indicate that hitting
+        MCHT_PREV = 0x02000000 # here will go to the next/prev month
+        MCHT_NOWHERE = 0x00000000
+        MCHT_TITLEBK = (MCHT_TITLE)
+        MCHT_TITLEMONTH = (MCHT_TITLE | 0x0001)
+        MCHT_TITLEYEAR = (MCHT_TITLE | 0x0002)
+        MCHT_TITLEBTNNEXT = (MCHT_TITLE | MCHT_NEXT | 0x0003)
+        MCHT_TITLEBTNPREV = (MCHT_TITLE | MCHT_PREV | 0x0003)
+        MCHT_CALENDARBK = (MCHT_CALENDAR)
+        MCHT_CALENDARDATE = (MCHT_CALENDAR | 0x0001)
+        MCHT_CALENDARDATENEXT = (MCHT_CALENDARDATE | MCHT_NEXT)
+        MCHT_CALENDARDATEPREV = (MCHT_CALENDARDATE | MCHT_PREV)
+        MCHT_CALENDARDAY = (MCHT_CALENDAR | 0x0002)
+        MCHT_CALENDARWEEKNUM = (MCHT_CALENDAR | 0x0003)
+        MCHT_CALENDARDATEMIN = (MCHT_CALENDAR | 0x0004)
+        MCHT_CALENDARDATEMAX = (MCHT_CALENDAR | 0x0005)
+        # set first day of week to iDay:
+        # 0 for Monday, 1 for Tuesday, ..., 6 for Sunday
+        # -1 for means use locale info
+        MCM_SETFIRSTDAYOFWEEK = (MCM_FIRST + 15)
+        # DWORD result...  low word has the day.  high word is bool if this is app set
+        # or not(FALSE == using locale info)
+        MCM_GETFIRSTDAYOFWEEK = (MCM_FIRST + 16)
+        # DWORD MonthCal_GetRange(HWND hmc, LPSYSTEMTIME rgst)
+        #   modifies rgst[0] to be the minimum ALLOWABLE systemtime(or 0 if no minimum)
+        #   modifies rgst[1] to be the maximum ALLOWABLE systemtime(or 0 if no maximum)
+        #   returns GDTR_MIN|GDTR_MAX if there is a minimum|maximum limit
+        MCM_GETRANGE = (MCM_FIRST + 17)
+        # BOOL MonthCal_SetRange(HWND hmc, DWORD gdtr, LPSYSTEMTIME rgst)
+        #   if GDTR_MIN, sets the minimum ALLOWABLE systemtime to rgst[0], otherwise removes minimum
+        #   if GDTR_MAX, sets the maximum ALLOWABLE systemtime to rgst[1], otherwise removes maximum
+        #   returns TRUE on success, FALSE on error(such as invalid parameters)
+        MCM_SETRANGE = (MCM_FIRST + 18)
+        # int MonthCal_GetMonthDelta(HWND hmc)
+        #   returns the number of months one click on a next/prev button moves by
+        MCM_GETMONTHDELTA = (MCM_FIRST + 19)
+        # int MonthCal_SetMonthDelta(HWND hmc, int n)
+        #   sets the month delta to n. n==0 reverts to moving by a page of months
+        #   returns the previous value of n.
+        MCM_SETMONTHDELTA = (MCM_FIRST + 20)
+        # DWORD MonthCal_GetMaxTodayWidth(HWND hmc, LPSIZE psz)
+        #   sets *psz to the maximum width/height of the "Today" string displayed
+        #   at the bottom of the calendar(as long as MCS_NOTODAY is not specified)
+        MCM_GETMAXTODAYWIDTH = (MCM_FIRST + 21)
+        MCM_SETUNICODEFORMAT = CCM_SETUNICODEFORMAT
+        MCM_GETUNICODEFORMAT = CCM_GETUNICODEFORMAT
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+            # View
+            MCMV_MONTH = 0
+            MCMV_YEAR = 1
+            MCMV_DECADE = 2
+            MCMV_CENTURY = 3
+            MCMV_MAX = MCMV_CENTURY
+            MCM_GETCURRENTVIEW = (MCM_FIRST + 22)
+            MCM_GETCALENDARCOUNT = (MCM_FIRST + 23)
+            # Part
+            MCGIP_CALENDARCONTROL = 0
+            MCGIP_NEXT = 1
+            MCGIP_PREV = 2
+            MCGIP_FOOTER = 3
+            MCGIP_CALENDAR = 4
+            MCGIP_CALENDARHEADER = 5
+            MCGIP_CALENDARBODY = 6
+            MCGIP_CALENDARROW = 7
+            MCGIP_CALENDARCELL = 8
+            MCGIF_DATE = 0x00000001
+            MCGIF_RECT = 0x00000002
+            MCGIF_NAME = 0x00000004
+            # Note: iRow of -1 refers to the row header and iCol of -1 refers to the col header.
+
+            class MCGRIDINFO(CStructure):
+                _fields_ = [
+                    ('cbSize', UINT),
+                    ('dwPart', DWORD),
+                    ('dwFlags', DWORD),
+                    ('iCalendar', INT),
+                    ('iRow', INT),
+                    ('iCol', INT),
+                    ('bSelected', BOOL),
+                    ('stStart', SYSTEMTIME),
+                    ('stEnd', SYSTEMTIME),
+                    ('rc', RECT),
+                    ('pszName', LPWSTR),
+                    ('cchName', SIZE_T)
+                ]
+                cbSize: int
+                dwPart: int
+                dwFlags: int
+                iCalendar: int
+                iRow: int
+                iCol: int
+                bSelected: int
+                stStart: SYSTEMTIME
+                stEnd: SYSTEMTIME
+                rc: RECT
+                pszName: LPWSTR
+                cchName: int
+            PMCGRIDINFO = PTR(MCGRIDINFO)
+
+            MCM_GETCALENDARGRIDINFO = (MCM_FIRST + 24)
+            MCM_GETCALID = (MCM_FIRST + 27)
+            MCM_SETCALID = (MCM_FIRST + 28)
+            # Returns the min rect that will fit the max number of calendars for the passed in rect.
+            MCM_SIZERECTTOMIN = (MCM_FIRST + 29)
+            MCM_SETCALENDARBORDER = (MCM_FIRST + 30)
+            MCM_GETCALENDARBORDER = (MCM_FIRST + 31)
+            MCM_SETCURRENTVIEW = (MCM_FIRST + 32)
+        # MCN_SELCHANGE is sent whenever the currently displayed date changes
+        # via month change, year change, keyboard navigation, prev/next button
+        #
+
+        class NMSELCHANGE(CStructure):
+            _fields_ = [
+                ('nmhdr', NMHDR),
+                ('stSelStart', SYSTEMTIME),
+                ('stSelEnd', SYSTEMTIME)
+            ]
+            nmhdr: NMHDR
+            stSelStart: SYSTEMTIME
+            stSelEnd: SYSTEMTIME
+        LPNMSELCHANGE = NMSELCHANGE.PTR()
+
+        MCN_SELCHANGE = (MCN_FIRST - 3) # -749
+        # MCN_GETDAYSTATE is sent for MCS_DAYSTATE controls whenever new daystate
+        # information is needed(month or year scroll) to draw bolding information.
+        # The app must fill in cDayState months worth of information starting from
+        # stStart date. The app may fill in the array at prgDayState or change
+        # prgDayState to point to a different array out of which the information
+        # will be copied.(similar to tooltips)
+        #
+
+        class NMDAYSTATE(CStructure):
+            _fields_ = [
+                ('nmhdr', NMHDR),
+                ('stStart', SYSTEMTIME),
+                ('cDayState', INT),
+                ('prgDayState', LPMONTHDAYSTATE)
+            ]
+            nmhdr: NMHDR
+            stStart: SYSTEMTIME
+            cDayState: int
+            prgDayState: LPMONTHDAYSTATE
+        LPNMDAYSTATE = NMDAYSTATE.PTR()
+
+        MCN_GETDAYSTATE = (MCN_FIRST - 1) # -747
+        # MCN_SELECT is sent whenever a selection has occured(via mouse or keyboard)
+        #
+        # typedef NMSELCHANGE NMSELECT, *LPNMSELECT;
+        MCN_SELECT = (MCN_FIRST) # -746
+
+        class NMVIEWCHANGE(CStructure):
+            _fields_ = [
+                ('nmhdr', NMHDR),
+                ('dwOldView', DWORD),
+                ('dwNewView', DWORD)
+            ]
+            nmhdr: NMHDR
+            dwOldView: int
+            dwNewView: int
+        LPNMVIEWCHANGE = NMVIEWCHANGE.PTR()
+
+        MCN_VIEWCHANGE = (MCN_FIRST - 4) # -750
+        # begin_r_commctrl
+        MCS_DAYSTATE = 0x0001
+        MCS_MULTISELECT = 0x0002
+        MCS_WEEKNUMBERS = 0x0004
+        MCS_NOTODAYCIRCLE = 0x0008
+        MCS_NOTODAY = 0x0010
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+            MCS_NOTRAILINGDATES = 0x0040
+            MCS_SHORTDAYSOFWEEK = 0x0080
+            MCS_NOSELCHANGEONNAV = 0x0100
+        # end_r_commctrl
+        GMR_VISIBLE = 0 # visible portion of display
+        GMR_DAYSTATE = 1 # above plus the grayed out parts of
+        # partially displayed months
+    # NOMONTHCAL
+    #====== DATETIMEPICK CONTROL ==================================================
+    if cpreproc.ifndef("NODATETIMEPICK"):
+        DATETIMEPICK_CLASSW = u"SysDateTimePick32"
+        DATETIMEPICK_CLASSA = b"SysDateTimePick32"
+        DATETIMEPICK_CLASS = DATETIMEPICK_CLASSW
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+            """
+
+            typedef struct tagDATETIMEPICKERINFO
+            {
+            DWORD cbSize;
+
+            RECT rcCheck;
+            DWORD stateCheck;
+
+            RECT rcButton;
+            DWORD stateButton;
+
+            HWND hwndEdit;
+            HWND hwndUD;
+            HWND hwndDropDown;
+            } DATETIMEPICKERINFO, *LPDATETIMEPICKERINFO;
+
+            """
+
+        #(_WINVER >= WIN32_WINNT_VISTA)
+        DTM_FIRST = 0x1000
+        # DWORD DateTimePick_GetSystemtime(HWND hdp, LPSYSTEMTIME pst)
+        #   returns GDT_NONE if "none" is selected(DTS_SHOWNONE only)
+        #   returns GDT_VALID and modifies *pst to be the currently selected value
+        DTM_GETSYSTEMTIME = (DTM_FIRST + 1)
+        # BOOL DateTime_SetSystemtime(HWND hdp, DWORD gd, LPSYSTEMTIME pst)
+        #   if gd==GDT_NONE, sets datetimepick to None(DTS_SHOWNONE only)
+        #   if gd==GDT_VALID, sets datetimepick to *pst
+        #   returns TRUE on success, FALSE on error(such as bad params)
+        DTM_SETSYSTEMTIME = (DTM_FIRST + 2)
+        # DWORD DateTime_GetRange(HWND hdp, LPSYSTEMTIME rgst)
+        #   modifies rgst[0] to be the minimum ALLOWABLE systemtime(or 0 if no minimum)
+        #   modifies rgst[1] to be the maximum ALLOWABLE systemtime(or 0 if no maximum)
+        #   returns GDTR_MIN|GDTR_MAX if there is a minimum|maximum limit
+        DTM_GETRANGE = (DTM_FIRST + 3)
+        # BOOL DateTime_SetRange(HWND hdp, DWORD gdtr, LPSYSTEMTIME rgst)
+        #   if GDTR_MIN, sets the minimum ALLOWABLE systemtime to rgst[0], otherwise removes minimum
+        #   if GDTR_MAX, sets the maximum ALLOWABLE systemtime to rgst[1], otherwise removes maximum
+        #   returns TRUE on success, FALSE on error(such as invalid parameters)
+        DTM_SETRANGE = (DTM_FIRST + 4)
+        # BOOL DateTime_SetFormat(HWND hdp, LPCTSTR sz)
+        #   sets the display formatting string to sz(see GetDateFormat and GetTimeFormat for valid formatting chars)
+        #   NOTE: 'X' is a valid formatting character which indicates that the application
+        #   will determine how to display information. Such apps must support DTN_WMKEYDOWN,
+        #   DTN_FORMAT, and DTN_FORMATQUERY.
+        DTM_SETFORMATA = (DTM_FIRST + 5)
+        DTM_SETFORMATW = (DTM_FIRST + 50)
+        DTM_SETFORMAT = unicode(DTM_SETFORMATW, DTM_SETFORMATA)
+        DTM_SETMCCOLOR = (DTM_FIRST + 6)
+        DTM_GETMCCOLOR = (DTM_FIRST + 7)
+    # HWND DateTime_GetMonthCal(HWND hdp)
+    #   returns the HWND of the MonthCal popup window. Only valid
+    # between DTN_DROPDOWN and DTN_CLOSEUP notifications.
+    DTM_GETMONTHCAL = (DTM_FIRST + 8)
+    DTM_SETMCFONT = (DTM_FIRST + 9)
+    DTM_GETMCFONT = (DTM_FIRST + 10)
+    if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+        DTM_SETMCSTYLE = (DTM_FIRST + 11)
+        DTM_GETMCSTYLE = (DTM_FIRST + 12)
+        DTM_CLOSEMONTHCAL = (DTM_FIRST + 13)
+        # DateTime_GetDateTimePickerInfo(HWND hdp, DATETIMEPICKERINFO* pdtpi)
+        # Retrieves information about the selected date time picker.
+        DTM_GETDATETIMEPICKERINFO = (DTM_FIRST + 14)
+        DTM_GETIDEALSIZE = (DTM_FIRST + 15)
+    #(_WINVER >= WIN32_WINNT_VISTA)
+    # begin_r_commctrl
+    DTS_UPDOWN = 0x0001 # use UPDOWN instead of MONTHCAL
+    DTS_SHOWNONE = 0x0002 # allow a NONE selection
+    DTS_SHORTDATEFORMAT = 0x0000 # use the short date format(app must forward WM_WININICHANGE messages)
+    DTS_LONGDATEFORMAT = 0x0004 # use the long date format(app must forward WM_WININICHANGE messages)
+    DTS_SHORTDATECENTURYFORMAT = 0x000C # short date format with century(app must forward WM_WININICHANGE messages)
+    DTS_TIMEFORMAT = 0x0009 # use the time format(app must forward WM_WININICHANGE messages)
+    DTS_APPCANPARSE = 0x0010 # allow user entered strings(app MUST respond to DTN_USERSTRING)
+    DTS_RIGHTALIGN = 0x0020 # right-align popup instead of left-align it
+    # end_r_commctrl
+    DTN_DATETIMECHANGE = (DTN_FIRST2 - 6) # the systemtime has changed, -759
+
+    class NMDATETIMECHANGE(CStructure):
+        _fields_ = [
+            ('nmhdr', NMHDR),
+            ('dwFlags', DWORD),
+            ('st', SYSTEMTIME)
+        ]
+        nmhdr: NMHDR
+        dwFlags: int
+        st: SYSTEMTIME
+    LPNMDATETIMECHANGE = PTR(NMDATETIMECHANGE)
+
+    DTN_USERSTRINGA = (DTN_FIRST2 - 5) # the user has entered a string, -758
+    DTN_USERSTRINGW = (DTN_FIRST - 5) # -745
+
+    class NMDATETIMESTRINGA(CStructure):
+        _fields_ = [
+            ('nmhdr', NMHDR),
+            ('pszUserString', LPCSTR),
+            ('st', SYSTEMTIME),
+            ('dwFlags', DWORD)
+        ]
+        nmhdr: NMHDR
+        pszUserString: LPCSTR
+        st: SYSTEMTIME
+        dwFlags: int
+    LPNMDATETIMESTRINGA = PTR(NMDATETIMESTRINGA)
+
+    class NMDATETIMESTRINGW(CStructure):
+        _fields_ = [
+            ('nmhdr', NMHDR),
+            ('pszUserString', LPCWSTR),
+            ('st', SYSTEMTIME),
+            ('dwFlags', DWORD)
+        ]
+        nmhdr: NMHDR
+        pszUserString: LPCWSTR
+        st: SYSTEMTIME
+        dwFlags: int
+    LPNMDATETIMESTRINGW = PTR(NMDATETIMESTRINGW)
+
+    DTN_USERSTRING = unicode(DTN_USERSTRINGW, DTN_USERSTRINGA)
+    NMDATETIMESTRING = unicode(NMDATETIMESTRINGW, NMDATETIMESTRINGA)
+    LPNMDATETIMESTRING = unicode(LPNMDATETIMESTRINGW, LPNMDATETIMESTRINGA)
+    DTN_WMKEYDOWNA = (DTN_FIRST2 - 4) # modify keydown on app format field(X), , -757
+    DTN_WMKEYDOWNW = (DTN_FIRST - 4) # -744
+
+    class NMDATETIMEWMKEYDOWNA(CStructure):
+        _fields_ = [
+            ('nmhdr', NMHDR),
+            ('nVirtKey', INT),
+            ('pszFormat', LPCSTR),
+            ('st', SYSTEMTIME)
+        ]
+        nmhdr: NMHDR
+        nVirtKey: int
+        pszFormat: LPCSTR
+        st: SYSTEMTIME
+    LPNMDATETIMEWMKEYDOWNA = PTR(NMDATETIMEWMKEYDOWNA)
+
+    class NMDATETIMEWMKEYDOWNW(CStructure):
+        _fields_ = [
+            ('nmhdr', NMHDR),
+            ('nVirtKey', INT),
+            ('pszFormat', LPCWSTR),
+            ('st', SYSTEMTIME)
+        ]
+        nmhdr: NMHDR
+        nVirtKey: int
+        pszFormat: LPCSTR
+        st: SYSTEMTIME
+    LPNMDATETIMEWMKEYDOWNW = PTR(NMDATETIMEWMKEYDOWNW)
+
+    DTN_WMKEYDOWN = unicode(DTN_WMKEYDOWNW, DTN_WMKEYDOWNA)
+    NMDATETIMEWMKEYDOWN = unicode(NMDATETIMEWMKEYDOWNW, NMDATETIMEWMKEYDOWNA)
+    LPNMDATETIMEWMKEYDOWN = unicode(LPNMDATETIMEWMKEYDOWNW, LPNMDATETIMEWMKEYDOWNA)
+    DTN_FORMATA = (DTN_FIRST2 - 3) # query display for app format field(X), -756
+    DTN_FORMATW = (DTN_FIRST - 3) # -743
+
+    class NMDATETIMEFORMATA(CStructure):
+        _fields_ = [
+            ('nmhdr', NMHDR),
+            ('pszFormat', LPCSTR),
+            ('st', SYSTEMTIME),
+            ('pszDisplay', LPCSTR),
+            ('szDisplay', CHAR * 64)
+        ]
+        nmhdr: NMHDR
+        pszFormat: LPCSTR
+        st: SYSTEMTIME
+        pszDisplay: LPCSTR
+        szDisplay: ICharArray
+    LPNMDATETIMEFORMATA = PTR(NMDATETIMEFORMATA)
+
+    class NMDATETIMEFORMATW(CStructure):
+        _fields_ = [
+            ('nmhdr', NMHDR),
+            ('pszFormat', LPCWSTR),
+            ('st', SYSTEMTIME),
+            ('pszDisplay', LPCWSTR),
+            ('szDisplay', WCHAR * 64)
+        ]
+        nmhdr: NMHDR
+        pszFormat: LPCSTR
+        st: SYSTEMTIME
+        pszDisplay: LPCSTR
+        szDisplay: IWideCharArray
+    LPNMDATETIMEFORMATW = PTR(NMDATETIMEFORMATW)
+
+    DTN_FORMAT = unicode(DTN_FORMATW, DTN_FORMATA)
+    NMDATETIMEFORMAT = unicode(NMDATETIMEFORMATW, NMDATETIMEFORMATA)
+    LPNMDATETIMEFORMAT = unicode(LPNMDATETIMEFORMATW, LPNMDATETIMEFORMATA)
+    DTN_FORMATQUERYA = (DTN_FIRST2 - 2) # query formatting info for app format field(X), -755
+    DTN_FORMATQUERYW = (DTN_FIRST - 2) # -742
+
+    class NMDATETIMEFORMATQUERYA(CStructure):
+        _fields_ = [
+            ('nmhdr', NMHDR),
+            ('pszFormat', LPCSTR),
+            ('szMax', SIZE)
+        ]
+        nmhdr: NMHDR
+        pszFormat: LPCSTR
+        szMax: SIZE
+    LPNMDATETIMEFORMATQUERYA = PTR(NMDATETIMEFORMATQUERYA)
+
+    class NMDATETIMEFORMATQUERYW(CStructure):
+        _fields_ = [
+            ('nmhdr', NMHDR),
+            ('pszFormat', LPCWSTR),
+            ('szMax', SIZE)
+        ]
+        nmhdr: NMHDR
+        pszFormat: LPCWSTR
+        szMax: SIZE
+    LPNMDATETIMEFORMATQUERYW = PTR(NMDATETIMEFORMATQUERYW)
+
+    DTN_FORMATQUERY = unicode(DTN_FORMATQUERYW, DTN_FORMATQUERYA)
+    NMDATETIMEFORMATQUERY = unicode(NMDATETIMEFORMATQUERYW, NMDATETIMEFORMATQUERYA)
+    LPNMDATETIMEFORMATQUERY = unicode(LPNMDATETIMEFORMATQUERYW, LPNMDATETIMEFORMATQUERYA)
+    DTN_DROPDOWN = (DTN_FIRST2 - 1) # MonthCal has dropped down, -754
+    DTN_CLOSEUP = (DTN_FIRST2) # MonthCal is popping up, -753
+    GDTR_MIN = 0x0001
+    GDTR_MAX = 0x0002
+    GDT_ERROR = -1
+    GDT_VALID = 0
+    GDT_NONE = 1
+    # _WIN32
+    # NODATETIMEPICK
+    if cpreproc.ifndef("NOIPADDRESS"):
+        #######################/
+        #    IP Address edit control
+        # Messages sent to IPAddress controls
+        IPM_CLEARADDRESS = (WM_USER+100)
+        IPM_SETADDRESS = (WM_USER+101) # lparam = TCP/IP address
+        IPM_GETADDRESS = (WM_USER+102) # lresult = # of non black fields.  lparam = LPDWORD for TCP/IP address
+        IPM_SETRANGE = (WM_USER+103)
+        IPM_SETFOCUS = (WM_USER+104)
+        IPM_ISBLANK = (WM_USER+105) # no parameters
+        WC_IPADDRESSW = u"SysIPAddress32"
+        WC_IPADDRESSA = b"SysIPAddress32"
+        WC_IPADDRESS = WC_IPADDRESSW
+        IPN_FIELDCHANGED = (IPN_FIRST - 0)
+
+        class NMIPADDRESS(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('iField', INT),
+                ('iValue', INT)
+            ]
+            hdr: NMHDR
+            iField: int
+            iValue: int
+        LPNMIPADDRESS = PTR(NMIPADDRESS)
+
+        # The following is a useful macro for passing the range values in the
+        # IPM_SETRANGE message.
+        MAKEIPRANGE = lambda low, high: (LPARAM(WORD((BYTE(high).value<<8) + BYTE(low).value)).value).value
+        # And this is a useful macro for making the IP Address to be passed
+        # as a LPARAM.
+        MAKEIPADDRESS = lambda b1,b2,b3,b4: (LPARAM(((DWORD(b1).value<<24)+(DWORD(b2).value<<16)+(DWORD(b3).value<<8)+(DWORD(b4).value)))).value
+        # Get individual number
+        FIRST_IPADDRESS = lambda x: (((x) >> 24) & 0xff)
+        SECOND_IPADDRESS = lambda x: (((x) >> 16) & 0xff)
+        THIRD_IPADDRESS = lambda x: (((x) >> 8) & 0xff)
+        FOURTH_IPADDRESS = lambda x: ((x) & 0xff)
+    # NOIPADDRESS
+    #---------------------------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------
+    #  ====================== Pager Control =============================
+    #---------------------------------------------------------------------------------------
+    #---------------------------------------------------------------------------------------
+    if cpreproc.ifndef("NOPAGESCROLLER"):
+        # Pager Class Name
+        WC_PAGESCROLLERW = u"SysPager"
+        WC_PAGESCROLLERA = b"SysPager"
+        WC_PAGESCROLLER = WC_PAGESCROLLERW
+        #---------------------------------------------------------------------------------------
+        # Pager Control Styles
+        #---------------------------------------------------------------------------------------
+        # begin_r_commctrl
+        PGS_VERT = 0x00000000
+        PGS_HORZ = 0x00000001
+        PGS_AUTOSCROLL = 0x00000002
+        PGS_DRAGNDROP = 0x00000004
+        # end_r_commctrl
+        #---------------------------------------------------------------------------------------
+        # Pager Button State
+        #---------------------------------------------------------------------------------------
+        #The scroll can be in one of the following control State
+        PGF_INVISIBLE = 0 # Scroll button is not visible
+        PGF_NORMAL = 1 # Scroll button is in normal state
+        PGF_GRAYED = 2 # Scroll button is in grayed state
+        PGF_DEPRESSED = 4 # Scroll button is in depressed state
+        PGF_HOT = 8 # Scroll button is in hot state
+        # The following identifiers specifies the button control
+        PGB_TOPORLEFT = 0
+        PGB_BOTTOMORRIGHT = 1
+        #---------------------------------------------------------------------------------------
+        # Pager Control  Messages
+        #---------------------------------------------------------------------------------------
+        PGM_SETCHILD = (PGM_FIRST + 1) # lParam == hwnd
+        PGM_RECALCSIZE = (PGM_FIRST + 2)
+        PGM_FORWARDMOUSE = (PGM_FIRST + 3)
+        PGM_SETBKCOLOR = (PGM_FIRST + 4)
+        PGM_GETBKCOLOR = (PGM_FIRST + 5)
+        PGM_SETBORDER = (PGM_FIRST + 6)
+        PGM_GETBORDER = (PGM_FIRST + 7)
+        PGM_SETPOS = (PGM_FIRST + 8)
+        PGM_GETPOS = (PGM_FIRST + 9)
+        PGM_SETBUTTONSIZE = (PGM_FIRST + 10)
+        PGM_GETBUTTONSIZE = (PGM_FIRST + 11)
+        PGM_GETBUTTONSTATE = (PGM_FIRST + 12)
+        PGM_GETDROPTARGET = CCM_GETDROPTARGET
+        PGM_SETSCROLLINFO = (PGM_FIRST + 13)
+        #---------------------------------------------------------------------------------------
+        #Pager Control Notification Messages
+        #---------------------------------------------------------------------------------------
+        # PGN_SCROLL Notification Message
+        PGN_SCROLL = (PGN_FIRST-1)
+        PGF_SCROLLUP = 1
+        PGF_SCROLLDOWN = 2
+        PGF_SCROLLLEFT = 4
+        PGF_SCROLLRIGHT = 8
+        #Keys down
+        PGK_SHIFT = 1
+        PGK_CONTROL = 2
+        PGK_MENU = 4
+        # This structure is sent along with PGN_SCROLL notifications
+
+        class NMPGSCROLL(CStructure):
+            _pack_ = 1
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('fwKeys', WORD),
+                ('rcParent', RECT),
+                ('iDir', INT),
+                ('iXpos', INT),
+                ('iYpos', INT),
+                ('iScroll', INT)
+            ]
+            hdr: NMHDR
+            fwKeys: int
+            rcParent: RECT
+            iDir: int
+            iXpos: int
+            iYpos: int
+            iScroll: int
+        LPNMPGSCROLL = PTR(NMPGSCROLL)
+
+        # PGN_CALCSIZE Notification Message
+        PGN_CALCSIZE = (PGN_FIRST-2)
+        PGF_CALCWIDTH = 1
+        PGF_CALCHEIGHT = 2
+
+        class NMPGCALCSIZE(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('dwFlag', DWORD),
+                ('iWidth', INT),
+                ('iHeight', INT)
+            ]
+            hdr: NMHDR
+            dwFlag: int
+            iWidth: int
+            iHeight: int
+        LPNMPGCALCSIZE = PTR(NMPGCALCSIZE)
+
+        # PGN_HOTITEMCHANGE Notification Message
+        PGN_HOTITEMCHANGE = (PGN_FIRST-3)
+
+        # The PGN_HOTITEMCHANGE notification uses these notification
+        # flags defined in TOOLBAR:
+
+        HICF_ENTERING = 0x00000010 # idOld is invalid
+        HICF_LEAVING = 0x00000020 # idNew is invalid
+
+        # Structure for PGN_HOTITEMCHANGE notification
+        #
+
+        class NMPGHOTITEM(CStructure):
+            _fields_ = [
+                ('hdr', NMHDR),
+                ('idOld', INT),
+                ('idNew', INT),
+                ('dwFlags', DWORD)
+            ]
+            hdr: NMHDR
+            idOld: int
+            idNew: int
+            dwFlags: int
+        LPNMPGHOTITEM = PTR(NMPGHOTITEM)
+
+    # NOPAGESCROLLER
+    ##======================  End Pager Control ==========================================
+    #
+    # === Native Font Control ===
+    #
+    if cpreproc.ifndef("NONATIVEFONTCTL"):
+        # NativeFont Class Name
+        WC_NATIVEFONTCTLW = u"NativeFontCtl"
+        WC_NATIVEFONTCTLA = b"NativeFontCtl"
+        WC_NATIVEFONTCTL = unicode(WC_NATIVEFONTCTLW, WC_NATIVEFONTCTLA)
+        # begin_r_commctrl
+        # style definition
+        NFS_EDIT = 0x0001
+        NFS_STATIC = 0x0002
+        NFS_LISTCOMBO = 0x0004
+        NFS_BUTTON = 0x0008
+        NFS_ALL = 0x0010
+        NFS_USEFONTASSOC = 0x0020
+        # end_r_commctrl
+    # NONATIVEFONTCTL
+    # === End Native Font Control ===
+    # ====================== Button Control =============================
+    if cpreproc.ifndef("NOBUTTON"):
+        # Button Class Name
+        WC_BUTTONA = b"Button"
+        WC_BUTTONW = u"Button"
+        WC_BUTTON = WC_BUTTONW
+        if cpreproc.get_version() >= WIN32_WINNT_WINXP:
+            BUTTON_IMAGELIST_ALIGN_LEFT = 0
+            BUTTON_IMAGELIST_ALIGN_RIGHT = 1
+            BUTTON_IMAGELIST_ALIGN_TOP = 2
+            BUTTON_IMAGELIST_ALIGN_BOTTOM = 3
+            BUTTON_IMAGELIST_ALIGN_CENTER = 4 # Doesn't draw text
+
+            class BUTTON_IMAGELIST(CStructure):
+                _fields_ = [
+                    ('himl', HIMAGELIST),
+                    ('margin', RECT),
+                    ('uAlign', UINT)
+                ]
+                himl: int
+                margin: RECT
+                uAlign: int
+            PBUTTON_IMAGELIST = PTR(BUTTON_IMAGELIST)
+
+            BCM_GETIDEALSIZE = (BCM_FIRST + 0x0001)
+            BCM_SETIMAGELIST = (BCM_FIRST + 0x0002)
+            BCM_GETIMAGELIST = (BCM_FIRST + 0x0003)
+            BCM_SETTEXTMARGIN = (BCM_FIRST + 0x0004)
+            BCM_GETTEXTMARGIN = (BCM_FIRST + 0x0005)
+
+            class NMBCHOTITEM(CStructure):
+                _fields_ = [
+                    ('hdr', NMHDR),
+                    ('dwFlags', DWORD)
+                ]
+                hdr: NMHDR
+                dwFlags: int
+            LPNMBCHOTITEM = PTR(NMBCHOTITEM)
+
+            BCN_HOTITEMCHANGE = (BCN_FIRST + 0x0001)
+            BST_HOT = 0x0200
+        # (_WINVER >= WIN32_WINNT_WINXP)
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+            # BUTTON STATE FLAGS
+            BST_DROPDOWNPUSHED = 0x0400
+            # begin_r_commctrl
+            # BUTTON STYLES
+            BS_SPLITBUTTON = 0x0000000C
+            BS_DEFSPLITBUTTON = 0x0000000D
+            BS_COMMANDLINK = 0x0000000E
+            BS_DEFCOMMANDLINK = 0x0000000F
+            # SPLIT BUTTON INFO mask flags
+            BCSIF_GLYPH = 0x0001
+            BCSIF_IMAGE = 0x0002
+            BCSIF_STYLE = 0x0004
+            BCSIF_SIZE = 0x0008
+            # SPLIT BUTTON STYLE flags
+            BCSS_NOSPLIT = 0x0001
+            BCSS_STRETCH = 0x0002
+            BCSS_ALIGNLEFT = 0x0004
+            BCSS_IMAGE = 0x0008
+            # end_r_commctrl
+            # BUTTON STRUCTURES
+
+            class BUTTON_SPLITINFO(CStructure):
+                _fields_ = [
+                    ('mask', UINT),
+                    ('himlGlyph', HIMAGELIST),
+                    ('uSplitStyle', UINT),
+                    ('size', SIZE)
+                ]
+                mask: int
+                himlGlyph: int
+                uSplitStyle: int
+                size: SIZE
+            PBUTTON_SPLITINFO = BUTTON_SPLITINFO.PTR()
+
+            # BUTTON MESSAGES
+            BCM_SETDROPDOWNSTATE = (BCM_FIRST + 0x0006)
+            BCM_SETSPLITINFO = (BCM_FIRST + 0x0007)
+            BCM_GETSPLITINFO = (BCM_FIRST + 0x0008)
+            BCM_SETNOTE = (BCM_FIRST + 0x0009)
+            BCM_GETNOTE = (BCM_FIRST + 0x000A)
+            BCM_GETNOTELENGTH = (BCM_FIRST + 0x000B)
+            # Macro to use on a button or command link to display an elevated icon
+            BCM_SETSHIELD = (BCM_FIRST + 0x000C)
+            # Value to pass to BCM_SETIMAGELIST to indicate that no glyph should be
+            # displayed
+            BCCL_NOGLYPH = HIMAGELIST(-1).value
+            # NOTIFICATION MESSAGES
+
+            class NMBCDROPDOWN(CStructure):
+                _fields_ =  [
+                    ('hdr', NMHDR),
+                    ('rcButton', RECT)
+                ]
+                hdr: NMHDR
+                rcButton: RECT
+            LPNMBCDROPDOWN = PTR(NMBCDROPDOWN)
+
+            BCN_DROPDOWN = (BCN_FIRST + 0x0002)
+        # (_WINVER >= WIN32_WINNT_VISTA)
+        # NOBUTTON
+        # =====================  End Button Control =========================
+        # ====================== Static Control =============================
+        if cpreproc.ifndef("NOSTATIC"):
+            # Static Class Name
+            WC_STATICA = b"Static"
+            WC_STATICW = u"Static"
+            WC_STATIC = WC_STATICW
+        # NOSTATIC
+        # =====================  End Static Control =========================
+        # ====================== Edit Control =============================
+        if cpreproc.ifndef("NOEDIT"):
+            # Edit Class Name
+            WC_EDITA = b"Edit"
+            WC_EDITW = u"Edit"
+            WC_EDIT = WC_EDITW
+            if cpreproc.get_version() >= WIN32_WINNT_WIN10:
+                # Edit Control Extended Styles to use with EM_SETEXTENDEDSTYLE/EM_GETEXTENDEDSTYLE
+                ES_EX_ALLOWEOL_CR = 0x0001
+                ES_EX_ALLOWEOL_LF = 0x0002
+                ES_EX_ALLOWEOL_ALL = (ES_EX_ALLOWEOL_CR | ES_EX_ALLOWEOL_LF)
+                ES_EX_CONVERT_EOL_ON_PASTE = 0x0004
+                ES_EX_ZOOMABLE = 0x0010
+            if cpreproc.get_version() >= WIN32_WINNT_WINXP:
+                EM_SETCUEBANNER = (ECM_FIRST + 1) # Set the cue banner with the lParm = LPCWSTR
+                EM_GETCUEBANNER = (ECM_FIRST + 2) # Set the cue banner with the lParm = LPCWSTR
+
+                class EDITBALLOONTIP(CStructure):
+                    _fields_ = [
+                        ('cbStruct', DWORD),
+                        ('pszTitle', LPCWSTR),
+                        ('pszText', LPCWSTR),
+                        ('ttiIcon', INT)
+                    ]
+                    cbStruct: int
+                    pszTitle: LPCWSTR
+                    pszText: LPCWSTR
+                    ttiIcon: int
+                PEDITBALLOONTIP = PTR(EDITBALLOONTIP)
+
+                EM_SHOWBALLOONTIP = (ECM_FIRST + 3) # Show a balloon tip associated to the edit control
+                EM_HIDEBALLOONTIP = (ECM_FIRST + 4) # Hide any balloon tip associated with the edit control
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                EM_SETHILITE = (ECM_FIRST + 5)
+                EM_GETHILITE = (ECM_FIRST + 6)
+            EM_NOSETFOCUS = (ECM_FIRST + 7)
+            EM_TAKEFOCUS = (ECM_FIRST + 8)
+            if cpreproc.get_version() >= WIN32_WINNT_WIN10:
+                # EM_SETENDOFLINE/EM_GETENDOFLINE options
+
+                if True:
+                    EC_ENDOFLINE_DETECTFROMCONTENT = 0
+                    EC_ENDOFLINE_CRLF              = 1
+                    EC_ENDOFLINE_CR                = 2
+                    EC_ENDOFLINE_LF                = 3
+                EC_ENDOFLINE = INT
+
+                EM_SETEXTENDEDSTYLE = (ECM_FIRST + 10)
+                EM_GETEXTENDEDSTYLE = (ECM_FIRST + 11)
+                EM_SETENDOFLINE = (ECM_FIRST + 12)
+                EM_GETENDOFLINE = (ECM_FIRST + 13)
+                EM_ENABLESEARCHWEB = (ECM_FIRST + 14)
+                EM_SEARCHWEB = (ECM_FIRST + 15)
+                # Form codes are internal-only so keep the api internal
+                EM_SETCARETINDEX = (ECM_FIRST + 17)
+                EM_GETCARETINDEX = (ECM_FIRST + 18)
+                # We want to reuse the same messages as richedit.h
+                # which is why these are outside of the ECM_FIRST-ECM_LAST range.
+                EM_GETZOOM = (WM_USER + 224)
+                EM_SETZOOM = (WM_USER + 225)
+                EM_FILELINEFROMCHAR = (ECM_FIRST + 19)
+                EM_FILELINEINDEX = (ECM_FIRST + 20)
+                EM_FILELINELENGTH = (ECM_FIRST + 21)
+                EM_GETFILELINE = (ECM_FIRST + 22)
+                EM_GETFILELINECOUNT = (ECM_FIRST + 23)
+                EN_SEARCHWEB = (EN_FIRST - 0)
+
+                if True:
+                    EC_SEARCHWEB_ENTRYPOINT_EXTERNAL    = 0
+                    EC_SEARCHWEB_ENTRYPOINT_CONTEXTMENU = 1
+                EC_SEARCHWEB_ENTRYPOINT = INT
+
+                class NMSEARCHWEB(CStructure):
+                    _fields_ = [
+                        ('hdr', NMHDR),
+                        ('entrypoint', EC_SEARCHWEB_ENTRYPOINT),
+                        ('hasQueryText', BOOL),
+                        ('invokeSucceeded', BOOL)
+                    ]
+                    hdr: NMHDR
+                    entrypoint: int
+                    hasQueryText: int
+                    invokeSucceeded: int
+        # NOEDIT
+        # =====================  End Edit Control =========================
+    # ====================== Listbox Control =============================
+    if cpreproc.ifndef('NOLISTBOX'):
+        # Listbox Class Name
+        WC_LISTBOXA             = b"ListBox"
+        WC_LISTBOXW             = u"ListBox"
+        WC_LISTBOX              = WC_LISTBOXW
+    # NOLISTBOX
+    # =====================  End Listbox Control =========================
+    # ====================== Combobox Control =============================
+    if cpreproc.ifndef('NOCOMBOBOX'):
+        # Combobox Class Name
+        WC_COMBOBOXA            = b"ComboBox"
+        WC_COMBOBOXW            = u"ComboBox"
+        WC_COMBOBOX             = WC_COMBOBOXW
+    # NOCOMBOBOX
+    if cpreproc.get_version() >= WIN32_WINNT_WINXP:
+        # custom combobox control messages
+        CB_SETMINVISIBLE        = (CBM_FIRST + 1)
+        CB_GETMINVISIBLE        = (CBM_FIRST + 2)
+        CB_SETCUEBANNER         = (CBM_FIRST + 3)
+        CB_GETCUEBANNER         = (CBM_FIRST + 4)
+    # =====================  End Combobox Control =========================
+    # ====================== Scrollbar Control ============================
+    if cpreproc.ifndef('NOSCROLLBAR'):
+        # Scrollbar Class Name
+        WC_SCROLLBARA            = b"ScrollBar"
+        WC_SCROLLBARW            = u"ScrollBar"
+        WC_SCROLLBAR             = WC_SCROLLBARW
+    # NOSCROLLBAR
+    # ===================== End Scrollbar Control =========================
+    # ===================== Task Dialog =========================
+    if cpreproc.ifndef('NOTASKDIALOG'):
+        # Task Dialog is only available starting Windows Vista
+        if (cpreproc.get_version() >= WIN32_WINNT_VISTA):
+            #ifdef _WIN32
+            #include <pshpack1.h>
+            #endif
+
+            # typedef HRESULT (CALLBACK *PFTASKDIALOGCALLBACK)(_In_ HWND hwnd, _In_ UINT msg, _In_ WPARAM wParam, _In_ LPARAM lParam, _In_ LONG_PTR lpRefData);
+            PFTASKDIALOGCALLBACK = CALLBACK(HRESULT, HWND, UINT, WPARAM, LPARAM, LONG_PTR)
+
+            if True:
+                TDF_ENABLE_HYPERLINKS               = 0x0001
+                TDF_USE_HICON_MAIN                  = 0x0002
+                TDF_USE_HICON_FOOTER                = 0x0004
+                TDF_ALLOW_DIALOG_CANCELLATION       = 0x0008
+                TDF_USE_COMMAND_LINKS               = 0x0010
+                TDF_USE_COMMAND_LINKS_NO_ICON       = 0x0020
+                TDF_EXPAND_FOOTER_AREA              = 0x0040
+                TDF_EXPANDED_BY_DEFAULT             = 0x0080
+                TDF_VERIFICATION_FLAG_CHECKED       = 0x0100
+                TDF_SHOW_PROGRESS_BAR               = 0x0200
+                TDF_SHOW_MARQUEE_PROGRESS_BAR       = 0x0400
+                TDF_CALLBACK_TIMER                  = 0x0800
+                TDF_POSITION_RELATIVE_TO_WINDOW     = 0x1000
+                TDF_RTL_LAYOUT                      = 0x2000
+                TDF_NO_DEFAULT_RADIO_BUTTON         = 0x4000
+                TDF_CAN_BE_MINIMIZED                = 0x8000
+                if cpreproc.get_version() >= WIN32_WINNT_WIN8:
+                    TDF_NO_SET_FOREGROUND               = 0x00010000 # Don't call SetForegroundWindow() when activating the dialog
+                # (_WINVER >= WIN32_WINNT_WIN8)
+                TDF_SIZE_TO_CONTENT                 = 0x01000000  # used by ShellMessageBox to emulate MessageBox sizing behavior
+            TASKDIALOG_FLAGS = INT # Note: _TASKDIALOG_FLAGS is an int
+
+            if True:
+                TDM_NAVIGATE_PAGE                   = WM_USER+101
+                TDM_CLICK_BUTTON                    = WM_USER+102 # wParam = Button ID
+                TDM_SET_MARQUEE_PROGRESS_BAR        = WM_USER+103 # wParam = 0 (nonMarque) wParam != 0 (Marquee)
+                TDM_SET_PROGRESS_BAR_STATE          = WM_USER+104 # wParam = new progress state
+                TDM_SET_PROGRESS_BAR_RANGE          = WM_USER+105 # lParam = MAKELPARAM(nMinRange, nMaxRange)
+                TDM_SET_PROGRESS_BAR_POS            = WM_USER+106 # wParam = new position
+                TDM_SET_PROGRESS_BAR_MARQUEE        = WM_USER+107 # wParam = 0 (stop marquee), wParam != 0 (start marquee), lparam = speed (milliseconds between repaints)
+                TDM_SET_ELEMENT_TEXT                = WM_USER+108 # wParam = element (TASKDIALOG_ELEMENTS), lParam = new element text (LPCWSTR)
+                TDM_CLICK_RADIO_BUTTON              = WM_USER+110 # wParam = Radio Button ID
+                TDM_ENABLE_BUTTON                   = WM_USER+111 # lParam = 0 (disable), lParam != 0 (enable), wParam = Button ID
+                TDM_ENABLE_RADIO_BUTTON             = WM_USER+112 # lParam = 0 (disable), lParam != 0 (enable), wParam = Radio Button ID
+                TDM_CLICK_VERIFICATION              = WM_USER+113 # wParam = 0 (unchecked), 1 (checked), lParam = 1 (set key focus)
+                TDM_UPDATE_ELEMENT_TEXT             = WM_USER+114 # wParam = element (TASKDIALOG_ELEMENTS), lParam = new element text (LPCWSTR)
+                TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE = WM_USER+115 # wParam = Button ID, lParam = 0 (elevation not required), lParam != 0 (elevation required)
+                TDM_UPDATE_ICON                     = WM_USER+116  # wParam = icon element (TASKDIALOG_ICON_ELEMENTS), lParam = new icon (hIcon if TDF_USE_HICON_* was set, PCWSTR otherwise)
+            TASKDIALOG_MESSAGES = INT
+
+            if True:
+                TDN_CREATED                         = 0
+                TDN_NAVIGATED                       = 1
+                TDN_BUTTON_CLICKED                  = 2            # wParam = Button ID
+                TDN_HYPERLINK_CLICKED               = 3            # lParam = (LPCWSTR)pszHREF
+                TDN_TIMER                           = 4            # wParam = Milliseconds since dialog created or timer reset
+                TDN_DESTROYED                       = 5
+                TDN_RADIO_BUTTON_CLICKED            = 6            # wParam = Radio Button ID
+                TDN_DIALOG_CONSTRUCTED              = 7
+                TDN_VERIFICATION_CLICKED            = 8             # wParam = 1 if checkbox checked, 0 if not, lParam is unused and always 0
+                TDN_HELP                            = 9
+                TDN_EXPANDO_BUTTON_CLICKED          = 10            # wParam = 0 (dialog is now collapsed), wParam != 0 (dialog is now expanded)
+            TASKDIALOG_NOTIFICATIONS = INT
+
+            class TASKDIALOG_BUTTON(CStructure):
+                _fields_ = [
+                    ('nButtonID', INT),
+                    ('pszButtonText', LPCWSTR)
+                ]
+                nButtonID: int
+                pszButtonText: LPCWSTR
+
+            if True:
+                TDE_CONTENT = 0
+                TDE_EXPANDED_INFORMATION = 1
+                TDE_FOOTER = 2
+                TDE_MAIN_INSTRUCTION = 3
+            TASKDIALOG_ELEMENTS = INT
+
+            if True:
+                TDIE_ICON_MAIN = 0
+                TDIE_ICON_FOOTER = 1
+            TASKDIALOG_ICON_ELEMENTS = INT
+
+            TD_WARNING_ICON         = MAKEINTRESOURCEW(-1)
+            TD_ERROR_ICON           = MAKEINTRESOURCEW(-2)
+            TD_INFORMATION_ICON     = MAKEINTRESOURCEW(-3)
+            TD_SHIELD_ICON          = MAKEINTRESOURCEW(-4)
+
+        # (_WINVER >= WIN32_WINNT_VISTA)
+
+        if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+            if True:
+                TDCBF_OK_BUTTON            = 0x0001 # selected control return value IDOK
+                TDCBF_YES_BUTTON           = 0x0002 # selected control return value IDYES
+                TDCBF_NO_BUTTON            = 0x0004 # selected control return value IDNO
+                TDCBF_CANCEL_BUTTON        = 0x0008 # selected control return value IDCANCEL
+                TDCBF_RETRY_BUTTON         = 0x0010 # selected control return value IDRETRY
+                TDCBF_CLOSE_BUTTON         = 0x0020  # selected control return value IDCLOSE
+                
+            TASKDIALOG_COMMON_BUTTON_FLAGS = INT # Note: _TASKDIALOG_COMMON_BUTTON_FLAGS is an int
+
+            class TASKDIALOGCONFIG(CStructure):
+                class _U1(CUnion):
+                    _fields_ = [
+                        ('hMainIcon', HICON),
+                        ('pszMainIcon', LPCWSTR)
+                    ]
+                class _U2(CUnion):
+                    _fields_ = [
+                        ('hFooterIcon', HICON),
+                        ('pszFooterIcon', LPCWSTR)
+                    ]
+                _fields_ = [
+                    ('cbSize', UINT),
+                    ('hwndParent', HWND),                                   # incorrectly named, this is the owner window, not a parent.
+                    ('hInstance', HINSTANCE),                               # used for MAKEINTRESOURCE() strings
+                    ('dwFlags', TASKDIALOG_FLAGS),                          # TASKDIALOG_FLAGS (TDF_XXX) flags
+                    ('dwCommonButtons', TASKDIALOG_COMMON_BUTTON_FLAGS),    # TASKDIALOG_COMMON_BUTTON (TDCBF_XXX) flags
+                    ('pszWindowTitle', LPCWSTR),                             # string or MAKEINTRESOURCE()
+                    ('_u1', _U1),
+                    ('pszMainInstruction', LPCWSTR),
+                    ('pszContent', LPCWSTR),
+                    ('cButtons', UINT),
+                    ('pButtons', PTR(TASKDIALOG_BUTTON)),
+                    ('nDefaultButton', INT),
+                    ('cRadioButtons', UINT),
+                    ('pRadioButtons', PTR(TASKDIALOG_BUTTON)),
+                    ('nDefaultRadioButton', INT),
+                    ('pszVerificationText', LPCWSTR),
+                    ('pszExpandedInformation', LPCWSTR),
+                    ('pszExpandedControlText', LPCWSTR),
+                    ('pszCollapsedControlText', LPCWSTR),
+                    ('_u2', _U2),
+                    ('pszFooter', LPCWSTR),
+                    ('pfCallback', PFTASKDIALOGCALLBACK),
+                    ('lpCallbackData', LONG_PTR),
+                    ('cxWidth', UINT)                                       # width of the Task Dialog's client area in DLU's. If 0, Task Dialog will calculate the ideal width.
+                ]
+                _anonymous_ = ['_u1', '_u2']
+                cbSize: int
+                hwndParent: int
+                hInstance: int
+                dwFlags: int
+                dwCommonButtons: int
+                pszWindowTitle: LPCWSTR
+                hMainIcon: int
+                pszMainIcon: LPCWSTR
+                pszMainInstruction: LPCWSTR
+                pszContent: LPCWSTR
+                cButtons: int
+                pButtons: IPointer[TASKDIALOG_BUTTON]
+                nDefaultButton: int
+                cRadioButtons: int
+                pRadioButtons: IPointer[TASKDIALOG_BUTTON]
+                nDefaultRadioButton: int
+                pszVerificationText: LPCWSTR
+                pszExpandedInformation: LPCWSTR
+                pszExpandedControlText: LPCWSTR
+                pszCollapsedControlText: LPCWSTR
+                hFooterIcon: int
+                pszFooterIcon: LPCWSTR
+                pszFooter: LPCWSTR
+                pfCallback: FARPROC
+                lpCallbackData: int
+                cxWidth: int
+
+            @comctl32.foreign(HRESULT, PTR(TASKDIALOGCONFIG), PINT, PINT, PBOOL)
+            def TaskDialogIndirect(self, pTaskConfig: IPointer[TASKDIALOGCONFIG], pnButton: PINT, pnRadioButton: PINT, pfVerificationFlagChecked: PBOOL) -> int: ...
+            
+            @comctl32.foreign(HRESULT, HWND, HINSTANCE, LPCWSTR, LPCWSTR, LPCWSTR, TASKDIALOG_COMMON_BUTTON_FLAGS, LPCWSTR, PINT)
+            def TaskDialog(self, hwndOwner: int, hInstance: int, pszWindowTitle: LPCWSTR, pszMainInstruction: LPCWSTR, pszContent: LPCWSTR, dwCommonButtons: int, pszIcon: LPCWSTR, pnButton: PINT) -> int: ...
+
+        # (_WINVER >= WIN32_WINNT_VISTA)
+    # NOTASKDIALOG
+    # ==================== End TaskDialog =======================
+    #
+    # === MUI APIs ===
+    #
+    if cpreproc.ifndef('NOMUI'):
+        @comctl32.foreign(VOID, LANGID)
+        def InitMUILanguage(uiLang: int): ...
+        
+        @comctl32.foreign(LANGID)
+        def GetMUILanguage() -> int: ...
+    # NOMUI
+    # ====== Flat Scrollbar APIs=========================================
+    if cpreproc.ifndef('NOFLATSBAPIS'):
+        WSB_PROP_CYVSCROLL  = 0x00000001
+        WSB_PROP_CXHSCROLL  = 0x00000002
+        WSB_PROP_CYHSCROLL  = 0x00000004
+        WSB_PROP_CXVSCROLL  = 0x00000008
+        WSB_PROP_CXHTHUMB   = 0x00000010
+        WSB_PROP_CYVTHUMB   = 0x00000020
+        WSB_PROP_VBKGCOLOR  = 0x00000040
+        WSB_PROP_HBKGCOLOR  = 0x00000080
+        WSB_PROP_VSTYLE     = 0x00000100
+        WSB_PROP_HSTYLE     = 0x00000200
+        WSB_PROP_WINSTYLE   = 0x00000400
+        WSB_PROP_PALETTE    = 0x00000800
+        WSB_PROP_MASK       = 0x00000FFF
+
+        FSB_FLAT_MODE       = 2
+        FSB_ENCARTA_MODE    = 1
+        FSB_REGULAR_MODE    = 0
+        
+        @comctl32.foreign(BOOL, HWND, INT, UINT)
+        def FlatSB_EnableScrollBar(hWndParent: int, code: int, esbFlags: int) -> int: ...
+        
+        @comctl32.foreign(BOOL, HWND, INT, BOOL)
+        def FlatSB_ShowScrollBar(hWndParent: int, code: int, fShow: int) -> int: ...
+        
+        @comctl32.foreign(BOOL, HWND, INT, LPINT, LPINT)
+        def FlatSB_GetScrollRange(hWndParent: int, code: int, piMin: LPINT, piMax: LPINT) -> int: ...
+        
+        @comctl32.foreign(BOOL, HWND, INT, LPSCROLLINFO)
+        def FlatSB_GetScrollInfo(hWndParent: int, code: int, pScrollInfo: IPointer[SCROLLINFO]) -> int: ...
+        
+        @comctl32.foreign(INT, HWND, INT)
+        def FlatSB_GetScrollPos(hWndParent: int, code: int) -> int: ...
+        
+        @comctl32.foreign(BOOL, HWND, INT, LPINT)
+        def FlatSB_GetScrollProp(hWndParent: int, propIndex: int, piData: LPINT) -> int: ...
+        
+        if cpreproc.ifdef('_WIN64'):
+            @comctl32.foreign(BOOL, HWND, INT, PINT_PTR)
+            def FlatSB_GetScrollPropPtr(hWndParent: int, propIndex: int, piData: PINT_PTR) -> int: ...
+        else:
+            FlatSB_GetScrollPropPtr = FlatSB_GetScrollProp
+            
+        @comctl32.foreign(INT, HWND, INT, INT, BOOL)
+        def FlatSB_SetScrollPos(hWndParent: int, code: int, pos: int, fRedraw: int) -> int: ...
+        
+        @comctl32.foreign(INT, HWND, INT, LPSCROLLINFO, BOOL)
+        def FlatSB_SetScrollInfo(hWndParent: int, code: int, psi: IPointer[SCROLLINFO], fRedraw: int) -> int: ...
+        
+        @comctl32.foreign(INT, HWND, INT, INT, INT, BOOL)
+        def FlatSB_SetScrollRange(hWndParent: int, code: int, min: int, max: int, fRedraw: int) -> int: ...
+        
+        @comctl32.foreign(BOOL, HWND, UINT, INT_PTR, BOOL)
+        def FlatSB_SetScrollProp(hWndParent: int, index: int, newValue: int, fRedraw: int) -> int: ...
+        
+        FlatSB_SetScrollPropPtr = FlatSB_SetScrollProp
+        
+        @comctl32.foreign(BOOL, HWND)
+        def InitializeFlatSB(hWndParent: int) -> int: ...
+        
+        @comctl32.foreign(HRESULT, HWND)
+        def UninitializeFlatSB(hWndParent: int) -> int: ...
+    # NOFLATSBAPIS

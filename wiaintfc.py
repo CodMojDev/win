@@ -28,7 +28,7 @@ if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WINXP: # Windows XP and later
         # GUID for Image class device interface.
         #
 
-        GUID_DEVINTERFACE_IMAGE = GUID("{6BDD1FC6-810F-11D0-BEC7-08002BE2092F}")
+        GUID_DEVINTERFACE_IMAGE = GUID.string("{6BDD1FC6-810F-11D0-BEC7-08002BE2092F}")
 
 
         # REGION ***
