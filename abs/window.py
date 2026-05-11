@@ -100,12 +100,18 @@ class Window(HWND):
             self.on_mouse_move = Event()
             self.on_draw_item = Event()
             self.on_palette_changed = Event()
+            self.on_destroy += self.Window_on_destroy
     
     _timers: dict[int, FARPROC]
     class_name: str | None
     
     cursor: int | HANDLE | None
     icon: int | HANDLE | None
+    
+    def Window_on_destroy(self):
+        app = Application()
+        app.windows -= 1
+        app.notify()
     
     @property
     def style(self) -> int:
@@ -198,10 +204,14 @@ class Window(HWND):
     def on_focus_lost(self, focused: 'Window'):
         pass
     
+    def on_set_cursor(self, hwnd: int, ht: int, message: int) -> bool:
+        return None
+    
     def window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         if msg == WM_CREATE:
             self.running = True
             self.value = hwnd
+            Application().windows += 1
             if not all(self.on_create.execute()):
                 return -1
             return 0
@@ -223,11 +233,10 @@ class Window(HWND):
             self.on_right_button_double_click.execute(wParam, LOWORD(lParam), HIWORD(lParam))
         elif msg == WM_CLOSE:
             if all(self.on_close.execute()):
-                SendMessage(hwnd, WM_DESTROY, 0, 0)
+                self.destroy()
         elif msg == WM_DESTROY:
             self.on_destroy.execute()
             self.running = False
-            PostQuitMessage(0)
         elif msg == WM_COMMAND:
             self.on_command(LOWORD(wParam), HIWORD(wParam), lParam)
             return 0
@@ -267,14 +276,17 @@ class Window(HWND):
             return FALSE
         elif msg == WM_SETFONT:
             self.on_set_font.execute(Font.foreign_owner(wParam), LOWORD(lParam) == TRUE)
+            return 0
         elif msg == WM_TIMER:
-            if not all(self.on_timer.execute(wParam, i_cast(lParam, TIMERPROC))):
-                return FALSE
+            self.on_timer.execute(wParam, i_cast(lParam, TIMERPROC))
+            return 0
         elif msg == WM_NOTIFY:
             nmhdr = i_cast(lParam, LPNMHDR).contents
             self.on_notify.execute(nmhdr)
+            return 0
         elif msg == WM_MOUSEMOVE:
             self.on_mouse_move.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0
         elif msg == WM_DRAWITEM:
             if not self.on_draw_item.empty():
                 self.on_draw_item.execute(wParam, i_cast_value(lParam, DRAWITEMSTRUCT))
@@ -287,12 +299,19 @@ class Window(HWND):
             return 0
         elif msg == WM_PALETTECHANGED:
             self.on_palette_changed.execute(Palette.foreign_owner(wParam))
+        elif msg == WM_SETCURSOR:
+            result = self.on_set_cursor(Window.foreign(wParam), LOWORD(lParam), HIWORD(lParam))
+            if result is not None:
+                return result
         else:
-            result = self.on_unknown_message.execute(msg, wParam, lParam)
+            result = self.on_unknown_message.execute(hwnd, msg, wParam, lParam)
             for value in result:
                 if value is not None:
                     return value
                 
+        return self.wnd_proc_fallback(hwnd, msg, wParam, lParam)
+    
+    def wnd_proc_fallback(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         return DefWindowProcW(hwnd, msg, wParam, lParam)
     
     def focus(self):
@@ -343,7 +362,8 @@ class Window(HWND):
         self.send(WM_CLOSE)
         
     def destroy(self):
-        self.send(WM_DESTROY)
+        if not DestroyWindow(self):
+            raise WinException()
         
     def hide(self):
         self.show(SW_HIDE)
@@ -353,6 +373,14 @@ class Window(HWND):
         
     def set_font(self, font: int | HANDLE, redraw: bool = True):
         self.send(WM_SETFONT, font, redraw)
+        
+    @property
+    def font(self) -> Font:
+        return Font.foreign_owner(self.send(WM_GETFONT))
+    
+    @font.setter
+    def font(self, font: int | HANDLE):
+        self.set_font(font)
     
     def is_child(self, hWnd: int | HANDLE) -> bool:
         return bool(IsChild(self, hWnd))
@@ -547,42 +575,51 @@ class Window(HWND):
     def update(self):
         if not UpdateWindow(self):
             raise WinException()
+
+class Application:
+    INSTANCE: 'Application' = None
+    
+    modeless_dialogs: list[int | HWND]
+    windows: int
+    
+    def __new__(cls):
+        if Application.INSTANCE is None:
+            return super().__new__(cls)
+            
+        return Application.INSTANCE
+    
+    def __init__(self):
+        if Application.INSTANCE is None:
+            self.after_message = Event()
+            self.modeless_dialogs = []
+            self.on_message = Event()
+            self.running = False
+            self.windows = 0
+            Application.INSTANCE = self
+            
+    def notify(self):
+        if not self.windows:
+            self.running = False
     
     def launch(self):
-        self.update()
-        
+        self.running = True
         msg = MSG()
         pMsg = byref(msg)
         
         while self.running:
             if PeekMessage(pMsg, NULL, 0, 0, PM_REMOVE):
-                TranslateMessage(pMsg)
-                self.on_message.execute(msg)
-                DispatchMessageW(pMsg)
+                dispatch = True
+                for modeless_dialog in self.modeless_dialogs:
+                    if IsDialogMessage(modeless_dialog, pMsg):
+                        dispatch = False
+                        break
+                if dispatch:
+                    TranslateMessage(pMsg)
+                    self.on_message.execute(msg)
+                    DispatchMessageW(pMsg)
             
             self.after_message.execute()
             MsgWaitForMultipleObjects(0, NULL, FALSE, 10, QS_ALLEVENTS)
-
-class WindowUtils:
-    @staticmethod
-    def draw_parent_background(window: Window, dc: DC, clip_rect: RECT = None):
-        if clip_rect is not None:
-            region = Region.rect(clip_rect)
-            dc.clip_region.select(region)
-            pClipRect = byref(clip_rect)
-        else:
-            pClipRect = NULL
-            
-        parent = window.parent
-        status = DrawThemeParentBackground(window, dc, pClipRect)
-        
-        if status != S_OK:
-            point, = window.map(parent, [(0, 0)])
-            point = dc.offset_window_origin(point)
-            parent.send(WM_ERASEBKGND, dc)
-            dc.window_origin = point
-        
-        dc.clip_region.select(NULL)
 
 class IdentifiersT:
     _identifiers: dict[str, int]
@@ -679,7 +716,10 @@ class GLWindow(Window):
     def __init__(self):
         super().__init__()
         self.class_style = CS_OWNDC
-        self.after_message += EventCallback(self.GL_after_message, Priority.Max)
+        self.gl_tick = Event()
+        self.enable_after_message_render = True
+        Application().after_message += self.GL_after_message
+        self.on_close += self.GL_close
         self._style |= WS_CLIPCHILDREN | WS_CLIPSIBLINGS
         self.pfd = PIXELFORMATDESCRIPTOR(
             sizeof(PIXELFORMATDESCRIPTOR),
@@ -698,20 +738,34 @@ class GLWindow(Window):
             0, 0, 0, 0
         )
         self.gl_ready = Event()
+        self.manual_initialize = False
+    
+    def disable_after_message_render(self):
+        self.enable_after_message_render = False
+        Application().after_message -= self.GL_after_message
     
     def GL_after_message(self):
+        self.gl_tick.execute()
         SwapBuffers(self.dc)
         
-    def create(self, width: int = CW_USEDEFAULT, height: int = CW_USEDEFAULT, 
-               x: int = CW_USEDEFAULT, y: int = CW_USEDEFAULT, 
-               window_name: str = 'Window', parent = NULL):
-        super().create(width, height, x, y, window_name, parent, NULL)
+    def GL_close(self):
+        if self.enable_after_message_render:
+            Application().after_message -= self.GL_after_message
+    
+    def initialize_gl(self):
         self.dc = DC.get(self)
         pPfd = self.pfd.ref()
         iPixelFormat = ChoosePixelFormat(self.dc, pPfd)
         SetPixelFormat(self.dc, iPixelFormat, pPfd)
         self.gl_context = GLContext.current(self.dc)
         self.gl_ready.execute()
+    
+    def create(self, width: int = CW_USEDEFAULT, height: int = CW_USEDEFAULT, 
+               x: int = CW_USEDEFAULT, y: int = CW_USEDEFAULT, 
+               window_name: str = 'Window', parent = NULL):
+        super().create(width, height, x, y, window_name, parent, NULL)
+        if not self.manual_initialize:
+            self.initialize_gl()
 
 PFNWGLCREATECONTEXTATTRIBSARB = APIENTRY(HGLRC, HDC, HGLRC, PINT)
 WGL_CONTEXT_MAJOR_VERSION_ARB = (0x2091)

@@ -125,7 +125,7 @@ def NDRSContextValue(hContext: IPointer[_NDR_SCONTEXT]) -> IPointer[PVOID]:
 cbNDRContext = 20 # size of context on WIRE
 
 NDR_RUNDOWN = WINAPI(VOID, PVOID)
-NDR_NOTIFY_ROUTINE = WINAPI(VOID, VOID)
+NDR_NOTIFY_ROUTINE = WINAPI(VOID)
 NDR_NOTIFY2_ROUTINE = WINAPI(VOID, boolean)
 
 class SCONTEXT_QUEUE(CStructure):

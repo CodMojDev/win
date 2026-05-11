@@ -1713,7 +1713,7 @@ def size_annotations(*pairs: tuple[str, int]):
     Add the size to the annotations in pairs (name, size).
     """
     annotations = get_caller_frame().f_locals['__annotations__']
-    for name, size in annotations:
+    for name, size in pairs:
         annotations[name]._size = size
     
 def _make_internal(cls: type) -> type:

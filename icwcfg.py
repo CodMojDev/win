@@ -36,14 +36,18 @@
 
 from . import cpreproc
 
-if cpreproc.pragma_once("_ICWCFG_H_"):
-    from .defbase import *
+from .defbase import *
+
+try:
+    inetcfg = get_win_library('Inetcfg.dll')
+except FileNotFoundError:
+    inetcfg = None
+
+if cpreproc.pragma_once("_ICWCFG_H_") and inetcfg is not None:
     from .minwindef import *
     from .winnt import PSTR
     
     # REGION *** Desktop Family ***
-
-    inetcfg = get_win_library('Inetcfg.dll')
 
     #
     # defines

@@ -1,4 +1,3 @@
-from win.com.comtl.baseface import TlIsMain
 from typing import Callable, TYPE_CHECKING
 from win.defbase_thread import *
 from win.synchapi import *
@@ -7,6 +6,9 @@ import traceback
 
 if TYPE_CHECKING:
     from ..window import Window
+
+def _abs_is_main(stack_level: int = 0) -> bool:
+    return get_py_frame(1 + stack_level).f_locals['__name__'] == '__main__'
 
 class Abs:
     class Thread(CThread):
@@ -53,8 +55,8 @@ class Abs:
             self.close(thread)
             del self.threads[thread.tid]
         
-        def add(self, thread: CThread):
-            self.threads[thread.tid] = (thread, thread.alive)
+        def add(self, thread: CThread, automatic_alive: bool = False):
+            self.threads[thread.tid] = (thread, automatic_alive or thread.alive)
         
         def threadmgr_bindedwindow_on_message(self, msg: MSG):
             if msg.message in (WM_DESTROY, WM_QUIT):
@@ -67,20 +69,19 @@ class Abs:
             if msg.message != WM_CLOSE:
                 if not self.running():
                     self.windows[GetCurrentThreadId()].close()
-                    
-        
+             
         def bind(self, window: 'Window', tid: int):
             window.on_message += self.threadmgr_bindedwindow_on_message
             self.windows[tid] = window
     
     @staticmethod
     def run(entry_point: Callable, *args, **kwargs):
-        if TlIsMain(1): return entry_point(*args, **kwargs)
+        if _abs_is_main(1): return entry_point(*args, **kwargs)
         return None
     
     @staticmethod
     def run_async(entry_point: Callable, *args, **kwargs) -> 'Abs.Thread':
-        if TlIsMain(1):
+        if _abs_is_main(1):
             def thread_worker() -> int:
                 try:
                     entry_point(*args, **kwargs)

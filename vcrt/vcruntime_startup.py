@@ -29,7 +29,7 @@ if cpreproc.pragma_once("__VCRUNTIME_STARTUP_H__"):
     _crt_exit_quick_cleanup = 1
     _crt_exit_no_cleanup = 2
 
-    __current_exit_return_mode = _crt_exit_return_mode.in_dll(msvcrt, "__current_exit_return_mode")
+    # __current_exit_return_mode = _crt_exit_return_mode.in_dll(msvcrt, "__current_exit_return_mode")
 
     @msvcrt.foreign(BOOL, result_function=bool)
     def __vcrt_initialize(): ...

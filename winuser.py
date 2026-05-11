@@ -2032,6 +2032,10 @@ if cpreproc.pragma_once("_WINUSER_"):
                         ("hwndTrack", HWND),
                         ("dwHoverTime", DWORD)
                     ]
+                    cbSize: int
+                    dwFlags: int
+                    hwndTrack: int
+                    dwHoverTime: int
                 TRACKMOUSEEVENT = tagTRACKMOUSEEVENT
                 LPTRACKMOUSEEVENT = POINTER(TRACKMOUSEEVENT)
 

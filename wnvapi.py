@@ -13,15 +13,19 @@ Abstract:
 
 from . import cpreproc
 
-if cpreproc.pragma_once("__WNV_API_INCLUDED_"):
+from .defbase import *
+
+try:
+    wnvapi = get_win_library('wnvapi.dll')
+except FileNotFoundError:
+    wnvapi = None
+
+if cpreproc.pragma_once("__WNV_API_INCLUDED_") and wnvapi is not None:
     # REGION *** Desktop Family or WNV Package ***
 
-    from .defbase import *
     from .winbase import *
     from .in6addr import *
-    from .inaddr import *
-
-    wnvapi = get_win_library('wnvapi.dll')
+    from .inaddr import *    
 
     from .sdkddkver import WIN32_WINNT_WIN8
     

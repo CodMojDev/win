@@ -157,6 +157,39 @@ class MemoryIO(io.IOBase):
     def read_bool32(self) -> bool:
         return self.read_int32() == TRUE
     
+    def write_int8(self, integer: int) -> int:
+        return self.write(bytes(INT8(integer)))
+    
+    def write_uint8(self, integer: int) -> int:
+        return self.write(bytes(UINT8(integer)))
+    
+    def write_int16(self, integer: int) -> int:
+        return self.write(bytes(INT16(integer)))
+    
+    def write_uint16(self, integer: int) -> int:
+        return self.write(bytes(UINT16(integer)))
+    
+    def write_int32(self, integer: int) -> int:
+        return self.write(bytes(INT32(integer)))
+    
+    def write_uint32(self, integer: int) -> int:
+        return self.write(bytes(UINT32(integer)))
+    
+    def write_int64(self, integer: int) -> int:
+        return self.write(bytes(INT64(integer)))
+    
+    def write_uint64(self, integer: int) -> int:
+        return self.write(bytes(UINT64(integer)))
+    
+    def write_structure(self, structure: WT_SIMPLESTRUCTURE) -> int:
+        return self.write(bytes(structure))
+    
+    def write_bool(self, boolean: bool) -> int:
+        return self.write(bytes(BYTE(boolean)))
+    
+    def write_bool32(self, boolean: bool) -> int:
+        return self.write(bytes(BOOL(boolean)))
+    
 class GlobalIO(MemoryIO):
     handle: int
     

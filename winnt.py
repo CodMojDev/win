@@ -1719,7 +1719,7 @@ if cpreproc.pragma_once("_WINNT_"):
             SmallBusinessRestricted = 5
             EmbeddedNT = 6
             DataCenter = 7
-            SingleUserTS = 8
+            XSingleUserTS = 8
             Personal = 9
             Blade = 10
             EmbeddedRestricted = 11

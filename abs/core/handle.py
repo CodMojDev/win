@@ -1212,6 +1212,30 @@ class Color:
         @a.setter
         def a(self, a: float):
             self.value.a = int(a * 255)
+            
+        def rgb(self) -> 'Color.RGB':
+            return self.value.rgb()
+            
+        def bgr(self) -> 'Color.BGR':
+            return self.value.bgr()
+            
+        def rgba(self) -> 'Color.RGBA':
+            return self.value.rgba()
+            
+        def argb(self) -> 'Color.ARGB':
+            return self.value.argb()
+            
+        def abgr(self) -> 'Color.ABGR':
+            return self.value.abgr()
+            
+        def bgra(self) -> 'Color.BGRA':
+            return self.value.bgra()
+        
+        def hsl(self) -> 'Color.HSL':
+            return self.value.hsl()
+        
+        def gl(self) -> 'Color.GLColor':
+            return self
         
 class MathUtil:
     @staticmethod

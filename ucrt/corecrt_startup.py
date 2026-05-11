@@ -10,6 +10,7 @@
 from .corecrt import *
 #include <math.h>
 from ..vcrt.vcruntime_startup import *
+from ..vcrt.vcruntime_startup import _crt_argv_mode
 
 #-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #
@@ -41,10 +42,10 @@ def _query_app_type() -> int: ...
 @ucrtbase.foreign(VOID, _crt_app_type)
 def _set_app_type(_Type: int): ...
 
-_UserMathErrorFunctionPointer = CALLBACK(INT, _exception)
+#_UserMathErrorFunctionPointer = CALLBACK(INT, _exception)
 
-@ucrtbase.foreign(VOID, _UserMathErrorFunctionPointer)
-def __setusermatherr(_UserMathErrorFunction: _UserMathErrorFunctionPointer): ...
+# @ucrtbase.foreign(VOID, _UserMathErrorFunctionPointer)
+# def __setusermatherr(_UserMathErrorFunction: _UserMathErrorFunctionPointer): ...
 
 @ucrtbase.foreign(INT)
 def _is_c_termination_complete() -> int: ...
@@ -87,8 +88,8 @@ def __p__acmdln() -> IPointer[LPSTR]: ...
 @ucrtbase.foreign(PTR(LPSTR))
 def __p__wcmdln() -> IPointer[LPWSTR]: ... 
 
-_acmdln = LPSTR.in_dll(ucrtbase, '_acmdln')
-_wcmdln = LPWSTR.in_dll(ucrtbase, '_wcmdln')
+_acmdln = LPSTR.in_dll(ucrtbase, '__p__acmdln')
+_wcmdln = LPWSTR.in_dll(ucrtbase, '__p__wcmdln')
 
 #-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 #
@@ -127,7 +128,7 @@ def _register_onexit_function(_Table: IPointer[_onexit_table_t],
                               _Function: CFuncPtr) -> int: ...
 
 @ucrtbase.foreign(INT, _onexit_table_t.PTR())
-def _execute_onexit_table(_Table: IPointer[_onexit_table_t]) -> int: ..
+def _execute_onexit_table(_Table: IPointer[_onexit_table_t]) -> int: ...
 
 @ucrtbase.foreign(INT, _PVFV)
 def _crt_atexit(_Function: CFuncPtr) -> int: ...

@@ -1,8 +1,10 @@
-from enum import Enum
+import enum
+enum._is_sunder = lambda name: False
+enum.EnumType._check_for_existing_members_ = lambda cls, bases: ...
 
 import struct
 
-class WPDBEnum(Enum):
+class WPDBEnum(enum.Enum):
     _type_ = 'b'
     
     def serialize(self) -> bytes:
