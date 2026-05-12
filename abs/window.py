@@ -359,20 +359,20 @@ class Window(HWND):
             del self._timers[event_id]
         
     def close(self):
-        self.send(WM_CLOSE)
+        self.post(WM_CLOSE)
         
     def destroy(self):
         if not DestroyWindow(self):
             raise WinException()
         
     def hide(self):
-        self.show(SW_HIDE)
+        self.post(SW_HIDE)
     
     def show(self, nCmdShow: int = SW_SHOW):
         ShowWindow(self, nCmdShow)
         
     def set_font(self, font: int | HANDLE, redraw: bool = True):
-        self.send(WM_SETFONT, font, redraw)
+        self.post(WM_SETFONT, font, redraw)
         
     @property
     def font(self) -> Font:
@@ -403,6 +403,21 @@ class Window(HWND):
             
         return SendMessage(self, message, wParam, lParam)
     
+    def post(self, message: int, wParam: int = 0, lParam: int = 0):
+        if isinstance(wParam, str):
+            wParam = create_unicode_buffer(wParam)
+        
+        if isinstance(lParam, str):
+            lParam = create_unicode_buffer(lParam)
+        
+        if wParam != 0: 
+            wParam = PtrUtil.get_address(wParam)
+            
+        if lParam != 0:
+            lParam = PtrUtil.get_address(lParam)
+            
+        PostMessage(self, message, wParam, lParam)
+"""  """    
     def map(self, window: int | HWND, points: Iterable[GraphicUtils.Point]) -> tuple[POINT, ...]:
         pointsToMap = [GraphicUtils.point(point) for point in points]
         length = len(points)

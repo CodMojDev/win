@@ -1,30 +1,4 @@
-from .processthreadsapi import *
-from .defbase_errordef import *
-from .wow64apiset import *
-from .handleapi import *
-from .memoryapi import *
-from .winuser import *
-from .psapi import *
-from .winnt import *
-
-from typing import TypeVar, Self, ClassVar, TYPE_CHECKING
-from ctypes import _SimpleCData as SimpleCData
-from . import defbase as defb
-from .defbase import *
-
-class CSimpleDataInterProcess(SimpleCData):
-    remote_address: WT_ADDRLIKE
-    process: 'CProcess'
-    
-    @classmethod
-    def initialize(cls, process: 'CProcess', remote_address: WT_ADDRLIKE) -> Self:
-        csdip = cls()
-        
-        csdip.remote_address = remote_address
-        csdip.process = process
-        
-        return csdip
-    
+!ёк4йёф1
     _type_ = 'i' # bypass the check
     
     @property

@@ -168,7 +168,12 @@ __all__ = [
     "IHasInit",
     "NEVER",
     "WT_STRUCTURE",
-    "WT_SIMPLESTRUCTURE"
+    "WT_SIMPLESTRUCTURE",
+    "IProfileEntry",
+    "profile_enable",
+    "profile_disable",
+    "profile_add",
+    "profile_remove",
 ]
 
 def pcall(f, *args, **kwargs) -> tuple[Any, BaseException]:
@@ -194,8 +199,11 @@ class _DEFB_STATE: # internal global state
                   '_trace_enabled', '_trace_entries', '_suppress_winwarning',
                   '_local_allocator', '_prev_excepthook', '_excepthook_enabled',
                   '_excepthook_entries', '_prev_unraisablehook', 
-                  '_unraisablehook_enabled', '_unraisablehook_entries']
+                  '_unraisablehook_enabled', '_unraisablehook_entries', 
+                  '_prev_profile', '_profile_enabled', '_profile_entries',]
     _trace_entries: list['ITraceEntry']
+    _profile_entries: list['IProfileEntry']
+    _prev_profile: Any
     _linked_libraries: Dict[str, 'LI']
     _prev_trace: Any
     _prev_excepthook: Any
@@ -216,6 +224,9 @@ class _DEFB_STATE: # internal global state
         self._prev_unraisablehook = None
         self._unraisablehook_enabled = False
         self._unraisablehook_entries = []
+        self._prev_profile = None
+        self._profile_enabled = False
+        self._profile_entries = []
     
 _defb_state: _DEFB_STATE = _DEFB_STATE()
 
@@ -522,6 +533,50 @@ def trace_remove(entry: type[ITraceEntry]):
     Remove the entry from trace listeners.
     """
     _defb_state._trace_entries.remove(entry)
+    
+class IProfileEntry(IInterface):
+    """
+    Interface for subscribing on profile calls.
+    """
+    
+    @interface_abstract_method
+    def on_event(self, frame: types.FrameType, event: str, arg: Any): 
+        """
+        Callback, called on every profile function call.
+        """
+
+def _profile_routine(frame: types.FrameType, event: str, arg: Any) -> Callable:
+    for entry in _defb_state._profile_entries:
+        entry.on_event(frame, event, arg)
+    return _profile_routine
+
+def profile_enable():
+    """
+    Enable profile.
+    """
+    _defb_state._prev_profile = sys.getprofile()
+    _defb_state._profile_enabled = True
+    sys.settrace(_profile_routine)
+    
+def profile_disable():
+    """
+    Disable profile.
+    """
+    sys.setprofile(_defb_state._prev_profile)
+    _defb_state._profile_enabled = False
+    _defb_state._prev_profile = None
+    
+def profile_add(entry: type[ITraceEntry]):
+    """
+    Add the entry to profile listeners.
+    """
+    _defb_state._profile_entries.append(entry)
+    
+def profile_remove(entry: type[IProfileEntry]):
+    """
+    Remove the entry from profile listeners.
+    """
+    _defb_state._profile_entries.remove(entry)
     
 class IHasInit(IInterface):
     """
