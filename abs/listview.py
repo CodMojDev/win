@@ -2,6 +2,10 @@ from .imagelist import *
 from .window import *
 
 class ListView(Control):
+    """
+    Win32 List view common control
+    """
+    
     class Columns:
         class Column(LVCOLUMNW):
             list_view: 'ListView'
@@ -14,6 +18,10 @@ class ListView(Control):
             index: int
             
             def select(self):
+                """
+                Select column.
+                """
+                
                 self.list_view.send(LVM_SETSELECTEDCOLUMN, self.index)
             
             @property
@@ -32,6 +40,10 @@ class ListView(Control):
         def insert(self, index: int, text: str = None, width: int = None, image: int = None,
                    ideal_width: int = None, minimal_width: int = None, format: int = None,
                    order: int = None, default_width: int = None, sub_item: int = None) -> 'ListView.Columns.Column':
+            """
+            Insert column into list view columns.
+            """
+            
             column = ListView.Columns.Column(self.list_view)
             
             if text is not None:
@@ -112,6 +124,9 @@ class ListView(Control):
         def make_item(self, index: int, text: str = None, param: int = None, 
                    group_id: int = None, indent: int = None, state: tuple[int, int] = None, 
                    columns: Iterable['ListView.Columns.Column'] = None, sub_item: int = None) -> 'ListView.Items.Item':
+            """
+            Make item from arguments.
+            """
             
             item = ListView.Items.Item(self.list_view)
             item.iItem = index
@@ -160,6 +175,10 @@ class ListView(Control):
         def insert(self, index: int, text: str = None, param: int = None, 
                    group_id: int = None, indent: int = None, state: tuple[int, int] = None, 
                    columns: Iterable['ListView.Columns.Column'] = None, sub_item: int = None) -> 'ListView.Items.Item':
+            """
+            Insert item into list view items.
+            """
+            
             item = self.make_item(index, text, param, group_id, indent, state, columns, sub_item)
             item.index = self.list_view.send(LVM_INSERTITEMW, lParam=item.ref())
             return item
@@ -179,6 +198,10 @@ class ListView(Control):
         self.items = ListView.Items(self)
     
     def create(self, x: int, y: int, relative: int | HANDLE = NULL):
+        """
+        Create list view control.
+        """
+        
         super().create(self._width, self._height, x, y, '', relative)
         
     @property
@@ -197,9 +220,17 @@ class ListView(Control):
         return rc
     
     def redraw_items(self, first: int, last: int):
+        """
+        Redraw list view items.
+        """
+        
         self.send(LVM_REDRAWITEMS, first, last)
         
     def scroll(self, horizontal: int, vertical: int):
+        """
+        Scroll the list view control.
+        """
+        
         self.send(LVM_SCROLL, horizontal, vertical)
         
     @property
@@ -259,6 +290,10 @@ class ListView(Control):
         self.send(LVM_SETIMAGELIST, LVSIL_GROUPHEADER, image_list)
         
     def hit(self, x: int, y: int) -> tuple[int, 'ListView.Items.Item']:
+        """
+        Hit-test the list view control.
+        """
+        
         lvhti = LVHITTESTINFO()
         lvhti.pt.x = x
         lvhti.pt.y = y

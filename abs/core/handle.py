@@ -1,11 +1,18 @@
+# Win32 errors stringification and WinException
 from win.defbase_errordef import *
+
+# WinAPI header files
 from win.handleapi import *
 from win.synchapi import *
 from win.winuser import *
 from win.wingdi import *
 from win.winnt import *
 
-class Rect(RECT):
+class Rect(RECT, CStructure):
+    """
+    Rectangle.
+    """
+    
     def __init__(self, left: int = 0, top: int = 0,
                  right: int = 0, bottom: int = 0):
         super().__init__(left, top, right, bottom)
@@ -13,6 +20,10 @@ class Rect(RECT):
     @classmethod
     def create(self, left: int = 0, top: int = 0,
                width: int = 0, height: int = 0) -> 'Rect':
+        """
+        Create the rectangle by x/y + width/height.
+        """
+        
         return Rect(left, top, left + width, top + height)
     
     @property
@@ -32,27 +43,40 @@ class Rect(RECT):
         self.bottom = self.top + height
         
     def offset(self, dx: int, dy: int):
+        """
+        Offset the rect by delta X and delta Y.
+        """
+        
         OffsetRect(byref(self), int(dx), int(dy))
     
-    def deflate(self, x: int, y: int):
-        InflateRect(byref(self), -int(x), -int(y))
-    
-    def inflate(self, x: int, y: int):
-        InflateRect(byref(self), int(x), int(y))
+    def deflate(self, dx: int, dy: int):
+        """
+        Deflate the rect by delta X and delta Y.
+        (Inflate by {-dx, -dy})
+        """
         
-    def ref(self): return byref(self)
+        InflateRect(byref(self), -int(dx), -int(dy))
     
-    def __contains__(self, pt: 'GraphicUtils.point') -> bool:
+    def inflate(self, dx: int, dy: int):
+        """
+        Deflate the rect by delta X and delta Y.
+        """
+        
+        InflateRect(byref(self), int(dx), int(dy))
+    
+    def __contains__(self, pt: 'GraphicUtils.Point') -> bool:
         pt = GraphicUtils.point(pt)
         return PtInRect(byref(self), pt)
     
-class Point(POINT):
-    ...
+class Point(POINT, CStructure): ...
     
-class Size(SIZE):
-    ...
+class Size(SIZE, CStructure): ...
 
 class Handle(HANDLE):
+    """
+    Main Win32 abstract handle wrapper.
+    """
+    
     _released: bool
     _closed: bool
     
@@ -63,12 +87,21 @@ class Handle(HANDLE):
     
     @classmethod
     def foreign_owner(cls, val: int | HANDLE) -> Self:
-        if not val: return None
+        """
+        Create the handle instance from foreign handle.
+        """
+        
+        if not val: return None # if invalid handle was provided, when return None
         instance = cls(val)
-        instance._closed = True
+        instance._closed = True # formally the handle is closed (by logic if it is already closed, 
+                                # it cannot be closed, so it is our variant)
         return instance
     
     def exchange_owner(self):
+        """
+        Exchange the owner of handle from local -> foreign, or foreign -> local.
+        """
+        
         self._closed = not self._closed
         return self
     
@@ -89,7 +122,9 @@ class Handle(HANDLE):
     
     @interface_abstract_method 
     def close(self):
-        ...
+        """
+        Abstract method to release the handle.
+        """
         
 class GDIObjectHandle(Handle):
     def close(self):
@@ -98,6 +133,10 @@ class GDIObjectHandle(Handle):
         
     @classmethod
     def stock(cls, type: int) -> Self:
+        """
+        Get the GDI stock object.
+        """
+        
         instance = cls.foreign_owner(GetStockObject(type))
         if not instance.value:
             raise WinException()
@@ -136,7 +175,12 @@ class GDIObjectHandle(Handle):
                 raise WinException()
             return lf
         
+# duplication shortcut for not to write GDIObjectHandle.stock for unknown stock object types
 class StockObject(GDIObjectHandle):
+    """
+    Stock object class.
+    """
+    
     def __init__(self, type: int):
         hObject = GetStockObject(type)
         if not hObject:
@@ -146,12 +190,17 @@ class StockObject(GDIObjectHandle):
     def close(self):
         self._closed = True
 
+# i don't know why UxTheme is there, but let it stay here
 uxtheme = get_win_library('uxtheme.dll')
 
 @uxtheme.foreign(HRESULT, HWND, HDC, PRECT)
 def DrawThemeParentBackground(hwnd: int | HANDLE, hdc: int | HANDLE, prc: PRECT) -> int: ...
 
 class DC(Handle):
+    """
+    Class, representing GDI Device Context (DC).
+    """
+    
     class Select:
         object: int | HANDLE
         dc: 'DC'
@@ -180,22 +229,42 @@ class DC(Handle):
             self.dc = dc
             
         def stroke(self):
+            """
+            Stroke the path.
+            """
+            
             if not StrokePath(self.dc):
                 raise WinException()
         
         def stroke_and_fill(self):
+            """
+            Stroke and fill the path.
+            """
+            
             if not StrokeAndFillPath(self.dc):
                 raise WinException()
             
         def fill(self):
+            """
+            Fill the path.
+            """
+            
             if not FillPath(self.dc):
                 raise WinException()
             
         def begin(self):
+            """
+            Begin the path.
+            """
+            
             if not BeginPath(self.dc):
                 raise WinException()
             
         def end(self):
+            """
+            End the path.
+            """
+            
             if not EndPath(self.dc):
                 raise WinException()
             
@@ -206,14 +275,26 @@ class DC(Handle):
             self.end()
             
         def abort(self):
+            """
+            Abort the path.
+            """
+            
             if not AbortPath(self.dc):
                 raise WinException()
             
         def flatten(self):
+            """
+            Flatten the path.
+            """
+            
             if not FlattenPath(self.dc):
                 raise WinException()
             
         def get(self) -> tuple['DC.PathPoint']:
+            """
+            Get the path points into tuple.
+            """
+            
             paths: IArray[DC.PathPoint]
             types: IArray[BYTE]
             nPaths: int
@@ -261,10 +342,18 @@ class DC(Handle):
             self.dc = dc
             
         def begin(self, palette: int | HANDLE=NULL):
+            """
+            Realize the palette.
+            """
+            
             with self.dc.select_ex(palette):
                 RealizePalette(self.dc)
                 
         def end(self, palette: int | HANDLE):
+            """
+            Unrealize the palette.
+            """
+            
             UnrealizeObject(palette)
             
         def __enter__(self):
@@ -294,14 +383,26 @@ class DC(Handle):
             self.dc = dc
             
         def select(self, region: int | HANDLE) -> int:
+            """
+            Select the clip region.
+            """
+            
             complexity = SelectClipRgn(self.dc, region)
             if complexity == ERROR: raise WinException()
             return complexity
         
         def select_ex(self, region: int | HANDLE) -> 'DC.ClipRegion.Select':
+            """
+            Select the clip region, extended version with RAII.
+            """
+            
             return DC.ClipRegion.Select(self, region)
         
         def offset(self, x: int, y: int) -> int:
+            """
+            Offset the clip region.
+            """
+            
             complexity = OffsetClipRgn(self.dc, x, y)
             if complexity == ERROR: raise WinException()
             return complexity
@@ -327,6 +428,10 @@ class DC(Handle):
         self._closed = True
             
     def create_compatible(self) -> 'DC':
+        """
+        Create compatible GDI device context from DC.
+        """
+        
         hDC = CreateCompatibleDC(self)
         if not hDC:
             raise WinException()
@@ -335,6 +440,10 @@ class DC(Handle):
         return dc
     
     def create_compatible_bitmap(self, width: int, height: int) -> 'Bitmap':
+        """
+        Create compatible bitmap by provided width and height.
+        """
+        
         bitmap = Bitmap()
         bitmap.value = CreateCompatibleBitmap(self, width, height)
         if not bitmap.value:
@@ -343,6 +452,10 @@ class DC(Handle):
         
     @classmethod
     def get(self, hwnd: int | HWND = NULL) -> 'DC':
+        """
+        Get the device context for HWND.
+        """
+        
         hDC = GetDC(hwnd)
         if not hDC:
             raise WinException()
@@ -356,17 +469,33 @@ class DC(Handle):
         return rc
         
     def select(self, hGdiObject: int | HANDLE) -> int:
+        """
+        Select the GDI object on DC.
+        """
+        
         return GDIObjectHandle.foreign_owner(SelectObject(self, hGdiObject))
     
     def select_ex(self, hGdiObject: int | HANDLE) -> 'DC.Select':
+        """
+        Select the GDI object on DC, extended version with RAII.
+        """
+        
         return DC.Select(self, hGdiObject)
     
     def text_out(self, x: int, y: int, text: str):
+        """
+        Output the text to screen.
+        """
+        
         buf = create_unicode_buffer(text)
         if not TextOutW(self, x, y, buf, len(text)):
             raise WinException()
         
     def set_pixel(self, x: int, y: int, color: TUnion[int, 'Color.IColor']) -> 'Color.RGB':
+        """
+        Set the pixel by given coordinates to given color.
+        """
+        
         crColor = SetPixel(self, x, y, int(color))
         if crColor == CLR_INVALID:
             raise WinException()
@@ -384,6 +513,10 @@ class DC(Handle):
         self.set_text_color(text_color)
     
     def set_text_color(self, color: TUnion[int, 'Color.IColor']) -> int:
+        """
+        Set the text color.
+        """
+        
         crColor = SetTextColor(self, int(color))
         if crColor == CLR_INVALID:
             raise WinException()
@@ -401,6 +534,10 @@ class DC(Handle):
         self.set_bk_color(bk_color)
     
     def set_bk_color(self, color: TUnion[int, 'Color.IColor']) -> 'Color.RGB':
+        """
+        Set the background color.
+        """
+        
         crColor = SetBkColor(self, int(color))
         if crColor == CLR_INVALID:
             raise WinException()
@@ -418,6 +555,10 @@ class DC(Handle):
         self.set_bk_mode(bk_mode)
     
     def set_bk_mode(self, mode: int) -> int:
+        """
+        Set the background mode.
+        """
+        
         dwPrevMode = SetBkMode(self, mode)
         if dwPrevMode == 0:
             raise WinException()
@@ -435,6 +576,10 @@ class DC(Handle):
         self.set_text_align(text_align)
     
     def set_text_align(self, text_align: int) -> int:
+        """
+        Set the text align.
+        """
+        
         dwPrevAlign = SetTextAlign(self, text_align)
         if dwPrevAlign == GDI_ERROR:
             raise WinException()
@@ -442,40 +587,72 @@ class DC(Handle):
     
     def bit_blt(self, dstX: int, dstY: int, srcX: int, srcY: int, 
                 width: int, height: int, srcHdc: int | HDC, rop: int):
+        """
+        GDI Device context BitBlt.
+        """
+        
         if not BitBlt(self, dstX, dstY, width, height, srcHdc, srcX, srcY, rop):
             raise WinException()
     
     def stretch_blt(self, dstX: int, dstY: int, srcX: int, srcY: int, 
                 dstWidth: int, dstHeight: int, srcWidth: int, srcHeight: int, 
                 srcHdc: int | HDC, rop: int):
+        """
+        GDI Device context StretchBlt.
+        """
+        
         if not StretchBlt(self, dstX, dstY, dstWidth, dstHeight,
                       srcHdc, srcX, srcY, srcWidth, srcHeight, rop):
             raise WinException()
     
     def pat_blt(self, x: int, y: int, width: int, height: int, rop: int):
+        """
+        GDI Device context PatBlt.
+        """
+        
         if not PatBlt(self, x, y, width, height, rop):
             raise WinException()
         
     def transparent_blt(self, srcX: int, srcY: int, dstX: int, dstY: int, 
                         srcHdc: int | HANDLE, srcWidth: int, srcHeight: int,
                         dstWidth: int, dstHeight: int, transparent: int):
+        """
+        GDI Device context TransparentBlt.
+        """
+        
         if not TransparentBlt(self, srcX, srcY, dstWidth, dstHeight, 
                               srcHdc, dstX, dstY, srcWidth, srcHeight, transparent):
             raise WinException()
     
     def ellipse(self, rcEllps: RECT):
+        """
+        Draw an ellipse.
+        """
+        
         if not Ellipse(self, rcEllps.left, rcEllps.top, rcEllps.right, rcEllps.bottom):
             raise WinException()
         
     def fill(self, rect: RECT, hbr: int | HANDLE):
+        """
+        Fill the given rect with brush.
+        """
+        
         if not FillRect(self, byref(rect), hbr):
             raise WinException()
         
     def invert_rect(self, rect: RECT):
+        """
+        Invert the given rect
+        """
+        
         if not InvertRect(self, byref(rect)):
             raise WinException()
         
     def get_text_extent_point(self, text: str) -> SIZE:
+        """
+        Get text extent point by text.
+        """
+        
         sizeText = SIZE()
         buf = create_unicode_buffer(text)
         GetTextExtentPointW(self, buf, len(text), byref(sizeText))
@@ -485,11 +662,19 @@ class DC(Handle):
                   icon: int | HANDLE, step: int = 0, 
                   flicker_free_draw: int | HANDLE = NULL,
                   flags: int = DI_NORMAL):
+        """
+        Draw the icon on device context.
+        """
+        
         if not DrawIconEx(self, x, y, icon, width, height, step, flicker_free_draw, flags):
             raise WinException()
         
     def draw_state(self, x: int, y: int, flags: int, fore_brush: int | HANDLE = NULL, callback: Callable = None,
                    width: int = 0, height: int = 0, lData: int = NULL, wData: int = NULL):
+        """
+        GDI device context DrawState.
+        """
+        
         if callback is not None:
             callback = DRAWSTATEPROC(callback)
         if not DrawStateW(self, fore_brush, i_cast(callback, DRAWSTATEPROC),
@@ -499,15 +684,23 @@ class DC(Handle):
             raise WinException()
         
     def move(self, x: int, y: int) -> POINT:
+        """
+        Move the pointer to (x, y) and return previous position.
+        """
+        
         pt = POINT()
         if not MoveToEx(self, x, y, byref(pt)):
             raise WinException()
         return pt
     
     def line(self, x: int, y: int):
+        """
+        Line to (x, y).
+        """
+        
         if not LineTo(self, x, y):
             raise WinException()
-        
+    
     @property
     def rop2(self) -> int:
         rop2 = GetROP2(self)
@@ -517,8 +710,17 @@ class DC(Handle):
     
     @rop2.setter
     def rop2(self, rop2: int):
-        if not SetROP2(self, rop2):
+        self.set_rop2(rop2)
+        
+    def set_rop2(self, rop2: int) -> int:
+        """
+        Set the ROP2.
+        """
+        
+        iPrevROP2 = SetROP2(self, rop2)
+        if not iPrevROP2:
             raise WinException()
+        return iPrevROP2
         
     @property
     def poly_fill_mode(self) -> int:
@@ -529,12 +731,25 @@ class DC(Handle):
     
     @poly_fill_mode.setter
     def poly_fill_mode(self, poly_fill_mode: int):
-        if not SetPolyFillMode(self, poly_fill_mode):
+        self.set_poly_fill_mode(poly_fill_mode)
+        
+    def set_poly_fill_mode(self, poly_fill_mode: int) -> int:
+        """
+        Set the polygon fill mode.
+        """
+        
+        dwPrevPolyFillMode = SetPolyFillMode(self, poly_fill_mode)
+        if not dwPrevPolyFillMode:
             raise WinException()
+        return dwPrevPolyFillMode
         
     def gradient(self, vertices: Iterable[TRIVERTEX],
                  meshes: Iterable[GRADIENT_TRIANGLE | GRADIENT_RECT],
                  mode: int):
+        """
+        Draw the gradient triangle/rectangle.
+        """
+        
         nVertex = len(vertices)
         pVertices = (TRIVERTEX * nVertex)(*vertices)
         nMesh = len(meshes)
@@ -543,16 +758,28 @@ class DC(Handle):
             raise WinException()
         
     def polygon(self, vertices: 'GraphicUtils.PointArray'):
+        """
+        Draw the polygon.
+        """
+        
         pVertices = GraphicUtils.point_array(vertices)
         if not Polygon(self, pVertices, len(vertices)):
             raise WinException()
         
     def frame(self, rc: RECT, brush: int | HANDLE):
+        """
+        Frame the given rect.
+        """
+        
         if not FrameRect(self, byref(rc), brush):
             raise WinException()
         
     def frame_region(self, region: int | HANDLE, brush: int | HANDLE,
                      width: int, height: int):
+        """
+        Frame the given region.
+        """
+        
         if not FrameRgn(self, region, brush, width, height):
             raise WinException()
         
@@ -569,12 +796,20 @@ class DC(Handle):
             raise WinException()
         
     def select_palette(self, palette: int | HANDLE, force_background: bool = False):
+        """
+        Select the given palette.
+        """
+        
         hPalettePrev = SelectPalette(self, palette, force_background)
         return Palette.foreign_owner(hPalettePrev)
     
     def draw_3d_rect(self, x: int, y: int, width: int, height: int,
                      top_left: TUnion[int, 'Color.IColor'],
                      bottom_right: TUnion[int, 'Color.IColor']):
+        """
+        Draw 3D rect on device context. Direct CDC::Draw3dRect reimplementation.
+        """
+        
         top_left, bottom_right = int(top_left), int(bottom_right)
         
         with Brush.create(top_left) as top_left_brush, Brush.create(bottom_right) as bottom_right_brush:
@@ -637,6 +872,10 @@ class DC(Handle):
             raise WinException()
         
     def offset_viewport_origin(self, *args) -> tuple[int, int]:
+        """
+        Offset the viewport origin.
+        """
+        
         if len(args) == 1:
             x, y = GraphicUtils.point_tuple(args[0])
         else:
@@ -647,6 +886,10 @@ class DC(Handle):
         return (pt.x, pt.y)
         
     def offset_window_origin(self, *args) -> tuple[int, int]:
+        """
+        Offset the window origin.
+        """
+        
         if len(args) == 1:
             x, y = GraphicUtils.point_tuple(args[0])
         else:
@@ -663,18 +906,30 @@ class GraphicUtils:
     
     @staticmethod
     def linear(x: int, y: int, rcSource: RECT, rcTarget: RECT) -> POINT:
+        """
+        Linear expansion of (x, y) by source and target rectangles.
+        """
+        
         x = rcTarget.left + (x - rcSource.left) * (rcTarget.right - rcTarget.left) / (rcSource.right - rcSource.left)
         y = rcTarget.top + (y - rcSource.top) * (rcTarget.bottom - rcTarget.top) / (rcSource.bottom - rcSource.top)
         return POINT(int(x), int(y))
     
     @staticmethod
     def center(x: int, y: int, rcSource: RECT, rcTarget: RECT) -> POINT:
+        """
+        Center expansion of (x, y) by source and target rectangles.
+        """
+        
         x = x + ((rcTarget.left + rcTarget.right) / 2 - (rcSource.left + rcSource.right) / 2)
         y = y + ((rcTarget.top + rcTarget.bottom) / 2 - (rcSource.top + rcSource.bottom) / 2)
         return POINT(int(x), int(y))
     
     @staticmethod
     def size_rect(rcSource: RECT, rcTarget: RECT) -> RECT:
+        """
+        Proportionally size the given rect into the target rect.
+        """
+        
         scaleX = (rcTarget.right - rcTarget.left) / (rcSource.right - rcSource.left)
         scaleY = (rcTarget.bottom - rcTarget.top) / (rcSource.bottom - rcTarget.top)
         scale = min(scaleX, scaleY)  
@@ -688,6 +943,10 @@ class GraphicUtils:
     
     @staticmethod
     def in_rect(x: int, y: int, rc: RECT) -> bool:
+        """
+        Check point in rectangle.
+        """
+        
         return bool(PtInRect(byref(rc), POINT(x, y)))
     
     class Vertex(TRIVERTEX):
@@ -700,31 +959,51 @@ class GraphicUtils:
             super().__init__(x, y, red, green, blue, alpha)
     
     @staticmethod
-    def size_tuple(size: 'GraphicUtils.Point') -> tuple[int, int]:
+    def size_tuple(size: 'GraphicUtils.Size') -> tuple[int, int]:
+        """
+        Convert SIZE/tuple to (cx, cy) tuple.
+        """
+        
         if isinstance(size, SIZE):
             return (size.cx, size.cy)
         return size[0:2]
     
     @staticmethod
-    def size(size: 'GraphicUtils.Point') -> SIZE:
+    def size(size: 'GraphicUtils.Size') -> SIZE:
+        """
+        Convert SIZE/tuple to SIZE structure.
+        """
+        
         if isinstance(size, SIZE):
             return size
         return SIZE(*size[0:2])
     
     @staticmethod
     def point_tuple(pt: 'GraphicUtils.Point') -> tuple[int, int]:
+        """
+        Convert POINT/tuple to (x, y) tuple.
+        """
+        
         if isinstance(pt, POINT):
             return (pt.x, pt.y)
         return pt[0:2]
     
     @staticmethod
     def point(pt: 'GraphicUtils.Point') -> POINT:
+        """
+        Convert POINT/tuple to POINT structure.
+        """
+        
         if isinstance(pt, POINT):
             return pt
         return POINT(*pt[0:2])
             
     @staticmethod
     def point_array(array: 'GraphicUtils.PointArray') -> IArray[POINT]:
+        """
+        Convert the POINT/{x,y} iterable to ctypes POINT array.
+        """
+        
         result_array = []
         
         for point in array:
@@ -743,9 +1022,17 @@ class GraphicUtils:
 class Color:
     @classmethod
     def system(cls, index: int) -> 'Color.RGB':
-        return Color.RGB(GetSysColor(index))
+        """
+        Get the system color.
+        """
+        
+        return Color.BGR(GetSysColor(index))
     
     class IColor(IHasInit):
+        """
+        Abstract class for interfacing color functionality.
+        """
+        
         value: int
         
         def __init__(self, value: int = 0):
@@ -768,24 +1055,52 @@ class Color:
         def color(self, r: int, g: int, b: int) -> 'Color.IColor': ...
 
         def rgb(self) -> 'Color.RGB':
+            """
+            Convert color into RGB.
+            """
+            
             return Color.RGB.color(self.r, self.g, self.b)
         
         def bgr(self) -> 'Color.BGR':
+            """
+            Convert color into BGR.
+            """
+            
             return Color.BGR.color(self.r, self.g, self.b)
         
         def rgba(self) -> 'Color.RGBA':
+            """
+            Convert color into RGBA.
+            """
+            
             return Color.RGBA.color(self.r, self.g, self.b, 0xff)
         
         def argb(self) -> 'Color.ARGB':
+            """
+            Convert color into ARGB.
+            """
+            
             return Color.ARGB.color(self.r, self.g, self.b, 0xff)
         
         def abgr(self) -> 'Color.ABGR':
+            """
+            Convert color into ABGR.
+            """
+            
             return Color.ABGR.color(self.r, self.g, self.b, 0xff)
         
         def bgra(self) -> 'Color.BGRA':
+            """
+            Convert color into BGRA.
+            """
+            
             return Color.BGRA.color(self.r, self.g, self.b, 0xff)
         
         def gl(self) -> 'Color.GLColor':
+            """
+            Convert color into OpenGL format.
+            """
+            
             return self.rgba().gl()
         
         def __index__(self) -> int:
@@ -837,6 +1152,10 @@ class Color:
             return +self.value
         
         def hsl(self) -> 'Color.HSL':
+            """
+            Convert color into HSL.
+            """
+            
             r_norm = self.r / 255
             g_norm = self.g / 255
             b_norm = self.b / 255
@@ -861,6 +1180,10 @@ class Color:
             return Color.HSL(hue, luminance, saturation)
 
     class IColorAlpha(IColor):
+        """
+        Abstract class for interfacing color functionality with alpha channel.
+        """
+        
         @interface_abstract_method
         @property
         def a(self) -> int: ...
@@ -888,6 +1211,10 @@ class Color:
             return format_hex(self, 8)
         
     class RGB(IColor):
+        """
+        RGB Representation of color.
+        """
+        
         @classmethod
         def color(cls, r: int, g: int, b: int) -> 'Color.RGB':
             return cls((r << 8 | g) << 8 | b)
@@ -920,6 +1247,10 @@ class Color:
             return iter((self.r, self.g, self.b))
 
     class RGBA(IColorAlpha):
+        """
+        RGBA Representation of alpha-channeled color.
+        """
+        
         @classmethod
         def color(cls, r: int, g: int, b: int, a: int) -> 'Color.RGBA':
             return cls(((r << 8 | g) << 8 | b) << 8 | a)
@@ -960,6 +1291,10 @@ class Color:
             return iter((self.r, self.g, self.b, self.a))
         
     class BGR(IColor):
+        """
+        BGR Representation of color.
+        """
+        
         @classmethod
         def color(cls, r: int, g: int, b: int) -> 'Color.BGR':
             return cls((b << 8 | g) << 8 | r)
@@ -992,6 +1327,10 @@ class Color:
             return iter((self.b, self.g, self.r))
         
     class BGRA(IColorAlpha):
+        """
+        BGRA Representation of alpha-channeled color.
+        """
+        
         @classmethod
         def color(cls, r: int, g: int, b: int, a: int) -> 'Color.BGRA':
             return cls(((b << 8 | g) << 8 | r) << 8 | a)
@@ -1032,6 +1371,10 @@ class Color:
             return iter((self.b, self.g, self.r, self.a))
         
     class ARGB(IColorAlpha):
+        """
+        ARGB Representation of alpha-channeled color.
+        """
+        
         @classmethod
         def color(cls, r: int, g: int, b: int, a: int) -> 'Color.ARGB':
             return cls(((a << 8 | r) << 8 | g) << 8 | b)
@@ -1072,6 +1415,10 @@ class Color:
             return iter((self.a, self.r, self.g, self.b))
         
     class ABGR(IColorAlpha):
+        """
+        ABGR Representation of alpha-channeled color.
+        """
+        
         @classmethod
         def color(cls, r: int, g: int, b: int, a: int) -> 'Color.ABGR':
             return cls(((a << 8 | b) << 8 | g) << 8 | r)
@@ -1112,6 +1459,10 @@ class Color:
             return iter((self.a, self.b, self.g, self.r))
         
     class HSL:
+        """
+        HSL Representation of color.
+        """
+        
         def __init__(self, hue: float = 0.0, saturation: float = 0.0, luminance: float = 0.0):
             self.hue = hue
             self.saturation = saturation
@@ -1151,6 +1502,10 @@ class Color:
             return str(self)
 
         def rgb(self) -> 'Color.RGB':
+            """
+            Convert color into RGB.
+            """
+            
             r = MathUtil.clamp(abs(self.hue * 6.0 - 3.0) - 1.0, 0.0, 1.0)
             g = MathUtil.clamp(2.0 - abs(self.hue * 6.0 - 2.0), 0.0, 1.0)
             b = MathUtil.clamp(2.0 - abs(self.hue * 6.0 - 4.0), 0.0, 1.0)
@@ -1161,21 +1516,44 @@ class Color:
             return Color.RGB.color(int(r * 255), int(g * 255), int(b * 255))
         
         def rgba(self) -> 'Color.RGBA':
+            """
+            Convert color into RGBA.
+            """
+            
             return self.rgb().rgba()
         
         def bgr(self) -> 'Color.BGR':
+            """
+            Convert color into BGR.
+            """
+            
             return self.rgb().bgr()
         
         def bgra(self) -> 'Color.BGRA':
+            """
+            Convert color into BGRA.
+            """
+            
             return self.rgb().bgra()
         
         def argb(self) -> 'Color.ARGB':
+            """
+            Convert color into ARGB.
+            """
+            
             return self.rgb().argb()
         
         def abgr(self) -> 'Color.ABGR':
+            """
+            Convert color into ABGR.
+            """
+            
             return self.rgb().abgr()
     
     class GLColor:
+        """
+        OpenGL format color representation.
+        """
         value: 'Color.IColorAlpha'
         
         def __init__(self, value: 'Color.IColorAlpha'):
@@ -1214,37 +1592,73 @@ class Color:
             self.value.a = int(a * 255)
             
         def rgb(self) -> 'Color.RGB':
+            """
+            Convert color into RGB.
+            """
             return self.value.rgb()
             
         def bgr(self) -> 'Color.BGR':
+            """
+            Convert color into BGR.
+            """
             return self.value.bgr()
             
-        def rgba(self) -> 'Color.RGBA':
+        def rgba(self) -> 'Color.RGBA'
+            """
+            Convert color into RGBA.
+            """:
             return self.value.rgba()
             
         def argb(self) -> 'Color.ARGB':
+            """
+            Convert color into ARGB.
+            """
             return self.value.argb()
             
         def abgr(self) -> 'Color.ABGR':
+            """
+            Convert color into ABGR.
+            """
             return self.value.abgr()
             
         def bgra(self) -> 'Color.BGRA':
+            """
+            Convert color into BGRA.
+            """
             return self.value.bgra()
         
         def hsl(self) -> 'Color.HSL':
+            """
+            Convert color into HSL.
+            """
             return self.value.hsl()
         
         def gl(self) -> 'Color.GLColor':
+            """
+            Convert color into OpenGL format.
+            """
             return self
         
 class MathUtil:
+    """
+    Math utilities.
+    """
+    
     @staticmethod
-    def clamp(value, min_value, max_value):
+    def clamp(value: int | float, min_value: int | float, max_value: int | float) -> int | float:
+        """
+        Clamp the value into [min, max]
+        """
+        
         return max(min_value, min(max_value, value))
         
 class StringUtil:
+    """
+    String and stringify utilities.
+    """
+    
     @staticmethod
-    def to_string(obj):
+    def to_string(obj: Any) -> str:
         if isinstance(obj, RECT):
             return f'<RECT {{{{{obj.left}, {obj.top}}}, {{{obj.right}, {obj.bottom}}}}}>'
         elif isinstance(obj, POINT):
@@ -1253,8 +1667,16 @@ class StringUtil:
             return repr(obj)
     
 class Pen(GDIObjectHandle):
+    """
+    Class, representing GDI Pen object.
+    """
+    
     @classmethod
     def create(cls, style: int, width: int, color: int | Color.IColor) -> 'Pen':
+        """
+        Create the pen.
+        """
+        
         pen = cls()
         pen.value = CreatePen(style, width, int(color))
         if not pen.value:
@@ -1262,8 +1684,16 @@ class Pen(GDIObjectHandle):
         return pen
 
 class Brush(GDIObjectHandle):
+    """
+    Class, representing GDI Brush object.
+    """
+    
     @classmethod
     def create(cls, color: int | Color.IColor, hatch: int | Color.IColor = None) -> 'Brush':
+        """
+        Create the brush.
+        """
+        
         brush = Brush()
         if hatch is None:
             brush.value = CreateSolidBrush(int(color))
@@ -1274,34 +1704,56 @@ class Brush(GDIObjectHandle):
         return brush
         
 class PatternBrush(GDIObjectHandle):
-    def __init__(self, hbm: int | HANDLE):
-        super().__init__()
-        self.value = CreatePatternBrush(hbm)
+    """
+    Class, representing GDI Pattern brush object.
+    """
+    @classmethod
+    def create(cls, hbm: int | HANDLE) -> 'PatternBrush':
+        """
+        Create the pattern brush.
+        """
+        brush = cls(CreatePatternBrush(hbm))
         if not self.value:
             raise WinException()
+        return brush
     
 class Font(GDIObjectHandle):
-    def __init__(self, name: str, height: int, width: int = 0, 
-                 escapement: int = 0, orientation: int = 0,
-                 weight: int = FW_DONTCARE, italic: bool = False,
-                 underline: bool = False, strike_out: bool = False,
-                 charset: int = DEFAULT_CHARSET, 
-                 out_precision: int = OUT_DEFAULT_PRECIS,
-                 clip_precision: int = CLIP_DEFAULT_PRECIS,
-                 quality: int = DEFAULT_QUALITY, 
-                 pitch_and_family: int = DEFAULT_PITCH | FF_DONTCARE):
-        super().__init__()
-        self.value = CreateFontW(height, width, escapement,
-                                 orientation, weight, italic,
-                                 underline, strike_out, charset,
-                                 out_precision, clip_precision,
-                                 quality, pitch_and_family, name)
+    """
+    Class, representing GDI Font object.
+    """
+    @classmethod
+    def create(cls, name: str, height: int, width: int = 0, 
+               escapement: int = 0, orientation: int = 0,
+               weight: int = FW_DONTCARE, italic: bool = False,
+               underline: bool = False, strike_out: bool = False,
+               charset: int = DEFAULT_CHARSET, 
+               out_precision: int = OUT_DEFAULT_PRECIS,
+               clip_precision: int = CLIP_DEFAULT_PRECIS,
+               quality: int = DEFAULT_QUALITY, 
+               pitch_and_family: int = DEFAULT_PITCH | FF_DONTCARE) -> 'Font':
+        font = cls(
+            CreateFontW(
+                height, width, escapement,
+                orientation, weight, italic,
+                underline, strike_out, charset,
+                out_precision, clip_precision,
+                quality, pitch_and_family, name)
+            )
         if not self.value:
             raise WinException()
+        return font
         
 class Region(GDIObjectHandle):
-    def offset(self, x: int, y: int):
-        if not OffsetRgn(self, x, y):
+    """
+    Class, representing GDI Region object.
+    """
+    
+    def offset(self, dx: int, dy: int):
+        """
+        Offset the region to given delta X and delta Y.
+        """
+        
+        if not OffsetRgn(self, dx, dy):
             raise WinException()
     
     def __contains__(self, point: GraphicUtils.Point) -> bool:
@@ -1310,11 +1762,17 @@ class Region(GDIObjectHandle):
     
     @overload
     @classmethod
-    def rect(cls, rc: RECT) -> 'Region': ...
+    def rect(cls, rc: RECT) -> 'Region':
+        """
+        Create the rectangle region.
+        """
     
     @overload
     @classmethod
-    def rect(cls, x1: int, y1: int, x2: int, y2: int, *args) -> 'Region': ...
+    def rect(cls, x1: int, y1: int, x2: int, y2: int, *args) -> 'Region': 
+        """
+        Create the rectangle region.
+        """
     
     @classmethod
     def rect(cls, rc, *args) -> 'Region':
@@ -1332,11 +1790,17 @@ class Region(GDIObjectHandle):
     
     @overload
     @classmethod
-    def elliptic(cls, rc: RECT) -> 'Region': ...
+    def elliptic(cls, rc: RECT) -> 'Region': 
+        """
+        Create the elliptic region.
+        """
     
     @overload
     @classmethod
-    def elliptic(cls, x1: int, y1: int, x2: int, y2: int, *args) -> 'Region': ...
+    def elliptic(cls, x1: int, y1: int, x2: int, y2: int, *args) -> 'Region':
+        """
+        Create the elliptic region.
+        """
     
     @classmethod
     def elliptic(cls, rc, *args) -> 'Region':
@@ -1354,6 +1818,10 @@ class Region(GDIObjectHandle):
     
     @classmethod
     def polygon(cls, points: GraphicUtils.PointArray, mode: int) -> 'Region':
+        """
+        Create the polygonal region.
+        """
+        
         rgn = cls(CreatePolygonRgn(GraphicUtils.point_array(points), len(points), mode))
         
         if not rgn.value:
@@ -1363,11 +1831,17 @@ class Region(GDIObjectHandle):
     
     @overload
     @classmethod
-    def round_rect(cls, rc: RECT, w: int, h: int) -> 'Region': ...
+    def round_rect(cls, rc: RECT, w: int, h: int) -> 'Region': 
+        """
+        Create the round rectangle region.
+        """
     
     @overload
     @classmethod
-    def round_rect(cls, x1: int, y1: int, x2: int, y2: int, w: int, h: int, *args) -> 'Region': ...
+    def round_rect(cls, x1: int, y1: int, x2: int, y2: int, w: int, h: int, *args) -> 'Region': 
+        """
+        Create the round rectangle region.
+        """
     
     @classmethod
     def round_rect(cls, var, *args) -> 'Region':
@@ -1386,6 +1860,10 @@ class Region(GDIObjectHandle):
     
     @classmethod
     def poly_polygon(cls, points: GraphicUtils.PointArray, point_counts: Iterable[int], mode: int):
+        """
+        Create the poly-polygonal region.
+        """
+        
         pPoints = (POINT * len(points))(*points)
         cPointCount = len(point_counts)
         pcPoints = (INT * cPointCount)(*point_counts)
@@ -1397,6 +1875,10 @@ class Region(GDIObjectHandle):
         return rgn
 
 class IconInfo(ICONINFO):
+    """
+    Class, representing icon info.
+    """
+    
     _foreign_owner: bool
     
     def __init__(self, *args):
@@ -1457,6 +1939,10 @@ class IconInfo(ICONINFO):
             self.mask.close()
 
 class Icon(Handle):
+    """
+    Class, representing Win32 ICO icon.
+    """
+    
     def close(self):
         DestroyIcon(self)
         self._closed = True
@@ -1477,6 +1963,10 @@ class Icon(Handle):
     
     @classmethod
     def from_bitmap(self, bitmap: int | HANDLE) -> 'Icon':
+        """
+        Create an icon from bitmap.
+        """
+        
         if not isinstance(bitmap, Bitmap):
             bitmap = Bitmap.foreign_owner(bitmap)
         
@@ -1502,6 +1992,10 @@ class Icon(Handle):
     
     @classmethod
     def from_icon(cls, path: str, width: int = 0, height: int = 0) -> 'Icon':
+        """
+        Create an icon from ICO file.
+        """
+        
         icon = cls()
         icon.value = LoadImageW(
             NULL, path, IMAGE_ICON, width, height, 
@@ -1514,6 +2008,10 @@ class Icon(Handle):
     
     @classmethod
     def load(cls, id: int, hInst: int = NULL) -> 'Icon':
+        """
+        Load an icon from resource.
+        """
+        
         icon = cls.foreign_owner(LoadIconW(hInst, i_cast(id, LPCWSTR)))
         
         if not icon.value:
@@ -1552,6 +2050,10 @@ class CursorMeta(Handle.__class__):
         cls.position = (cls.x, y)
     
 class Cursor(Handle, metaclass=CursorMeta):
+    """
+    Class, representing cursor.
+    """
+    
     def close(self):
         DestroyCursor(self)
         self._closed = True
@@ -1574,6 +2076,10 @@ class Cursor(Handle, metaclass=CursorMeta):
     
     @classmethod
     def load(cls, id: int, hInst: int = NULL) -> 'Cursor':
+        """
+        Load the cursor from resource.
+        """
+        
         icon = cls.foreign_owner(LoadCursorW(hInst, i_cast(id, LPCWSTR)))
         
         if not icon.value:
@@ -1583,6 +2089,10 @@ class Cursor(Handle, metaclass=CursorMeta):
     
     @classmethod
     def from_cursor(cls, path: str, width: int = 0, height: int = 0) -> 'Cursor':
+        """
+        Create the cursor from CUR/ANI/ICO file.
+        """
+        
         cursor = cls()
         cursor.value = LoadImageW(
             NULL, path, IMAGE_CURSOR, width, height, 
@@ -1594,8 +2104,16 @@ class Cursor(Handle, metaclass=CursorMeta):
         return cursor
     
 class Palette(GDIObjectHandle):
+    """
+    Class, representing the GDI palette.
+    """
+    
     @classmethod
     def create(cls, entries: Iterable[PALETTEENTRY]) -> 'Palette':
+        """
+        Create the palette.
+        """
+        
         palNumEntries = len(entries)
         
         lp = LOGPALETTE.allocate(LOGPALETTE.size() + PtrArithmetic.size(PALETTEENTRY, palNumEntries))
@@ -1612,8 +2130,16 @@ class Palette(GDIObjectHandle):
         return palette
         
 class Bitmap(GDIObjectHandle):
+    """
+    Class, representing the GDI Bitmap object.
+    """
+    
     @classmethod
     def create(self, width: int, height: int, planes: int = 1, bit_count: int = 32, bits = NULL):
+        """
+        Create the bitmap by width/height, optionally planes, bpp and bits.
+        """
+        
         bitmap = Bitmap()
         if width + height != -2: # width == -1, height == -1
             bitmap.value = CreateBitmap(width, height, planes, bit_count, bits)
@@ -1621,6 +2147,10 @@ class Bitmap(GDIObjectHandle):
     
     @classmethod
     def from_icon(self, icon: int | HANDLE) -> 'Bitmap':
+        """
+        Create the bitmap from ICO icon.
+        """
+        
         with DC.get().create_compatible() as dc:
             if not isinstance(icon, Icon):
                 icon = Icon.foreign_owner(icon)
@@ -1643,6 +2173,10 @@ class Bitmap(GDIObjectHandle):
             return bitmap
 
 class PaintDC(DC):
+    """
+    Class, representing GDI device context for window painting.
+    """
+    
     paint_struct: PAINTSTRUCT
     _hwnd: int | HWND
     
@@ -1660,6 +2194,10 @@ class PaintDC(DC):
         self._closed = True
 
 class GLContext(Handle):
+    """
+    Class, representing the OpenGL context.
+    """
+    
     _current: bool
     
     def __init__(self, *args):
@@ -1668,19 +2206,31 @@ class GLContext(Handle):
     
     @classmethod
     def current(self, hDC: int | HANDLE) -> 'GLContext':
+        """
+        Create the OpenGL context and make it current.
+        """
+        
         hGLCtx = wglCreateContext(hDC)
         if not hGLCtx:
             raise WinException()
-        return GLContext.current_external(hDC, hGLCtx)
+        return GLContext.current_external(hDC, hGLCtx).owned_current(True)
     
     @classmethod
     def current_external(self, hDC: int | HANDLE, hGLCtx: int | HANDLE) -> 'GLContext':
+        """
+        Make OpenGL context current.
+        """
+        
         glCtx = GLContext(hGLCtx)
         if not wglMakeCurrent(hDC, hGLCtx):
             raise WinException()
         return glCtx
     
     def owned_current(self, value: bool):
+        """
+        Exchange the "current" state of context owning to local or foreign.
+        """
+        
         self._current = value
         return self
     
@@ -1691,7 +2241,11 @@ class GLContext(Handle):
         self._closed = True
         
 class Event(Handle):
-    def __init__(self, name: str, initial: bool = False, manual_reset: bool = True, 
+    """
+    Class, representing Win32 Event.
+    """
+    
+    def __init__(self, name: str = None, initial: bool = False, manual_reset: bool = True, 
                  security_attributes: SECURITY_ATTRIBUTES = NULL):
         super().__init__()
         name = '\\Local\\' + name

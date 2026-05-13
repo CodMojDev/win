@@ -2,6 +2,10 @@ from .imagelist import *
 from .window import *
 
 class Toolbar(Control):
+    """
+    Win32 Toolbar common control.
+    """
+    
     def __init__(self, parent: int | HWND, identifier: int | HMENU):
         super().__init__(parent, identifier)
         self.class_name = TOOLBARCLASSNAMEW

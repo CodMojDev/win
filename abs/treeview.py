@@ -3,6 +3,10 @@ from .window import *
 from .edit import *
 
 class TreeItem(HTREEITEM):
+    """
+    Class, representing tree item (HTREEITEM).
+    """
+    
     class EditLabel:
         tree_item: 'TreeItem'
         
@@ -10,14 +14,26 @@ class TreeItem(HTREEITEM):
             self.tree_item = tree_item
         
         def begin(self) -> Edit:
+            """
+            Begin the label editing for tree item.
+            """
+            
             hEdit = self.tree_item.tree_view.send(TVM_EDITLABELW, lParam=self)
             if not hEdit: return None
             return Edit.foreign(hEdit)
         
         def end(self, dont_save: bool = False):
+            """
+            End the label editing for tree item.
+            """
+            
             self.tree_item.tree_view.send(TVM_ENDEDITLABELNOW, dont_save)
             
         def get(self) -> Edit:
+            """
+            Get the label edit control for tree item.
+            """
+            
             hEdit = self.tree_item.tree_view.send(TVM_GETEDITCONTROL)
             if not hEdit: return None
             return Edit.foreign(hEdit)
@@ -36,6 +52,10 @@ class TreeItem(HTREEITEM):
         self.value = value
         
     def select(self, action: int = TVGN_CARET):
+        """
+        Select the tree item.
+        """
+        
         self.tree_view.send(TVM_SELECTITEM, action, self)
         
     @property
@@ -46,19 +66,39 @@ class TreeItem(HTREEITEM):
         return TreeItem(self.tree_view, item)
     
     def delete(self):
+        """
+        Delete the tree item.
+        """
+        
         self.tree_view.send(TVM_DELETEITEM, lParam=self)
         self.value = None
         
     def collapse(self):
+        """
+        Collapse the tree item.
+        """
+        
         self.tree_view.send(TVM_EXPAND, TVE_COLLAPSE, self)
         
     def expand(self):
+        """
+        Expand the tree item.
+        """
+        
         self.tree_view.send(TVM_EXPAND, TVE_EXPAND, self)
         
     def toggle(self):
+        """
+        Toggle the tree item.
+        """
+        
         self.tree_view.send(TVM_EXPAND, TVE_TOGGLE, self)
         
     def show_info_tip(self):
+        """
+        Show info tip on the tree item.
+        """
+        
         self.tree_view.send(TVM_SHOWINFOTIP, lParam=self)
 
     @property
@@ -76,11 +116,18 @@ class TreeItem(HTREEITEM):
         return rect
     
     def state(self, mask: int) -> int:
+        """
+        Get tree item state.
+        """
         return self.tree_view.send(TVM_GETITEMSTATE, self, mask)
     
     def insert(self, after: int | HANDLE = TVI_LAST, text: str = '',
                image_index: int = 0, selected_image_index: int = 0,
                value: int = 0, children_count: int = 0) -> 'TreeItem':
+        """
+        Insert another item into tree item.
+        """
+        
         value = PtrUtil.get_address(value)
         tviex = TVITEMEXW()
         tviex.iImage = image_index
@@ -99,6 +146,10 @@ class TreeItem(HTREEITEM):
         return TreeItem(self.tree_view, hItem)
 
 class TreeView(Control):
+    """
+    Win32 Tree view common control.
+    """
+    
     def __init__(self, width: int, height: int, parent: int | HANDLE, identifier: int | HANDLE):
         super().__init__(parent, identifier)
         self._width = width
@@ -107,6 +158,10 @@ class TreeView(Control):
         self.root = TreeItem(self, TVI_ROOT)
     
     def create(self, x: int, y: int, relative: int | HANDLE = NULL):
+        """
+        Create tree view control.
+        """
+        
         super().create(self._width, self._height, x, y, '', relative)
         
     @property
@@ -150,6 +205,10 @@ class TreeView(Control):
         self.send(TVM_SETIMAGELIST, TVSIL_STATE, image_list)
         
     def hit(self, x: int, y: int) -> tuple[int, TreeItem]:
+        """
+        Hit-test the tree view control.
+        """
+        
         info = TVHITTESTINFO()
         info.pt.x = x
         info.pt.y = y
@@ -168,6 +227,10 @@ class TreeView(Control):
         return self.send(TVM_GETVISIBLECOUNT)
     
     def clear(self):
+        """
+        Clear the tree view.
+        """
+        
         self.send(TVM_DELETEITEM, lParam=TVI_ROOT)
         
     @property
@@ -179,6 +242,10 @@ class TreeView(Control):
         self.send(TVM_SETSCROLLTIME, scroll_time)
         
     def set_autoscroll_info(self, pixels_per_second: int, redraw_interval: int):
+        """
+        Set autoscroll info of list view control.
+        """
+        
         self.send(TVM_SETAUTOSCROLLINFO, pixels_per_second, redraw_interval)
         
     @property

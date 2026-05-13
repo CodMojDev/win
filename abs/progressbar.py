@@ -1,6 +1,10 @@
 from .window import *
 
 class ProgressBar(Control):
+    """
+    Win32 Progress bar common control.
+    """
+    
     class Progress:
         progress_bar: 'ProgressBar'
         
@@ -8,9 +12,17 @@ class ProgressBar(Control):
             self.progress_bar = progress_bar
             
         def set(self, position: int):
+            """
+            Set current progress bar progress.
+            """
+            
             self.progress_bar.send(PBM_SETPOS, position)
         
         def get(self):
+            """
+            Get current progress bar progress.
+            """
+            
             return self.progress_bar.send(PBM_GETPOS)
         
         def __iadd__(self, delta: int):
@@ -22,6 +34,10 @@ class ProgressBar(Control):
             return self
         
         def step(self):
+            """
+            Step the progress bar progress.
+            """
+            
             self.progress_bar.send(PBM_STEPIT)
     
     def __init__(self, width: int, height: int, 
@@ -33,9 +49,17 @@ class ProgressBar(Control):
         self.class_name = PROGRESS_CLASSW
         
     def create(self, x: int, y: int, relative: int | HWND=NULL):
+        """
+        Create progress bar control.
+        """
+        
         super().create(self._width, self._height, x, y, relative=relative)
         
     def marquee(self, marquee: bool = True, update: int = 0):
+        """
+        Set current progress bar as marquee (or not).
+        """
+        
         self.send(PBM_SETMARQUEE, marquee, update)
         
     @property

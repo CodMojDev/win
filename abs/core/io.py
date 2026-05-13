@@ -20,6 +20,10 @@ def GlobalUnlock(hMem: int) -> int: ...
 def GlobalFree(hMem: int) -> int: ...
 
 class MemoryIO(io.IOBase):
+    """
+    Class, wrapping the direct memory operations with Python I/O-compatible class.
+    """
+    
     memory_position: int
     memory_address: int
     memory_size: int
@@ -104,93 +108,189 @@ class MemoryIO(io.IOBase):
         return data_length
     
     def can_read(self) -> bool:
+        """
+        Can read now.
+        """
+        
         return self.memory_position < self.memory_size
     
     def read_int8(self) -> int:
+        """
+        Read the 8-bit integer from memory.
+        """
+        
         data = i_cast(self.memory_address + self.memory_position, PINT8).contents.value
         self.memory_position += 1
         return data
     
     def read_uint8(self) -> int:
+        """
+        Read the unsigned 8-bit integer from memory.
+        """
+        
         data = i_cast(self.memory_address + self.memory_position, PUINT8).contents.value
         self.memory_position += 1
         return data
     
     def read_int16(self) -> int:
+        """
+        Read the 16-bit integer from memory.
+        """
+        
         data = i_cast(self.memory_address + self.memory_position, PINT16).contents.value
         self.memory_position += 2
         return data
     
     def read_uint16(self) -> int:
+        """
+        Read the unsigned 16-bit integer from memory.
+        """
+        
         data = i_cast(self.memory_address + self.memory_position, PUINT16).contents.value
         self.memory_position += 2
         return data
     
     def read_int32(self) -> int:
+        """
+        Read the 32-bit integer from memory.
+        """
+        
         data = i_cast(self.memory_address + self.memory_position, PINT32).contents.value
         self.memory_position += 4
         return data
     
     def read_uint32(self) -> int:
+        """
+        Read the unsigned 32-bit integer from memory.
+        """
+        
         data = i_cast(self.memory_address + self.memory_position, PUINT32).contents.value
         self.memory_position += 4
         return data
     
     def read_int64(self) -> int:
+        """
+        Read the 64-bit integer from memory.
+        """
+        
         data = i_cast(self.memory_address + self.memory_position, PINT64).contents.value
         self.memory_position += 8
         return data
     
     def read_uint64(self) -> int:
+        """
+        Read the unsigned 64-bit integer from memory.
+        """
+        
         data = i_cast(self.memory_address + self.memory_position, PUINT64).contents.value
         self.memory_position += 8
         return data
     
     def read_structure(self, type: type[WT_SIMPLESTRUCTURE]) -> WT_SIMPLESTRUCTURE:
+        """
+        Read the structure from memory.
+        """
+        
         data = i_cast(self.memory_address + self.memory_position, PTR(type)).contents
         self.memory_position += sizeof(type)
         return data
     
     def read_bool(self) -> bool:
+        """
+        Read the boolean from memory.
+        """
+        
         return self.read_int8() == TRUE
     
     def read_bool32(self) -> bool:
+        """
+        Read the 32-bit boolean from memory.
+        """
+        
         return self.read_int32() == TRUE
     
     def write_int8(self, integer: int) -> int:
+        """
+        Write the 8-bit integer into memory.
+        """
+        
         return self.write(bytes(INT8(integer)))
     
     def write_uint8(self, integer: int) -> int:
+        """
+        Write the unsigned 8-bit integer into memory.
+        """
+        
         return self.write(bytes(UINT8(integer)))
     
     def write_int16(self, integer: int) -> int:
+        """
+        Write the 16-bit integer into memory.
+        """
+        
         return self.write(bytes(INT16(integer)))
     
     def write_uint16(self, integer: int) -> int:
+        """
+        Write the unsigned 16-bit integer into memory.
+        """
+        
         return self.write(bytes(UINT16(integer)))
     
     def write_int32(self, integer: int) -> int:
+        """
+        Write the 32-bit integer into memory.
+        """
+        
         return self.write(bytes(INT32(integer)))
     
     def write_uint32(self, integer: int) -> int:
+        """
+        Write the unsigned 32-bit integer into memory.
+        """
+        
         return self.write(bytes(UINT32(integer)))
     
     def write_int64(self, integer: int) -> int:
+        """
+        Write the 64-bit integer into memory.
+        """
+        
         return self.write(bytes(INT64(integer)))
     
     def write_uint64(self, integer: int) -> int:
+        """
+        Write the unsigned 64-bit integer into memory.
+        """
+        
         return self.write(bytes(UINT64(integer)))
     
     def write_structure(self, structure: WT_SIMPLESTRUCTURE) -> int:
+        """
+        Write the structure into memory.
+        """
+        
         return self.write(bytes(structure))
     
     def write_bool(self, boolean: bool) -> int:
+        """
+        Write the boolean into memory.
+        """
+        
         return self.write(bytes(BYTE(boolean)))
     
     def write_bool32(self, boolean: bool) -> int:
+        """
+        Write the 32-bit boolean into memory.
+        """
+        
         return self.write(bytes(BOOL(boolean)))
     
 class GlobalIO(MemoryIO):
+    """
+    Class, wrapping the functionality of HGLOBAL, extending the MemoryIO.
+    """
+    
     handle: int
     
     def __init__(self, hMem: int):
@@ -202,6 +302,10 @@ class GlobalIO(MemoryIO):
         self._owning = False
     
     def owning(self, owning: bool = True):
+        """
+        Set the owner off this Global I/O, local or foreign.
+        """
+        
         self._owning = owning
         return self
     
@@ -212,6 +316,10 @@ class GlobalIO(MemoryIO):
         super().close()
         
 class StreamIO(io.IOBase):
+    """
+    Class, wrapping the functionality of IStream with Python I/O-compatible class.
+    """
+    
     stream: IStream
     
     def __init__(self, stream: IStream):

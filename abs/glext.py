@@ -9,7 +9,15 @@ class GLExtState:
     methods: list[Callable] = []
 
 class GLExtAPI:
+    """
+    Open GL extensions API.
+    """
+    
     def method(ret: type, *args: type):
+        """
+        Open GL extension method.
+        """
+        
         def _method(f: Callable):
             for method in GLExtState.methods:
                 if method.__name__ == f.__name__:
@@ -29,6 +37,10 @@ class GLExtAPI:
     
     @classmethod
     def initialize(cls):
+        """
+        Initialize an Open GL extensions.
+        """
+        
         for method in GLExtState.methods:
             proto = CALLBACK(method._glext_ret, *method._glext_args)
             name = method.__name__.encode('ascii')
@@ -1190,4 +1202,8 @@ class GLExt(
     GL_EXT_blend_color, GL_EXT_cull_vertex, GL_EXT_index_material, 
     GL_EXT_index_func, GL_EXT_light_texture, GL_EXT_polygon_offset, 
     GL_EXT_texture, WGL_EXT_extensions_string, GL_EXT_vertex_shader,
-    GL_EXT_framebuffer_object): ...
+    GL_EXT_framebuffer_object):
+    """
+    Open GL extensions collection.
+    """
+    

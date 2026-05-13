@@ -8,12 +8,25 @@ if TYPE_CHECKING:
     from ..window import Window
 
 def _abs_is_main(stack_level: int = 0) -> bool:
+    # check upper frame + stack_level is running as main script (standard __name__ == __main__ check)
     return get_py_frame(1 + stack_level).f_locals['__name__'] == '__main__'
 
 class Abs:
+    """
+    Main WinAbs class for entry points and threads.
+    """
+    
     class Thread(CThread):
+        """
+        WinAbs thread.
+        """
+        
         @classmethod
         def run(cls, callback: Callable[..., int], args=(), kwargs={}) -> 'Abs.Thread':
+            """
+            Run WinAbs thread with thread callback.
+            """
+            
             def thread_worker(lParam: int):
                 ExitThread(callback(*args, **kwargs) or 0)
             thread_worker_routine = LPTHREAD_START_ROUTINE(thread_worker)
@@ -23,64 +36,83 @@ class Abs:
             return thread
         
     class ThreadManager:
+        """
+        WinAbs thread manager.
+        """
+        
         threads: dict[int, tuple[CThread, bool]]
         windows: dict[int, 'Window']
         window: 'Window'
         
         def __init__(self, window: 'Window'):
+            # bind the thread manager on_close event to window on_close
             window.on_close += self.threadmgr_on_close
+            
+            # setup the thread manager dictionaries
             self.threads = {}
             self.windows = {}
         
         def close(self, thread: CThread):
+            """
+            Close the thread.
+            """
+            
+            # set the thread manager state to thread alive=False
             self.threads[thread.tid] = (thread, False)
-            if thread.alive:
-                try:
+            if thread.alive: # if thread is alive
+                try: # try waiting for thread, 1 sec
                     thread.join(timeout=1000)
-                except TimeoutError:
-                    thread.terminate()
+                except TimeoutError: # if timeout exceeded,
+                    thread.terminate() # when terminate thread
                 finally:
+                    # finally, close the thread handle
                     thread.close()
         
         def threadmgr_on_close(self):
-            for thread, alive in self.threads.values():
+            # close all threads
+            for thread, _ in self.threads.values():
                 self.close(thread)
+            # clear threads dictionary
             self.threads.clear()
                         
         def running(self):
+            """
+            Function for testing current thread is running in WinAbs Thread manager.
+            """
+            
             tid = GetCurrentThreadId()
             return tid in self.threads and self.threads[tid][1]
         
         def remove(self, thread: CThread):
+            """
+            Remove thread from thread manager.
+            """
+            
             self.close(thread)
             del self.threads[thread.tid]
         
         def add(self, thread: CThread, automatic_alive: bool = False):
+            """
+            Add thread to thread manager.
+            """
+            
             self.threads[thread.tid] = (thread, automatic_alive or thread.alive)
-        
-        def threadmgr_bindedwindow_on_message(self, msg: MSG):
-            if msg.message in (WM_DESTROY, WM_QUIT):
-                current = GetCurrentThreadId()
-                window = self.windows[current]
-                del self.windows[current]
-                window.on_message -= self.threadmgr_bindedwindow_on_message
-                return
-                
-            if msg.message != WM_CLOSE:
-                if not self.running():
-                    self.windows[GetCurrentThreadId()].close()
-             
-        def bind(self, window: 'Window', tid: int):
-            window.on_message += self.threadmgr_bindedwindow_on_message
-            self.windows[tid] = window
     
     @staticmethod
     def run(entry_point: Callable, *args, **kwargs):
+        """
+        Run the WinAbs entry point.
+        """
+        
         if _abs_is_main(1): return entry_point(*args, **kwargs)
         return None
     
     @staticmethod
     def run_async(entry_point: Callable, *args, **kwargs) -> 'Abs.Thread':
+        """
+        Asynchronously run the WinAbs entry point.
+        """
+        
         if _abs_is_main(1):
             def thread_worker() -> int:
                 try:

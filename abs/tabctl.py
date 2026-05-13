@@ -1,3 +1,5 @@
+# TODO:
+
 from .window import *
 
 class TabControl(Control):
@@ -5,4 +7,4 @@ class TabControl(Control):
         super().__init__(parent, identifier)
         
     def adjust_rect(self, pRect : IPointer[RECT], non_client: bool = False):
-        SendMessage(self, TCM_)
+        ...#SendMessage(self, TCM_)

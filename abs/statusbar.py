@@ -1,6 +1,10 @@
 from .window import *
 
 class StatusBar(Control):
+    """
+    Win32 Status bar common control.
+    """
+    
     def __init__(self, text: str, parent: int | HWND, 
                  identifier: int | HMENU, draw_mode: int = 0):
         super().__init__(parent, identifier)
@@ -8,6 +12,10 @@ class StatusBar(Control):
         self._text = text
         
     def create(self):
+        """
+        Create status bar control.
+        """
+        
         self.value = CreateStatusWindowW(self._style, self._text, self._parent, self._identifier)
         if not self.value:
             raise WinException()

@@ -1,10 +1,16 @@
 from .window import *
 
 class ButtonBase(Control):
+    """
+    Base class, wrapping the functionality of Win32 BUTTON common control.
+    """
+    
     def __init__(self, width: int, height: int, parent: int | HWND,
                  identifier: int | HMENU, text: str = 'Button'):
         super().__init__(parent, identifier)
         self.class_name = 'BUTTON'
+        
+        # predefine parameters given in constructor
         self._button_text = text
         self._width = width
         self._height = height
@@ -14,69 +20,103 @@ class ButtonBase(Control):
         
     @property
     def state(self) -> int:
-        return SendMessage(self, BM_GETSTATE, 0, 0)
+        return self.send(BM_GETSTATE)
     
     @state.setter
     def state(self, state: int):
-        SendMessage(self, BM_SETSTATE, state, 0)
+        self.post(BM_SETSTATE, state)
         
 class Button(ButtonBase):
+    """
+    Win32 Button common control.
+    """
+    
     def __init__(self, width: int, height: int, parent: int | HWND,
                  identifier: int | HMENU, text: str = 'Button'):
         super().__init__(width, height, parent, identifier, text=text)
         self._style |= BS_PUSHBUTTON
         
     def click(self):
-        SendMessage(self, BM_CLICK, 0, 0)
+        self.post(BM_CLICK)
         
 class RadioButton(ButtonBase):
+    """
+    Win32 Radio button common control.
+    """
+    
     def __init__(self, width: int, height: int, parent: int | HWND,
                  identifier: int | HMENU, text: str = 'RadioButton', auto: bool = False):
         super().__init__(width, height, parent, identifier, text=text)
         
+        # setup styles based on automatically enabling of radio button
         if auto:
             self._style |= BS_AUTORADIOBUTTON
         else:
             self._style |= BS_RADIOBUTTON
         
     def click(self):
-        SendMessage(self, BM_CLICK, 0, 0)
+        """
+        Click on the radio button.
+        """
+        
+        self.post(BM_CLICK)
         
 class Checkbox(ButtonBase):
+    """
+    Win32 Checkbox common control.
+    """
+    
     def __init__(self, width: int, height: int, parent: int | HWND,
                  identifier: int | HMENU, text: str = 'Checkbox', auto: bool = False):
         super().__init__(width, height, parent, identifier, text=text)
         
+        # setup styles based on automatically enabling of check box
         if auto:
             self._style |= BS_AUTOCHECKBOX
         else:
             self._style |= BS_CHECKBOX
         
     def click(self):
-        SendMessage(self, BM_CLICK, 0, 0)
+        self.send(BM_CLICK)
         
     @property
     def checked(self) -> bool:
-        return SendMessage(self, BM_GETCHECK, 0, 0) == BST_CHECKED
+        return self.send(BM_GETCHECK) == BST_CHECKED
     
     @checked.setter
     def checked(self, checked: bool):
-        SendMessage(self, BM_SETCHECK, BST_CHECKED if checked else BST_UNCHECKED, 0)
+        self.post(BM_SETCHECK, BST_CHECKED if checked else BST_UNCHECKED)
         
-    def get_grayed(self) -> bool:
-        return SendMessage(self, BM_GETCHECK, 0, 0) == BST_INDETERMINATE
+    @property
+    def grayed(self) -> bool:
+        return self.send(BM_GETCHECK) == BST_INDETERMINATE
     
-    def set_grayed(self, grayed: bool):
-        SendMessage(self, BM_SETCHECK, BST_INDETERMINATE, 0)
+    @grayed.setter
+    def grayed(self, grayed: bool):
+        if grayed:
+            self.post(BM_SETCHECK, BST_INDETERMINATE)
+        else:
+            self.post(BM_SETCHECK, BST_UNCHECKED)
         
 class GroupBox(ButtonBase):
+    """
+    Win32 Group box common control.
+    """
+    
     def __init__(self, width: int, height: int, parent: int | HWND,
                  identifier: int | HMENU, text: str = ''):
         super().__init__(width, height, parent, identifier, text=text)
         self.style |= BS_GROUPBOX
         
 class SplitButton(ButtonBase):
+    """
+    Win32 Split button common control.
+    """
+    
     def __init__(self, width: int, height: int, parent: int | HWND,
                  identifier: int | HMENU, text: str = 'Button'):
         super().__init__(width, height, parent, identifier, text=text)
         self.style |= BS_SPLITBUTTON
+        
+    def click(self):
+        self.send(BM_CLICK)

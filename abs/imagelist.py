@@ -1,6 +1,10 @@
 from .window import *
 
 class ImageList(Handle):
+    """
+    Class, representing Win32 Image list object (comctl32).
+    """
+    
     def __init__(self, width: int, height: int, initial: int, 
                  flags: int = ILC_COLOR32 | ILC_MASK, grow: int = 0):
         super().__init__()
@@ -13,10 +17,16 @@ class ImageList(Handle):
         self._closed = True
     
     @overload
-    def add(self, hIcon: Icon) -> int: ...
+    def add(self, hIcon: Icon) -> int: 
+        """
+        Add icon to image list.
+        """
     
     @overload
     def add(self, hBitmap: int | HANDLE, hBmMask: int | HANDLE = NULL) -> int: ...
+        """
+        Add bitmap to image list.
+        """
     
     def add(self, var: int | HANDLE, hBmMask: int | HANDLE = NULL) -> int:
         if isinstance(var, Icon):
