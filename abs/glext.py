@@ -667,7 +667,7 @@ class GL_ARB_shader_objects:
     @GLExtAPI.method(GLvoid, GLhandleARB, GLsizei, PTR(LPSTR), PTR(GLint))
     def glShaderSourceARB(shaderObj: int, count: int, string: IPointer[LPSTR], length: IPointer[GLint]): ...
     
-    @GLExtAPI(GLvoid, GLhandleARB)
+    @GLExtAPI.method(GLvoid, GLhandleARB)
     def glCompileShaderARB(shaderObj: int): ...
     
     @GLExtAPI.method(GLhandleARB)
@@ -1190,11 +1190,52 @@ class GL_EXT_geometry_shader4:
     @GLExtAPI.method(GLvoid, GLenum, GLenum, GLuint, GLint)
     def glFramebufferTextureEXT(target: int, attachment: int, texture: int, level: int): ...
     
-    @GLExtAPI.method(GLvoid, GLenum, GLenum, GLunt, GLint, GLint)
+    @GLExtAPI.method(GLvoid, GLenum, GLenum, GLuint, GLint, GLint)
     def glFramebufferTextureLayerEXT(target: int, attachment: int, texture: int, level: int, layer: int): ...
     
-    @GLExtAPI.method(GLvoid, GLenum, GLenum, GLunt, GLint, GLint)
+    @GLExtAPI.method(GLvoid, GLenum, GLenum, GLuint, GLint, GLint)
     def glFramebufferTextureFaceEXT(target: int, attachment: int, texture: int, level: int, face: int): ...
+
+class GL_EXT_blend_equation_separate:
+    GL_BLEND_EQUATION_RGB_EXT = 0x8009
+    GL_BLEND_EQUATION_ALPHA_EXT = 0x883D
+    
+    @GLExtAPI.method(GLvoid, GLenum, GLenum)
+    def glBlendEquationSeparateEXT(modeRGB: int, modeAlpha: int): ...
+
+class GL_EXT_blend_func_separate:
+    GL_BLEND_DST_RGB_EXT = 0x80C8
+    GL_BLEND_SRC_RGB_EXT = 0x80C9
+    GL_BLEND_DST_ALPHA_EXT = 0x80CA
+    GL_BLEND_SRC_ALPHA_EXT = 0x80CB
+    
+    @GLExtAPI.method(GLvoid, GLenum, GLenum, GLenum, GLenum)
+    def glBlendFuncSeparateEXT(sfactorRGB: int, dfactorRGB: int, sfactorAlpha: int, dfactorAlpha: int): ...
+
+class GL_ATI_separate_stencil:
+    GL_STENCIL_BACK_FUNC_ATI = 0x8800
+    GL_STENCIL_BACK_FAIL_ATI = 0x8801
+    GL_STENCIL_BACK_PASS_DEPTH_FAIL_ATI = 0x8802
+    GL_STENCIL_BACK_PASS_DEPTH_PASS_ATI = 0x8803
+    
+    @GLExtAPI.method(GLvoid, GLenum, GLenum, GLenum, GLenum)
+    def glStencilOpSeparateATI(face: int, sfail: int, dpfail: int, dppass: int): ...
+    
+    @GLExtAPI.method(GLvoid, GLenum, GLenum, GLint, GLuint)
+    def glStencilFuncSeparateATI(frontfunc: int, backfunc: int, ref: int, mask: int): ...
+
+class GL_EXT_blend_minmax:
+    GL_FUNC_ADD_EXT = 0x8006
+    GL_MIN_EXT = 0x8007
+    GL_MAX_EXT = 0x8008
+    GL_BLEND_EQUATION_EXT = 0x8009
+
+    @GLExtAPI.method(GLvoid, GLenum)
+    def glBlendEquationEXT(mode: int): ...
+
+class GL_EXT_blend_subtract:
+    GL_FUNC_SUBTRACT_EXT = 0x800A
+    GL_FUNC_REVERSE_SUBTRACT_EXT = 0x800B
 
 class GLExt(
     WGL_EXT_swap_control, GL_EXT_abgr, GL_EXT_bgra, WGL_EXT_pixel_format,
@@ -1202,7 +1243,10 @@ class GLExt(
     GL_EXT_blend_color, GL_EXT_cull_vertex, GL_EXT_index_material, 
     GL_EXT_index_func, GL_EXT_light_texture, GL_EXT_polygon_offset, 
     GL_EXT_texture, WGL_EXT_extensions_string, GL_EXT_vertex_shader,
-    GL_EXT_framebuffer_object):
+    GL_EXT_framebuffer_object, GL_ARB_shader_objects, GL_ARB_framebuffer_object,
+    GL_ARB_invalidate_subdata, GL_ARB_vertex_buffer_object, GL_ARB_vertex_shader,
+    GL_ARB_fragment_shader, GL_EXT_geometry_shader4, GL_EXT_blend_equation_separate,
+    GL_EXT_blend_func_separate, GL_ATI_separate_stencil):
     """
     Open GL extensions collection.
     """

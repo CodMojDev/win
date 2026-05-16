@@ -80,10 +80,12 @@ class PopupMenu(Menu):
         if not TrackPopupMenu(self, flags, x, y, 0, hWnd, NULL):
             raise WinException()
 
-class Window(HWND):
+class Window(HWND, Abs.Object):
     """
     Class, wrapping functionality of Win32 Window.
     """
+    
+    _foreign_cache: dict[int, 'Window'] = {}
     
     def __hash__(self):
         return hash(self.value)
@@ -99,16 +101,22 @@ class Window(HWND):
         Create `Window` object from foreign HWND.
         """
         
-        if PtrUtil.get_address(hwnd) == 0: return None
+        hwnd = PtrUtil.get_address(hwnd)
+        if hwnd == 0: return None
         if not IsWindow(hwnd):
             raise WinException()
-        return cls(hwnd, headless=True)
+        window = Window._foreign_cache.get(hwnd)
+        if window is None:
+            window = cls(hwnd, headless=True)
+            Window._foreign_cache[hwnd] = window
+        return window
     
     def __init__(self, *args, **kwargs):
-        super().__init__(*args)
+        HWND.__init__(self, *args)
         
         # headless construct = construct `Window` object from HWND
         if 'headless' not in kwargs:
+            Abs.Object.__init__(self)
             # fields for class registering
             self.class_name = None
             self.class_style = 0
@@ -151,6 +159,8 @@ class Window(HWND):
             self.on_mouse_move = Event()
             self.on_draw_item = Event()
             self.on_palette_changed = Event()
+            self.on_measure_item = Event()
+            self.on_compare_item = Event()
             
             # bind the standard handler for destroy: application cycle notifier
             self.on_destroy += self.Window_on_destroy
@@ -390,6 +400,16 @@ class Window(HWND):
             result = self.on_set_cursor(Window.foreign(wParam), LOWORD(lParam), HIWORD(lParam))
             if result is not None: # return True/False
                 return result
+        elif msg == WM_MEASUREITEM: # measure the item
+            if not self.on_measure_item.empty(): # if has measure item handlers
+                self.on_measure_item.execute(wParam, i_cast_value(lParam, MEASUREITEMSTRUCT))
+                return TRUE # WM_MEASUREITEM handled
+            return FALSE # not handled
+        elif msg == WM_COMPAREITEM:
+            if not self.on_compare_item.empty(): # if has compare item handlers
+                self.on_compare_item.execute(wParam, i_cast_value(lParam, COMPAREITEMSTRUCT))
+                return TRUE # WM_COMPAREITEM handled
+            return FALSE # not handled
         else:
             # unknown window message received
             result = self.on_unknown_message.execute(hwnd, msg, wParam, lParam) # trying to call all unknown message handlers

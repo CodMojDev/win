@@ -15,9 +15,24 @@ class ButtonBase(Control):
         self._width = width
         self._height = height
         
+        # button events
+        self.on_click = Event()
+        self.on_double_click = Event()
+        
+        # if parent is window and Abs-managed object, then subscribe on events
+        if isinstance(parent, Window) and Abs.managed(parent):
+            parent.on_command += self.parent_window_on_command
+        
     def create(self, x: int = 0, y: int = 0, relative: int | HWND = NULL):
         super().create(self._width, self._height, x, y, self._button_text, relative)
-        
+    
+    def parent_window_on_command(self, identifier: int, notify_code: int, hwnd: int):
+        if identifier == self._identifier:
+            if notify_code == BN_CLICKED:
+                self.on_click.execute()
+            elif notify_code == BN_DOUBLECLICKED:
+                self.on_double_click.execute()
+                
     @property
     def state(self) -> int:
         return self.send(BM_GETSTATE)

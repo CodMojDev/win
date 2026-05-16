@@ -16,6 +16,25 @@ class Abs:
     Main WinAbs class for entry points and threads.
     """
     
+    class Object:
+        """
+        WinAbs object.
+        """
+        
+        property_map: dict[str, Any]
+        
+        def __init__(self):
+            self.property_map = {}
+            self._abs_managed = True
+            
+    @staticmethod
+    def managed(obj: Any) -> bool:
+        """
+        Check object is WinAbs-managed.
+        """
+        
+        return hasattr(obj, '_abs_managed')
+    
     class Thread(CThread):
         """
         WinAbs thread.

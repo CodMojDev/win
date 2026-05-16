@@ -1603,10 +1603,10 @@ class Color:
             """
             return self.value.bgr()
             
-        def rgba(self) -> 'Color.RGBA'
+        def rgba(self) -> 'Color.RGBA':
             """
             Convert color into RGBA.
-            """:
+            """
             return self.value.rgba()
             
         def argb(self) -> 'Color.ARGB':
