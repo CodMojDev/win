@@ -219,7 +219,7 @@ class CVirtualPoolAllocator(CLocalPoolAllocator):
         super().__init__(quota)
         
     def alloc_init(self):
-        self.base = VirtualAlloc(NULL, self.quota, 5, self.flags)
+        self.base = VirtualAlloc(NULL, self.quota, MEM_COMMIT, self.flags)
         
     def alloc_init_resized(self, old_quota: int):
         old_base = self.base

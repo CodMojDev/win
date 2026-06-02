@@ -92,6 +92,19 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("pfnCallback", LPFNPSPCALLBACKA),
             ("pcRefParent", PUINT)
         ]
+        _anonymous_ = ['u', 'u2']
+        dwSize: int
+        dwFlags: int
+        hInstance: int
+        pszTemplate: LPCSTR
+        pResource: defb_t.Any
+        hIcon: int
+        pszIcon: LPCSTR
+        pszTitle: LPCSTR
+        pfnDlgProc: FARPROC
+        lParam: int
+        pfnCallback: FARPROC
+        pcRefParent: PUINT
     PROPSHEETPAGEA_V1 = _PROPSHEETPAGEA_V1
     LPPROPSHEETPAGEA_V1 = POINTER(PROPSHEETPAGEA_V1)
     LPCPROPSHEETPAGEA_V1 = LPPROPSHEETPAGEA_V1
@@ -121,6 +134,19 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("pfnCallback", LPFNPSPCALLBACKW),
             ("pcRefParent", PUINT)
         ]
+        _anonymous_ = ['u', 'u2']
+        dwSize: int
+        dwFlags: int
+        hInstance: int
+        pszTemplate: LPCWSTR
+        pResource: defb_t.Any
+        hIcon: int
+        pszIcon: LPCWSTR
+        pszTitle: LPCWSTR
+        pfnDlgProc: FARPROC
+        lParam: int
+        pfnCallback: FARPROC
+        pcRefParent: PUINT
     PROPSHEETPAGEW_V1 = _PROPSHEETPAGEW_V1
     LPPROPSHEETPAGEW_V1 = POINTER(PROPSHEETPAGEW_V1)
     LPCPROPSHEETPAGEW_V1 = LPPROPSHEETPAGEW_V1
@@ -140,6 +166,21 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("pszHeaderTitle", LPCSTR),
             ("pszHeaderSubTitle", LPCSTR)
         ]
+        _anonymous_ = ['u', 'u2']
+        dwSize: int
+        dwFlags: int
+        hInstance: int
+        pszTemplate: LPCSTR
+        pResource: defb_t.Any
+        hIcon: int
+        pszIcon: LPCSTR
+        pszTitle: LPCSTR
+        pfnDlgProc: FARPROC
+        lParam: int
+        pfnCallback: FARPROC
+        pcRefParent: PUINT
+        pszHeaderTitle: LPCSTR
+        pszHeaderSubTitle: LPCSTR
     PROPSHEETPAGEA_V2 = _PROPSHEETPAGEA_V2
     LPPROPSHEETPAGEA_V2 = POINTER(PROPSHEETPAGEA_V2)
     LPCPROPSHEETPAGEA_V2 = LPPROPSHEETPAGEA_V2
@@ -159,6 +200,21 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("pszHeaderTitle", LPCWSTR),
             ("pszHeaderSubTitle", LPCWSTR)
         ]
+        _anonymous_ = ['u', 'u2']
+        dwSize: int
+        dwFlags: int
+        hInstance: int
+        pszTemplate: LPCWSTR
+        pResource: defb_t.Any
+        hIcon: int
+        pszIcon: LPCWSTR
+        pszTitle: LPCWSTR
+        pfnDlgProc: FARPROC
+        lParam: int
+        pfnCallback: FARPROC
+        pcRefParent: PUINT
+        pszHeaderTitle: LPCWSTR
+        pszHeaderSubTitle: LPCWSTR
     PROPSHEETPAGEW_V2 = _PROPSHEETPAGEW_V2
     LPPROPSHEETPAGEW_V2 = POINTER(PROPSHEETPAGEW_V2)
     LPCPROPSHEETPAGEW_V2 = LPPROPSHEETPAGEW_V2
@@ -179,6 +235,22 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("pszHeaderSubTitle", LPCSTR),
             ("hActCtx", HANDLE)
         ]
+        _anonymous_ = ['u', 'u2']
+        dwSize: int
+        dwFlags: int
+        hInstance: int
+        pszTemplate: LPCSTR
+        pResource: defb_t.Any
+        hIcon: int
+        pszIcon: LPCSTR
+        pszTitle: LPCSTR
+        pfnDlgProc: FARPROC
+        lParam: int
+        pfnCallback: FARPROC
+        pcRefParent: PUINT
+        pszHeaderTitle: LPCSTR
+        pszHeaderSubTitle: LPCSTR
+        hActCtx: int
     PROPSHEETPAGEA_V3 = _PROPSHEETPAGEA_V3
     LPPROPSHEETPAGEA_V3 = POINTER(PROPSHEETPAGEA_V3)
     LPCPROPSHEETPAGEA_V3 = LPPROPSHEETPAGEA_V3
@@ -199,6 +271,22 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("pszHeaderSubTitle", LPCWSTR),
             ("hActCtx", HANDLE)
         ]
+        dwSize: int
+        dwFlags: int
+        hInstance: int
+        pszTemplate: LPCWSTR
+        pResource: defb_t.Any
+        hIcon: int
+        pszIcon: LPCWSTR
+        pszTitle: LPCWSTR
+        pfnDlgProc: FARPROC
+        lParam: int
+        pfnCallback: FARPROC
+        pcRefParent: PUINT
+        pszHeaderTitle: LPCWSTR
+        pszHeaderSubTitle: LPCWSTR
+        hActCtx: int
+        _anonymous_ = ['u', 'u2']
     PROPSHEETPAGEW_V3 = _PROPSHEETPAGEW_V3
     LPPROPSHEETPAGEW_V3 = POINTER(PROPSHEETPAGEW_V3)
     LPCPROPSHEETPAGEW_V3 = LPPROPSHEETPAGEW_V3
@@ -226,6 +314,24 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("hActCtx", HANDLE),
             ("u3", _U_HHPHA)
         ]
+        _anonymous_ = ['u', 'u2', 'u3']
+        dwSize: int
+        dwFlags: int
+        hInstance: int
+        pszTemplate: LPCSTR
+        pResource: defb_t.Any
+        hIcon: int
+        pszIcon: LPCSTR
+        pszTitle: LPCSTR
+        pfnDlgProc: FARPROC
+        lParam: int
+        pfnCallback: FARPROC
+        pcRefParent: PUINT
+        pszHeaderTitle: LPCSTR
+        pszHeaderSubTitle: LPCSTR
+        hActCtx: int
+        hbmHeader: int
+        pszbmHeader: LPCSTR
     PROPSHEETPAGEA_V4 = _PROPSHEETPAGEA_V4
     LPPROPSHEETPAGEA_V4 = POINTER(PROPSHEETPAGEA_V4)
     LPCPROPSHEETPAGEA_V4 = LPPROPSHEETPAGEA_V4
@@ -253,6 +359,25 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("hActCtx", HANDLE),
             ("u3", _U_HHPHW)
         ]
+        _anonymous_ = ['u', 'u2', 'u3']
+        dwSize: int
+        dwFlags: int
+        hInstance: int
+        pszTemplate: LPCWSTR
+        pResource: defb_t.Any
+        hIcon: int
+        pszIcon: LPCWSTR
+        pszTitle: LPCWSTR
+        pfnDlgProc: FARPROC
+        lParam: int
+        pfnCallback: FARPROC
+        pcRefParent: PUINT
+        pszHeaderTitle: LPCWSTR
+        pszHeaderSubTitle: LPCWSTR
+        hActCtx: int
+        hbmHeader: int
+        pszbmHeader: LPCWSTR
+        
     PROPSHEETPAGEW_V4 = _PROPSHEETPAGEW_V4
     LPPROPSHEETPAGEW_V4 = POINTER(PROPSHEETPAGEW_V4)
     LPCPROPSHEETPAGEW_V4 = LPPROPSHEETPAGEW_V4
@@ -386,7 +511,22 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("u2", _U_NSPPSPA),
             ("u3", _U_PP),
             ("pfnCallback", PFNPROPSHEETCALLBACK)
-        ] 
+        ]
+        _anonymous_ = ['u', 'u2', 'u3']
+        dwSize: int
+        dwFlags: int
+        hwndParent: int
+        hInstance: int
+        hIcon: int
+        pszIcon: LPCSTR
+        pszCaption: LPWSTR
+        nPages: int
+        nStartPage: int
+        pStartPage: LPCSTR
+        ppsp: IPointer[PROPSHEETPAGEW_V4]
+        phpage: IPointer[HPROPSHEETPAGE]
+        pfnCallback: FARPROC
+        
     PROPSHEETHEADERA_V1 = _PROPSHEETHEADERA_V1
     LPPROPSHEETHEADERA_V1 = POINTER(PROPSHEETHEADERA_V1)
     LPCPROPSHEETHEADERA_V1 = LPPROPSHEETHEADERA_V1
@@ -410,6 +550,20 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("u3", _U_PP),
             ("pfnCallback", PFNPROPSHEETCALLBACK)
         ] 
+        _anonymous_ = ['u', 'u2', 'u3']
+        dwSize: int
+        dwFlags: int
+        hwndParent: int
+        hInstance: int
+        hIcon: int
+        pszIcon: LPCWSTR
+        pszCaption: LPCWSTR
+        nPages: int
+        nStartPage: int
+        pStartPage: LPCWSTR
+        ppsp: IPointer[PROPSHEETPAGEW_V4]
+        phpage: IPointer[HPROPSHEETPAGE]
+        pfnCallback: FARPROC
     PROPSHEETHEADERW_V1 = _PROPSHEETHEADERW_V1 
     LPPROPSHEETHEADERW_V1 = POINTER(PROPSHEETHEADERW_V1)
     LPCPROPSHEETHEADERW_V1 = LPPROPSHEETHEADERW_V1
@@ -436,6 +590,24 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("hplWatermark", HPALETTE),
             ("u5", _U_HHPHA)
         ] 
+        _anonymous_ = ['u', 'u2', 'u3', 'u4', 'u5']
+        dwSize: int
+        dwFlags: int
+        hwndParent: int
+        hInstance: int
+        hIcon: int
+        pszIcon: LPCSTR
+        pszCaption: LPCSTR
+        nPages: int
+        nStartPage: int
+        pStartPage: LPCSTR
+        ppsp: IPointer[PROPSHEETPAGEW_V4]
+        phpage: IPointer[HPROPSHEETPAGE]
+        pfnCallback: FARPROC
+        hbmWatermark: int
+        pszbmWatermark: LPCSTR
+        hbmHeader: int
+        pszbmHeader: LPCSTR
     PROPSHEETHEADERA_V2 = _PROPSHEETHEADERA_V2
     LPPROPSHEETHEADERA_V2 = POINTER(PROPSHEETHEADERA_V2)
     LPCPROPSHEETHEADERA_V2 = LPPROPSHEETHEADERA_V2
@@ -461,7 +633,26 @@ if cpreproc.pragma_once("_PRSHT_H_"):
             ("u4", _U_HWPWW),
             ("hplWatermark", HPALETTE),
             ("u5", _U_HHPHW)
-        ] 
+        ]
+        _anonymous_ = ['u', 'u2', 'u3', 'u4', 'u5']
+        dwSize: int
+        dwFlags: int
+        hwndParent: int
+        hInstance: int
+        hIcon: int
+        pszIcon: LPCWSTR
+        pszCaption: LPCWSTR
+        nPages: int
+        nStartPage: int
+        pStartPage: LPCWSTR
+        ppsp: IPointer[PROPSHEETPAGEW_V4]
+        phpage: IPointer[HPROPSHEETPAGE]
+        pfnCallback: FARPROC
+        hbmWatermark: int
+        pszbmWatermark: LPCWSTR
+        hbmHeader: int
+        pszbmHeader: LPCWSTR
+        
     PROPSHEETHEADERW_V2 = _PROPSHEETHEADERW_V2
     LPPROPSHEETHEADERW_V2 = POINTER(PROPSHEETHEADERW_V2)
     LPCPROPSHEETHEADERW_V2 = LPPROPSHEETHEADERW_V2

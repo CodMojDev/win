@@ -1237,6 +1237,22 @@ class GL_EXT_blend_subtract:
     GL_FUNC_SUBTRACT_EXT = 0x800A
     GL_FUNC_REVERSE_SUBTRACT_EXT = 0x800B
 
+class GL_ARB_multisample:
+    WGL_SAMPLE_BUFFERS_ARB = 0x2041
+    WGL_SAMPLES_ARB = 0x2042
+    GL_MULTISAMPLE_ARB = 0x809D
+    GL_SAMPLE_ALPHA_TO_COVERAGE_ARB = 0x809E
+    GL_SAMPLE_ALPHA_TO_ONE_ARB = 0x809F
+    GL_SAMPLE_COVERAGE_ARB = 0x80A0
+    GL_MULTISAMPLE_BIT_ARB = 0x20000000
+    GL_SAMPLE_BUFFERS_ARB = 0x80A8
+    GL_SAMPLES_ARB = 0x80A9
+    GL_SAMPLE_COVERAGE_VALUE_ARB = 0x80AA
+    GL_SAMPLE_COVERAGE_INVERT_ARB = 0x80AB
+    
+    @GLExtAPI.method(GLvoid, GLclampf, GLboolean)
+    def glSampleCoverageARB(value: float, invert: int): ...
+
 class GLExt(
     WGL_EXT_swap_control, GL_EXT_abgr, GL_EXT_bgra, WGL_EXT_pixel_format,
     GL_EXT_texture_swizzle, GL_EXT_stencil_wrap, GL_EXT_fog_coord, 

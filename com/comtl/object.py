@@ -13,7 +13,7 @@ def QI_SetInterface(itf: IUnknown, ppvObject: IVoidPtr, virtual_table: COMVirtua
 
     lpVtbl = PVOID(getattr(itf, virtual_table.field_name)) # create the pointer to virtual table
     pItf = pointer(lpVtbl) # create the pointer to interface (double pointer to virtual table)
-    _defb_ci.PyObject_GC_UnTrack(pItf) # unmanage lpVtbl from Python GC controlship
+    _defb_ci.PyObject_GC_UnTrack(pItf) # unmanage lpVtbl (ctypes Python Object) from Python GC controlship
     i_cast(ppvObject, PLPVOID).contents.value = PtrUtil.get_address(pItf)
     itf.AddRef() # Add reference to queried interface as by COM specification
     
@@ -33,14 +33,6 @@ class CComObject(CUnknownMTA):
         
         # IUnknown
         self.implement(self.QueryInterface)
-        
-        """
-        for attribute in dir(self):
-            value = i_getattr(self, attribute)
-            implementation_name = getattr(value, '_tl_implementation_name', None)
-            if implementation_name is not None:
-                self.implement(i_getattr(self, implementation_name))
-        """
         
     def QueryInterface_Impl(self, piid: IPointer[IID], ppv: IVoidPtr) -> int:
         iid = piid.contents
@@ -68,12 +60,3 @@ class CComObject(CUnknownMTA):
         self.dbg_trace(provider, f'No interface {iid}')
         i_cast(ppv, PLPVOID).contents.value = NULL
         return E_NOINTERFACE
-    
-"""
-def TlFunction(f: Callable) -> Callable:
-    f._tl_implementation_name = f.__name__
-    f.__name__ += '_Impl'
-    f.__code__.co_name = f.__name__
-    f.__qualname__ = f.__code__.co_qualname = '.'.join(f.__qualname__.split('.')[:-1] + [f.__name__])
-    return f
-"""

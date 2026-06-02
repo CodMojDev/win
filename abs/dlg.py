@@ -6,13 +6,14 @@ class Dialog(Window):
     Class, wrapping functionality of Win32 Dialog window.
     """
     
-    def __init__(self, width: int, height: int):
+    def __init__(self, width: int, height: int, himetric: bool = False):
         super().__init__()
         
         # predefined parameters
         self._width = width
         self._height = height
         self._parent = NULL
+        self._himetric = himetric
         
         # dialog window styles
         self._style &= ~WS_OVERLAPPEDWINDOW
@@ -23,7 +24,7 @@ class Dialog(Window):
         self.on_close += self.on_close_dialog
         
         # remove standard window destroy procedure
-        self.on_destroy -= self.Window_on_destroy
+        self.on_destroy -= self.Window_on_nc_destroy
         
         # dialog is modal by default
         self.modal = True
@@ -40,7 +41,7 @@ class Dialog(Window):
             if not EndDialog(self, ret):
                 raise WinException()
         else: # dialog is modeless
-            self.destroy() # modeless dialogs destroyed buy dialog.destroy()
+            self.destroy() # modeless dialogs destroyed by dialog.destroy()
             
             app = Application()
             # remove the modeless dialog from application-held list
@@ -70,7 +71,6 @@ class Dialog(Window):
         """
         Create the modal or modeless dialog.
         """
-        
         
         # allocate DLGTEMPLATE structure as buffer of 256 bytes
         buffer = (CHAR * 256)()
@@ -112,7 +112,7 @@ class Dialog(Window):
             data.write_uint16(0) # charset
             data.write('MS Shell Dlg\0'.encode('utf-16-le')) # write the font name
         
-        if not self.modal: # if dialog, is modeless, when create it
+        if not self.modal: # if dialog is modeless, when create it
             # setup dialog procedure
             self.pfnWndProc = DLGPROC(self.window_proc)
             

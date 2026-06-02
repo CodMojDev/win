@@ -8339,6 +8339,27 @@ if cpreproc.ifndef("CCHDEVICENAME"):
         CALERT_SYSTEM = 6
 
         # REGION *** Desktop Family ***
+        
+class MENUBARINFO(CStructure):
+    _fields_ = [
+        ('cbSize', DWORD),
+        ('rcBar', RECT),
+        ('hMenu', HMENU),
+        ('hwndMenu', HWND),
+        ('fBarFocused', BOOL, 1),
+        ('fFocused', BOOL, 1),
+        ('fUnsued', BOOL, 30)
+    ]
+    
+    cbSize: int
+    rcBar: RECT # rect of bar, popup, item
+    hMenu: int # real menu handle of bar, popup
+    hwndMenu: int # hwnd of item submenu if one
+    fBarFocused: int # bar, popup has the focus
+    fFocused: int # item has the focus
+    fUnused: int # reserved
+    
+PMENUBARINFO = LPMENUBARINFO = PTR(MENUBARINFO)
 
 # NOT REALIZED
 # TODO

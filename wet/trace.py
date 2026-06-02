@@ -193,6 +193,12 @@ def dbg_trace(provider: WET_PROVIDER | str, message: str = '', trace_id: int = -
     Debug trace.
     """
     
+    if isinstance(provider, str):
+        provider_name = provider
+        provider = _WET_GLOBAL_STATE.LookupProvider(provider_name)
+        if provider is None:
+            raise ValueError(f'Unknown provider "{provider_name}".')
+    
     if not provider._consumers:
         return # optimization
     
@@ -216,7 +222,7 @@ def dbg_trace(provider: WET_PROVIDER | str, message: str = '', trace_id: int = -
             additional_info.IsClassMethod = True
             additional_info.Class = cls.__qualname__
     
-    name = name.replace('.', '::')
+    name = name.replace('.', '::').replace('::<locals>', '')
     
     if name.endswith('_Impl'):
         name = name[:-5]
@@ -226,12 +232,6 @@ def dbg_trace(provider: WET_PROVIDER | str, message: str = '', trace_id: int = -
     # 
     # send event to WET
     #
-    
-    if isinstance(provider, str):
-        provider_name = provider
-        provider = _WET_GLOBAL_STATE.LookupProvider(provider_name)
-        if provider is None:
-            raise ValueError(f'Unknown provider "{provider_name}".')
     
     TraceComponent = WET_TRACE_COMPONENT(TraceString=message, Type=WET_TRACE_TYPE_STRING)
     event = WET_EVENT(FunctionName=name, nTraceComponents=1, 

@@ -258,6 +258,8 @@ if TYPE_CHECKING:
     from .defbase_module import CModule
 
 class CProcess:
+    current: 'CProcess' = None
+    
     is_current: bool
     handle: int
     pid: int
@@ -289,7 +291,36 @@ class CProcess:
         
         if not self.handle:
             raise WinException()
+    
+    @classmethod
+    def new(self, app_name: str, command_line: str = NULL, process_attributes: SECURITY_ATTRIBUTES = NULL, 
+            thread_attributes: SECURITY_ATTRIBUTES = NULL, inherit_handles: bool=False, flags: int=0, 
+            environment: WT_ADDRLIKE = NULL, current_directory: str = NULL, si: STARTUPINFOW=NULL) -> 'CProcess':
+        if process_attributes is not None:
+            process_attributes = process_attributes.ref()
+            
+        if thread_attributes is not None:
+            thread_attributes = thread_attributes.ref()
+            
+        if si is not None:
+            si = si.ref()
         
+        pi = PROCESS_INFORMATION()
+        
+        environment = PtrUtil.get_address(environment)
+            
+        process = CProcess(-1)
+        if not CreateProcessW(
+            app_name, command_line, process_attributes, 
+            thread_attributes, inherit_handles, flags, 
+            environment, current_directory, si, pi.ref()):
+            raise WinException()
+        process.handle = pi.hProcess
+        process.pid = pi.dwProcessId
+        CloseHandle(pi.hThread)
+        
+        return process
+    
     def open(self, flags: int = PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION):
         self.handle = OpenProcess(flags, False, self.pid)
         
@@ -426,3 +457,5 @@ class CProcess:
             return module_address
             
         return format_hex(address, sizeof(PVOID))
+    
+CProcess.current = CProcess()

@@ -25,6 +25,18 @@ def OleInitialize(pvReserved: int) -> int: ...
 @ole32.foreign(HRESULT)
 def OleUninitialize() -> int: ...
 
+def _ole_Application_on_destroy():
+    OleUninitialize()
+
+def initialize_ole():
+    hr = OleInitialize(NULL)
+    
+    if hr in (S_OK, RPC_E_CHANGED_MODE):
+        app = Application()
+        app.on_destroy += _ole_Application_on_destroy
+    elif FAILED(hr):
+        raise COMError(hr)
+
 # Invalid TYMED HRESULT
 DV_E_TYMED = HRESULT(0x80040069).value
 
@@ -241,13 +253,7 @@ class DragDropWindow(Window):
         super().__init__()
         
         # initialize OLE
-        hr = OleInitialize(NULL)
-        if hr in (S_OK, RPC_E_CHANGED_MODE):
-            self.ole_is_held = True # the OLE initialized just now, window is now holds OLE state
-        elif FAILED(hr):
-            raise COMError(hr)
-        else:
-            self.ole_is_held = False # OLE state is held by other object
+        initialize_ole()
         
         # create drop target implementation
         self.drop_target = DragDropWindow.DropTarget()
@@ -259,8 +265,8 @@ class DragDropWindow(Window):
         self.drop_target.on_drop.set(self.on_drop)
         
         # bind to window events
+        self.on_nc_destroy += self.DragDropWindow_on_nc_destroy
         self.on_create += self.DragDropWindow_on_create
-        self.on_close += EventCallback(self.DragDropWindow_on_close, Priority.Max)
     
     def DragDropWindow_on_create(self):
         # register window as drag & drop target
@@ -296,10 +302,7 @@ class DragDropWindow(Window):
         
         return DROPEFFECT_NONE
     
-    def DragDropWindow_on_close(self):
+    def DragDropWindow_on_nc_destroy(self):
         # release drop target
         self.drop_target.Release()
         RevokeDragDrop(self) # revoke window as drag & drop target from system
-        # if OLE state held by window, uninitialize OLE
-        if self.ole_is_held: 
-            OleUninitialize()

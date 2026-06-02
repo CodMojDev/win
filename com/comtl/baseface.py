@@ -210,7 +210,7 @@ class _TL_REF_GUARD:
         self.itf = itf
     
     def __del__(self):
-        self.itf.Release()
+        if self.itf: self.itf.Release()
 
 def TlGetInterface(itf: IT | IPointer[IT]) -> IT:
     """
@@ -599,7 +599,14 @@ def TlOverride(method: Callable):
     Override the method from local context.
     Naming contract: `<function name>`_Impl
     """
-    _TlContext_GetLocalContext_Guarantee()._virtual_table_on_ctx.override(method.__self__, method)
+    TlOverrideEx(_TlContext_GetLocalContext_Guarantee()._virtual_table_on_ctx)
+
+def TlOverrideEx(vtable: VirtualTable, method: Callable):
+    """
+    Indirectly override the method from local context.
+    Naming contract: `<function name>`_Impl
+    """
+    vtable.override(method.__self__, method)
 
 def TlContext_SetVtable(vtable: VirtualTable):
     """

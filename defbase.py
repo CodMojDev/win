@@ -10,9 +10,12 @@ abstraction helpers.
 from typing import (Callable, Any, List, 
                     Union as TUnion, Generic, TypeVar, 
                     Type, Dict, Optional, ClassVar, Self,
-                    Protocol, overload)
+                    Protocol, overload, TYPE_CHECKING)
 from functools import wraps
 
+import typing_extensions as defb_tx
+import typing as defb_t
+import types as defb_ty
 import warnings
 
 __all__ = [
@@ -174,6 +177,11 @@ __all__ = [
     "profile_disable",
     "profile_add",
     "profile_remove",
+    "defb_t", "defb_tx",
+    "WTC", "WTCT", "WTCT_S", "WTCT_V", "WTCT2",
+    "defb_ty",
+    "is_CData", "is_CFuncPtr",
+    "CData", "SimpleCData"
 ]
 
 def pcall(f, *args, **kwargs) -> tuple[Any, BaseException]:
@@ -242,9 +250,42 @@ def format_hex(value: int, zeros: int = -1) -> str:
         return hex(value)
     return '0x' + (hex(value)[2:].zfill(zeros))
 
+if TYPE_CHECKING:
+    from ctypes import _CData
+    from _ctypes import _PyCSimpleType, _PyCStructType
+    from ctypes import _CDataType
+    
+    from ctypes import _CData as CData, _SimpleCData as SimpleCData, _CDataType as CDataType
+    from _ctypes import (_PyCSimpleType as PyCSimpleType, 
+                         _PyCStructType as PyCStructType, 
+                         _PyCFuncPtrType as PyCFuncPtrType, 
+                         _PyCArrayType as PyCArrayType,
+                         _Pointer as Pointer, _CField as CField,
+                         _CArgObject as CArgObject, Array)
+else:
+    from ctypes import Structure, c_int, POINTER, byref
+    from ctypes.wintypes import RECT
+    from _ctypes import CFuncPtr
+    _CData = CData = Structure.__base__
+    _PyCStructType = PyCStructType = Structure.__class__
+    _PyCSimpleType = PyCSimpleType = c_int.__class__
+    CArgObject = byref(c_int()).__class__
+    CField = type(RECT.left)
+    SimpleCData = c_int.__base__
+    PyCArrayType = (c_int * 0).__class__
+    Array = (c_int * 0).__base__
+    Pointer = POINTER(c_int).__base__
+    PyCPointerType = Pointer.__class__
+    PyCFuncPtrType = CFuncPtr.__class__
+
 # Core generic functionality
 WT = TypeVar('_WT')
 WT2 = TypeVar('_WT2')
+WTC = TypeVar('_WTC', bound=_CData)
+WTCT = TypeVar('_WTCT', bound='_CDataType')
+WTCT_S = TypeVar('_WTCT_S', bound=_PyCStructType)
+WTCT_V = TypeVar('_WTCT_V', bound=_PyCSimpleType)
+WTCT2 = TypeVar('_WTCT2', bound='_CDataType')
 
 def interface_abstract_method(f: WT) -> WT:
     """
@@ -333,6 +374,19 @@ def is_IFunction(instance: Any) -> bool:
     return (not isinstance(instance, type) and 
             hasattr(instance, 'argtypes') and 
             hasattr(instance, 'restype'))
+
+def is_CData(instance: Any) -> bool:
+    """
+    Check the `instance` type is CData descendant (ctypes-compatible).
+    """
+    return isinstance(instance, _CData)
+
+
+def is_CFuncPtr(instance: Any) -> bool:
+    """
+    Check the `instance` type is CData descendant (ctypescall-compatible).
+    """
+    return isinstance(instance, CFuncPtr)
 
 class IMarshaller(IInterface):
     """
@@ -460,35 +514,41 @@ class DelayedTypeStorage(IUnpackable):
     def unpack(self) -> type[WT]:
         return self.storaged_type
 
-def call_variadic(function: IFunction, full_marshal_scheme: list[type], *args) -> Any:
+def call_variadic(function: IFunction, variadic_scheme: list[type], *args) -> Any:
     """
-    Call variadic function with provided full marshal scheme.
+    Call variadic function with provided variadic scheme.
     """
     
-    old_argtypes = function.argtypes
-    argtypes = []
-    
-    for i in enumerate(full_marshal_scheme):
-        typ = full_marshal_scheme[i]
-        if typ is None:
-            argtypes.append(old_argtypes[i])
-        else:
-            argtypes.append(typ)
-    
-    function.argtypes = argtypes
+    old = function.argtypes
+    function.argtypes = list(function.argtypes) + variadic_scheme
     result = function(*args)
-    function.argtypes = old_argtypes
+    function.argtypes = old
     
     return result
 
 import types
 import sys
 
-def get_current_frame(): return sys._getframe(1)
+def get_current_frame(): 
+    """
+    Get current Python frame.
+    """
+    
+    return sys._getframe(1)
 
-def get_py_frame(depth: int): return sys._getframe(depth+1)
+def get_py_frame(depth: int):
+    """
+    Get Python frame at depth.
+    """
+    
+    return sys._getframe(depth+1)
 
-def get_caller_frame(): return sys._getframe(2)
+def get_caller_frame(): 
+    """
+    Get caller Python frame.
+    """
+    
+    return sys._getframe(2)
 
 class ITraceEntry(IInterface):
     """
@@ -999,7 +1059,7 @@ class VirtualTable:
         
         # bypass ctypes T* treated as invalid (bug)
         ret_ptr = None
-        if _is_ptr(ret):
+        if _is_ptr_type(ret):
             ret_ptr = ret
             ret = c_void_p
         
@@ -1050,22 +1110,18 @@ class VirtualTable:
                     return f(*args, **kwargs, function=_virtual_wrapper)
                 
             # write virtual method metadata
-            
             if intermediate_method:
-                setattr(_intermediate, 'proto', WINFUNCTYPE(ret, THIS, *args))
-                setattr(_intermediate, 'f', f)
-                setattr(_intermediate, 'result_function', result_function)
-                setattr(_intermediate, 'marshal_scheme', marshal_scheme)
-                
-                return _intermediate
+                fn = _intermediate
+            else:
+                fn = _virtual_wrapper
             
-            setattr(_virtual_wrapper, 'proto', WINFUNCTYPE(ret, THIS, *args))
-            setattr(_virtual_wrapper, 'arguments', (ret, THIS, *args))
-            setattr(_virtual_wrapper, 'result_function', result_function)
-            setattr(_virtual_wrapper, 'marshal_scheme', marshal_scheme)
-            setattr(_virtual_wrapper, 'f', f)
+            setattr(fn, 'proto', WINFUNCTYPE(ret, THIS, *args))
+            setattr(fn, 'f', f)
+            setattr(fn, 'result_function', result_function)
+            setattr(fn, 'marshal_scheme', marshal_scheme)
+            setattr(fn, 'ret_ptr', ret_ptr)
             
-            return _virtual_wrapper
+            return fn
         
         return _function
     
@@ -1077,28 +1133,36 @@ class VirtualTable:
         function_name = function.__name__
         
         # thunk between C and Python, garbages unused `this` pointer and uses closured `self`
-        def thunk(this, *args, **kwargs):
+        def thunk(this, *f_args, **kwargs):
+            thunk.__name__ = f'{self.name}_{function_name}_Thunk'
+            thunk.__qualname__ = thunk.__code__.co_name = thunk.__code__.co_qualname = thunk.__name__
             function = getattr(self_class, function_name + '_Impl')
             marshal_scheme = getattr(function, 'marshal_scheme', None)
             
             # if marshal scheme provided, marshal the input arguments
             if marshal_scheme:
-                args = list(args)
+                args = []
                 
-                for arg_no, arg in enumerate(args):
+                for arg_no, arg in enumerate(f_args):
                     for marshalled_no, marshal_function in marshal_scheme:
                         if arg_no == marshalled_no:
                             arg = IMarshaller.call_marshaller(arg, marshal_function)
                             break
                         
                     args.append(arg)
-                
-            return function(*args, **kwargs)
+            else:
+                args = f_args
+            
+            result = function(*args, **kwargs)
+            if ret_ptr is not None:
+                return PtrUtil.get_address(result)
+            return result
         
         # prototype the function and make callback, then write into vtable entry
         proto = getattr(function, 'proto')
         callback = proto(thunk)
         self.stub(self_class, function, callback)
+        ret_ptr = getattr(function, 'ret_ptr')
         
         # hold the ref for virtual table keeping
         registry = getattr(self, '_registry', None)
@@ -1448,8 +1512,6 @@ def filter_self(args_tuple: tuple, typ: type) -> tuple:
         return args_tuple[1:]
     
     return args_tuple
-    
-from typing import TYPE_CHECKING
     
 class Template(Generic[WT]):
     """
@@ -2022,7 +2084,7 @@ class CStructure(Structure):
             if allocator is None:
                 from .defbase_allocator import CLocalAllocator
                 _defb_state._local_allocator = allocator = CLocalAllocator()
-        return i_cast(allocator.allocate(size), cls.PTR())
+        return i_cast(allocator.allocate(size), cls.PTR()).contents
 
 def resolve_genericalias(generic_alias: IGenericAlias) -> type:
     """

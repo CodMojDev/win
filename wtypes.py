@@ -11,7 +11,9 @@
 
 from . import cpreproc
 
-if cpreproc.pragma_once():
+from typing import TYPE_CHECKING
+
+if cpreproc.pragma_once() or TYPE_CHECKING:
     from .wtypesbase import *
     
     class RemHGLOBAL(CStructure):

@@ -2,10 +2,13 @@ from typing import Callable, TYPE_CHECKING
 from win.defbase_thread import *
 from win.synchapi import *
 
+import threading
 import traceback
+import queue
 
 if TYPE_CHECKING:
-    from ..window import Window
+    from ..window import Window, Application
+    from .handle import CriticalSection
 
 def _abs_is_main(stack_level: int = 0) -> bool:
     # check upper frame + stack_level is running as main script (standard __name__ == __main__ check)
@@ -22,10 +25,18 @@ class Abs:
         """
         
         property_map: dict[str, Any]
+        reference_list: list[Any]
         
         def __init__(self):
             self.property_map = {}
+            self.reference_list = []
             self._abs_managed = True
+            
+        def add_ref(self, obj: Any):
+            self.reference_list.append(obj)
+            
+        def remove_ref(self, obj: Any):
+            self.reference_list.remove(obj)
             
     @staticmethod
     def managed(obj: Any) -> bool:
@@ -54,6 +65,27 @@ class Abs:
             thread.thread_worker = thread_worker
             return thread
         
+    class ThreadHolder:
+        """
+        WinAbs thread holder.
+        """
+        
+        queue: queue.Queue[tuple[str, ...]]
+        lock: threading.Lock
+        crit: 'CriticalSection'
+        
+        def __init__(self):
+            from .handle import CriticalSection
+            
+            self.crit = CriticalSection()
+            self.lock = threading.Lock()
+            self.queue = queue.Queue()
+            
+        def worker(self):
+            """
+            WinAbs thread worker.
+            """
+    
     class ThreadManager:
         """
         WinAbs thread manager.
@@ -63,13 +95,21 @@ class Abs:
         windows: dict[int, 'Window']
         window: 'Window'
         
-        def __init__(self, window: 'Window'):
+        def __init__(self, window: 'Window'=None):
             # bind the thread manager on_close event to window on_close
-            window.on_close += self.threadmgr_on_close
+            if window is not None:
+                window.on_close += self.threadmgr_on_close
             
             # setup the thread manager dictionaries
             self.threads = {}
             self.windows = {}
+            
+        def bind_to_app(self, app: 'Application'):
+            """
+            Bind thread manager on-destroy event handler to application event cycle.
+            """
+            
+            app.on_destroy += self.threadmgr_on_close
         
         def close(self, thread: CThread):
             """
@@ -137,10 +177,53 @@ class Abs:
                 try:
                     entry_point(*args, **kwargs)
                 except Exception:
-                    print('[Abs.Thread] Exception')
+                    print('Exception in WinAbs entry thread:')
                     traceback.print_exc()
                     return 1
                 return 0
             
             return Abs.Thread.run(thread_worker, args, kwargs)
         return None
+    
+    class Synchronization:
+        @staticmethod
+        def wait(timeout: int = INFINITE, *objects):
+            length = len(objects)
+            
+            if length == 0:
+                Sleep(timeout)
+                return
+            
+            if length == 1:
+                wait_object, = objects
+                
+                if isinstance(wait_object, CThread):
+                    wait_object = wait_object.handle
+                elif isinstance(wait_object, HANDLE):
+                    wait_object = wait_object.value
+                elif isinstance(wait_object, int): pass
+                else:
+                    raise TypeError(type(wait_object))
+                
+                result = WaitForSingleObject(wait_object, timeout)
+            else:
+                wait_objects = []
+                
+                for wait_object in objects:
+                    if isinstance(wait_object, CThread):
+                        wait_object = wait_object.handle
+                    elif isinstance(wait_object, HANDLE):
+                        wait_object = wait_object.value
+                    elif isinstance(wait_object, int): pass
+                    else:
+                        raise TypeError(type(wait_object))
+                    wait_objects.append(wait_object)
+                
+                wait_objects = (HANDLE * length)(*wait_objects)
+                result = WaitForMultipleObjects(length, wait_objects, TRUE, timeout)
+                
+            if result == WAIT_TIMEOUT:
+                raise TimeoutError('Time elapsed, 1 or more objects is not signaled.')
+            elif result == WAIT_OBJECT_0: pass
+            else:
+                raise WinException()

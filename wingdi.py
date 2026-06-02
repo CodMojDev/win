@@ -1308,40 +1308,35 @@ if cpreproc.pragma_once("_WINGDI_"):
         NPEXTLOGPEN32 = PEXTLOGPEN32
         LPEXTLOGPEN32 = PEXTLOGPEN32
 
-        if cpreproc.pragma_once("_PALETTEENTRY_DEFINED"):
-            class tagPALETTEENTRY(CStructure):
-                _fields_ = [
-                    ("peRed", BYTE),
-                    ("peGreen", BYTE),
-                    ("peBlue", BYTE),
-                    ("peFlags", BYTE)
-                ]
-                peRed: int
-                peGreen: int
-                peBlue: int
-                peFlags: int
-            PALETTEENTRY = tagPALETTEENTRY
-            PPALETTEENTRY = POINTER(PALETTEENTRY)
-            LPPALETTEENTRY = PPALETTEENTRY
-        # !_PALETTEENTRY_DEFINED
+        class tagPALETTEENTRY(CStructure):
+            _fields_ = [
+                ("peRed", BYTE),
+                ("peGreen", BYTE),
+                ("peBlue", BYTE),
+                ("peFlags", BYTE)
+            ]
+            peRed: int
+            peGreen: int
+            peBlue: int
+            peFlags: int
+        PALETTEENTRY = tagPALETTEENTRY
+        PPALETTEENTRY = POINTER(PALETTEENTRY)
+        LPPALETTEENTRY = PPALETTEENTRY
 
-        if cpreproc.pragma_once("_LOGPALETTE_DEFINED"):
-            # Logical Palette
-            class tagLOGPALETTE(CStructure):
-                _fields_ = [
-                    ("palVersion", WORD),
-                    ("palNumEntries", WORD)
-                ]
-                palVersion: int
-                palNumEntries: int
-                palPalEntry: IPointer[tagPALETTEENTRY]
-            array_after_structure(tagLOGPALETTE, 'palPalEntry', tagPALETTEENTRY)
-            LOGPALETTE = tagLOGPALETTE
-            PLOGPALETTE = POINTER(LOGPALETTE)
-            NPLOGPALETTE = PLOGPALETTE
-            LPLOGPALETTE = PLOGPALETTE
-        # !_LOGPALETTE_DEFINED
-
+        # Logical Palette
+        class tagLOGPALETTE(CStructure):
+            _fields_ = [
+                ("palVersion", WORD),
+                ("palNumEntries", WORD)
+            ]
+            palVersion: int
+            palNumEntries: int
+            palPalEntry: IPointer[tagPALETTEENTRY]
+        array_after_structure(tagLOGPALETTE, 'palPalEntry', tagPALETTEENTRY)
+        LOGPALETTE = tagLOGPALETTE
+        PLOGPALETTE = POINTER(LOGPALETTE)
+        NPLOGPALETTE = PLOGPALETTE
+        LPLOGPALETTE = PLOGPALETTE
 
         # Logical Font
         LF_FACESIZE = 32

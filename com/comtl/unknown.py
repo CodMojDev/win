@@ -83,11 +83,11 @@ class CUnknown(IUnknown):
         else:
             self._refcnt -= 1
             
+        self.dbg_trace(provider, f'refcnt = {self._refcnt}')
+        
         # If reference count reached 0, then cleanup the COM Object
         if self._refcnt == 0:
             self.Cleanup()
-        
-        self.dbg_trace(provider, f'refcnt = {self._refcnt}')
         
         return self._refcnt
             

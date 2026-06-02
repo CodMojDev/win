@@ -38,6 +38,10 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
             ("dwProcessId", DWORD),
             ("dwThreadId", DWORD)
         ]
+        hProcess: int
+        hThread: int
+        dwProcessId: int
+        dwThreadId: int
     PROCESS_INFORMATION = _PROCESS_INFORMATION
     PPROCESS_INFORMATION = POINTER(PROCESS_INFORMATION)
     LPPROCESS_INFORMATION = PPROCESS_INFORMATION
@@ -62,6 +66,23 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
             ("hStdOutput", HANDLE),
             ("hStdError", HANDLE)
         ]
+        cb: int
+        lpReserved: LPSTR
+        lpDesktop: LPSTR
+        lpTitle: LPSTR
+        dwX: int
+        dwY: int
+        dwXSize: int
+        dwYSize: int
+        dwXCountChars: int
+        dwYCountChars: int
+        dwFlags: int
+        wShowWindow: int
+        cbReserved2: int
+        lpReserved2: PBYTE
+        hStdInput: int
+        hStdOutput: int
+        hStdError: int
     STARTUPINFOA = _STARTUPINFOA
     LPSTARTUPINFOA = POINTER(STARTUPINFOA)
 
@@ -85,6 +106,23 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
             ("hStdOutput", HANDLE),
             ("hStdError", HANDLE)
         ]
+        cb: int
+        lpReserved: LPWSTR
+        lpDesktop: LPWSTR
+        lpTitle: LPWSTR
+        dwX: int
+        dwY: int
+        dwXSize: int
+        dwYSize: int
+        dwXCountChars: int
+        dwYCountChars: int
+        dwFlags: int
+        wShowWindow: int
+        cbReserved2: int
+        lpReserved2: PBYTE
+        hStdInput: int
+        hStdOutput: int
+        hStdError: int
 
     STARTUPINFOW = _STARTUPINFOW
     LPSTARTUPINFOW = POINTER(STARTUPINFOW)
@@ -352,6 +390,7 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
         _fields_ = [
             ("MemoryPriority", ULONG)
         ]
+        MemoryPriority: int
     MEMORY_PRIORITY_INFORMATION = _MEMORY_PRIORITY_INFORMATION
     PMEMORY_PRIORITY_INFORMATION = POINTER(MEMORY_PRIORITY_INFORMATION)
 
@@ -368,6 +407,9 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
             ("ControlMask", ULONG),
             ("StateMask", ULONG)
         ]
+        Version: int
+        ControlMask: int
+        StateMask: int
     THREAD_POWER_THROTTLING_STATE = _THREAD_POWER_THROTTLING_STATE
 
     # REGION ***
@@ -409,6 +451,10 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
             ("PeakPrivateCommitUsage", ULONG64),
             ("TotalCommitUsage", ULONG64)
         ]
+        AvailableCommit: int
+        PrivateCommitUsage: int
+        PeakPrivateCommitUsage: int
+        TotalCommitUsage: int
     APP_MEMORY_INFORMATION = _APP_MEMORY_INFORMATION
     PAPP_MEMORY_INFORMATION = POINTER(APP_MEMORY_INFORMATION)
 
@@ -436,6 +482,10 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
             ("Type", PROCESS_MEMORY_EXHAUSTION_TYPE),
             ("Value", ULONG_PTR)
         ]
+        Version: int
+        Reserved: int
+        Type: int
+        Value: int
     PROCESS_MEMORY_EXHAUSTION_INFO = _PROCESS_MEMORY_EXHAUSTION_INFO
     PPROCESS_MEMORY_EXHAUSTION_INFO = POINTER(PROCESS_MEMORY_EXHAUSTION_INFO)
 
@@ -451,6 +501,9 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
             ("ControlMask", ULONG),
             ("StateMask", ULONG)
         ]
+        Version: int
+        ControlMask: int
+        StateMask: int
     PROCESS_POWER_THROTTLING_STATE = _PROCESS_POWER_THROTTLING_STATE
     PPROCESS_POWER_THROTTLING_STATE = POINTER(PROCESS_POWER_THROTTLING_STATE)
 
@@ -458,6 +511,7 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
         _fields_ = [
             ("ProtectionLevel", DWORD)
         ]
+        ProtectionLevel: int
 
     PROCESS_LEAP_SECOND_INFO_FLAG_ENABLE_SIXTY_SECOND = 0x1
 
@@ -468,6 +522,8 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
             ("Flags", ULONG),
             ("Reserved", ULONG)
         ]
+        Flags: int
+        Reserved: int
     PROCESS_LEAP_SECOND_INFO = _PROCESS_LEAP_SECOND_INFO
     PPROCESS_LEAP_SECOND_INFO = POINTER(PROCESS_LEAP_SECOND_INFO)
 

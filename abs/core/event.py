@@ -57,6 +57,9 @@ class Event:
     def unblock(self):
         self._blocked = False
         
+    def clear(self):
+        self._callbacks.clear()
+        
 class SingleEvent:
     _callback: Callable
     _blocked: bool
@@ -78,3 +81,6 @@ class SingleEvent:
         
     def unblock(self):
         self._blocked = False
+        
+    def clear(self):
+        self._callback = None

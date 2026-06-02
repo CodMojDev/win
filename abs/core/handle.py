@@ -319,8 +319,8 @@ class DC(Handle):
                 self.dc = dc
                 self.x = 0
             
-            def __getitem__(self, y: int) -> 'Color.RGB':
-                return Color.RGB(GetPixel(self.dc, self.x, y))
+            def __getitem__(self, y: int) -> 'Color.BGR':
+                return Color.BGR(GetPixel(self.dc, self.x, y))
             
             def __setitem__(self, y: int, color: TUnion[int, 'Color.IColor']):
                 self.dc.set_pixel(self.x, y, color)
@@ -491,7 +491,7 @@ class DC(Handle):
         if not TextOutW(self, x, y, buf, len(text)):
             raise WinException()
         
-    def set_pixel(self, x: int, y: int, color: TUnion[int, 'Color.IColor']) -> 'Color.RGB':
+    def set_pixel(self, x: int, y: int, color: TUnion[int, 'Color.IColor']) -> 'Color.BGR':
         """
         Set the pixel by given coordinates to given color.
         """
@@ -499,14 +499,14 @@ class DC(Handle):
         crColor = SetPixel(self, x, y, int(color))
         if crColor == CLR_INVALID:
             raise WinException()
-        return Color.RGB(crColor)
+        return Color.BGR(crColor)
     
     @property
-    def text_color(self) -> 'Color.RGB':
+    def text_color(self) -> 'Color.BGR':
         crColor = GetTextColor(self)
         if crColor == CLR_INVALID:
             raise WinException()
-        return Color.RGB(crColor)
+        return Color.BGR(crColor)
     
     @text_color.setter
     def text_color(self, text_color: TUnion[int, 'Color.IColor']):
@@ -523,17 +523,17 @@ class DC(Handle):
         return crColor
     
     @property
-    def bk_color(self) -> 'Color.RGB':
+    def bk_color(self) -> 'Color.BGR':
         crColor = GetBkColor(self)
         if crColor == CLR_INVALID:
             raise WinException()
-        return Color.RGB(crColor)
+        return Color.BGR(crColor)
     
     @bk_color.setter
     def bk_color(self, bk_color: TUnion[int, 'Color.IColor']):
         self.set_bk_color(bk_color)
     
-    def set_bk_color(self, color: TUnion[int, 'Color.IColor']) -> 'Color.RGB':
+    def set_bk_color(self, color: TUnion[int, 'Color.IColor']) -> 'Color.BGR':
         """
         Set the background color.
         """
@@ -541,7 +541,7 @@ class DC(Handle):
         crColor = SetBkColor(self, int(color))
         if crColor == CLR_INVALID:
             raise WinException()
-        return Color.RGB(crColor)
+        return Color.BGR(crColor)
     
     @property
     def bk_mode(self) -> int:
@@ -1021,7 +1021,7 @@ class GraphicUtils:
 
 class Color:
     @classmethod
-    def system(cls, index: int) -> 'Color.RGB':
+    def system(cls, index: int) -> 'Color.BGR':
         """
         Get the system color.
         """
@@ -1178,6 +1178,9 @@ class Color:
             else:
                 saturation = delta / (1 - abs(2 * luminance - 1))
             return Color.HSL(hue, luminance, saturation)
+        
+        def copy(self) -> 'Color.IColor':
+            return self.__class__(self.value)
 
     class IColorAlpha(IColor):
         """
@@ -1245,6 +1248,9 @@ class Color:
         
         def __iter__(self):
             return iter((self.r, self.g, self.b))
+        
+        def rgb(self) -> 'Color.RGB':
+            return self
 
     class RGBA(IColorAlpha):
         """
@@ -1290,6 +1296,9 @@ class Color:
         def __iter__(self):
             return iter((self.r, self.g, self.b, self.a))
         
+        def rgba(self) -> 'Color.RGBA':
+            return self
+        
     class BGR(IColor):
         """
         BGR Representation of color.
@@ -1325,6 +1334,9 @@ class Color:
         
         def __iter__(self):
             return iter((self.b, self.g, self.r))
+        
+        def bgr(self) -> 'Color.BGR':
+            return self
         
     class BGRA(IColorAlpha):
         """
@@ -1414,6 +1426,9 @@ class Color:
         def __iter__(self):
             return iter((self.a, self.r, self.g, self.b))
         
+        def argb(self) -> 'Color.ARGB':
+            return self
+        
     class ABGR(IColorAlpha):
         """
         ABGR Representation of alpha-channeled color.
@@ -1458,10 +1473,21 @@ class Color:
         def __iter__(self):
             return iter((self.a, self.b, self.g, self.r))
         
+        def abgr(self) -> 'Color.ABGR':
+            return self
+        
     class HSL:
         """
         HSL Representation of color.
         """
+        
+        @classmethod
+        def color(cls, r: int, g: int, b: int) -> 'Color.HSL':
+            return Color.RGB.color(r, g, b).hsl()
+        
+        @classmethod
+        def from_hsl(cls, h: float, s: float, l: float):
+            return cls(h / 360, s / 100, l / 100)
         
         def __init__(self, hue: float = 0.0, saturation: float = 0.0, luminance: float = 0.0):
             self.hue = hue
@@ -1474,7 +1500,7 @@ class Color:
         
         @h.setter
         def h(self, h: int):
-            self.hue = h * 360.0
+            self.hue = h / 360.0
         
         @property
         def s(self) -> int:
@@ -1482,7 +1508,7 @@ class Color:
         
         @s.setter
         def s(self, s: int):
-            self.saturation = s * 100.0
+            self.saturation = s / 100.0
         
         @property
         def l(self) -> int:
@@ -1490,7 +1516,7 @@ class Color:
         
         @l.setter
         def l(self, l: int):
-            self.luminance = l * 360.0
+            self.luminance = l / 100.0
             
         def __iter__(self):
             return iter((self.h, self.s, self.l))
@@ -1549,6 +1575,18 @@ class Color:
             """
             
             return self.rgb().abgr()
+        
+        def hsl(self) -> 'Color.HSL':
+            """
+            Convert color into HSL.
+            """
+            return self
+        
+        def gl(self) -> 'Color.GLColor':
+            """
+            Convert color into OpenGL format (by HSL->RGBA->OpenGL conversion).
+            """
+            return Color.GLColor(self.rgba())
     
     class GLColor:
         """
@@ -1638,6 +1676,9 @@ class Color:
             Convert color into OpenGL format.
             """
             return self
+        
+        def __eq__(self, color: TUnion['Color.IColorAlpha', 'Color.GLColor']) -> bool:
+            return self.value == color.gl().value
         
 class MathUtil:
     """
@@ -1739,7 +1780,7 @@ class Font(GDIObjectHandle):
                 out_precision, clip_precision,
                 quality, pitch_and_family, name)
             )
-        if not self.value:
+        if not font.value:
             raise WinException()
         return font
         
@@ -2239,21 +2280,105 @@ class GLContext(Handle):
             wglMakeCurrent(NULL, NULL)
         wglDeleteContext(self)
         self._closed = True
-        
+
+EVENT_ALL_ACCESS = 0x1F0003
+EVENT_MODIFY_STATE = 0x2
+INFINITE = 0xffffffff
+
 class Event(Handle):
     """
     Class, representing Win32 Event.
     """
     
-    def __init__(self, name: str = None, initial: bool = False, manual_reset: bool = True, 
-                 security_attributes: SECURITY_ATTRIBUTES = NULL):
-        super().__init__()
-        name = '\\Local\\' + name
-        pSecurityAttributes = security_attributes.ref() if security_attributes is not None else NULL
-        self.value = CreateEventW(pSecurityAttributes, manual_reset, initial, name)
-        if not self.value:
+    @classmethod
+    def create(cls, name: str = None, initial: bool = False, manual_reset: bool = True, 
+               security_attributes: SECURITY_ATTRIBUTES = NULL, access: int = EVENT_ALL_ACCESS) -> 'Event':
+        if name is not None and not name.startswith('\\'):
+            name = '\\Local\\' + name
+        pSecurityAttributes = security_attributes.ref() if security_attributes is not NULL else NULL
+        flags = 0
+        if initial:
+            flags |= CREATE_EVENT_INITIAL_SET
+        if manual_reset:
+            flags |= CREATE_EVENT_MANUAL_RESET
+        event = cls(CreateEventExW(pSecurityAttributes, name, flags, access))
+        if not event.value:
             raise WinException()
+        return event
+    
+    @classmethod
+    def open(cls, name: str, access: int = EVENT_MODIFY_STATE | SYNCHRONIZE, inherit_handle: bool = False) -> 'Event':
+        if not name.startswith('\\'):
+            name = '\\Local\\' + name
+        event = cls(OpenEventW(access, inherit_handle, name))
+        if not event.value:
+            raise WinException()
+        return event
     
     def close(self):
         CloseHandle(self)
         self._closed = True
+    
+    def trigger(self):
+        SetEvent(self)
+        
+    def wait(self, time: int=INFINITE):
+        WaitForSingleObject(self, time)
+    
+    def reset(self):
+        ResetEvent(self)
+        
+class CriticalSection(RTL_CRITICAL_SECTION):
+    """
+    Class, representing Win32 Critical section.
+    """
+    
+    def __init__(self):
+        InitializeCriticalSection(byref(self))
+        
+    def __del__(self):
+        DeleteCriticalSection(byref(self))
+        
+    def __enter__(self):
+        self.enter()
+        
+    def __exit__(self, *_):
+        self.leave()
+        
+    def enter(self):
+        EnterCriticalSection(byref(self))
+        
+    def leave(self):
+        LeaveCriticalSection(byref(self))
+        
+class Semaphore(Handle):
+    """
+    Class, representing Win32 Semaphore.
+    """
+    
+    @classmethod
+    def create(cls, name: str = None, initial: int = 32, maximum: int = 32, access: int = SEMAPHORE_ALL_ACCESS,
+               security_attributes: SECURITY_ATTRIBUTES = NULL) -> 'Event':
+        if name is not None and not name.startswith('\\'):
+            name = '\\Local\\' + name
+        pSecurityAttributes = security_attributes.ref() if security_attributes is not NULL else NULL
+        event = cls(CreateSemaphoreExW(pSecurityAttributes, initial, maximum, name, 0, access))
+        if not event.value:
+            raise WinException()
+        return event
+    
+    @classmethod
+    def open(cls, name: str, inherit_handle: bool=False, access: int=SEMAPHORE_MODIFY_STATE | SYNCHRONIZE) -> 'Event':
+        if name is not None and not name.startswith('\\'):
+            name = '\\Local\\' + name
+        event = cls(OpenSemaphoreW(access, inherit_handle, name))
+        if not event.value:
+            raise WinException()
+        return event
+    
+    def release(self, count: int = 1):
+        if not ReleaseSemaphore(self, count, NULL):
+            raise WinException()
+        
+    def wait(self, time: int=INFINITE):
+        WaitForSingleObject(self, time)

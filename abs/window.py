@@ -161,9 +161,17 @@ class Window(HWND, Abs.Object):
             self.on_palette_changed = Event()
             self.on_measure_item = Event()
             self.on_compare_item = Event()
+            self.on_char = Event()
+            self.on_command = Event()
+            self.on_hscroll = Event()
+            self.on_vscroll = Event()
+            self.on_nc_destroy = Event()
             
             # bind the standard handler for destroy: application cycle notifier
-            self.on_destroy += self.Window_on_destroy
+            self.on_destroy += self.Window_on_nc_destroy
+            
+            # bind the standard handler for creation: application cycle notifier
+            self.on_create += self.Window_on_create
     
     _timers: dict[int, FARPROC]
     class_name: str | None
@@ -171,11 +179,16 @@ class Window(HWND, Abs.Object):
     cursor: int | HANDLE | None
     icon: int | HANDLE | None
     
-    def Window_on_destroy(self):
+    def Window_on_nc_destroy(self):
         # notify the application cycle what one of application-hosted windows is destroyed
         app = Application()
         app.windows -= 1
         app.notify()
+        
+    def Window_on_create(self):
+        app = Application()
+        app.windows += 1 # add the application cycle windows count
+        return True
     
     @property
     def style(self) -> int:
@@ -285,9 +298,6 @@ class Window(HWND, Abs.Object):
     def on_paint(self, dc: PaintDC):
         pass
     
-    def on_command(self, identifier: int, notify_code: int, hwnd: int):
-        pass
-    
     def on_size(self, flags: int, width: int, height: int):
         pass
     
@@ -307,7 +317,6 @@ class Window(HWND, Abs.Object):
     def window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         if msg == WM_CREATE: # window created
             self.value = hwnd
-            Application().windows += 1 # add the application cycle windows count
             if not all(self.on_create.execute()): # check the all window.on_create returned True
                 return -1
             return 0
@@ -317,24 +326,31 @@ class Window(HWND, Abs.Object):
             return 0
         elif msg == WM_LBUTTONDOWN: # left mouse button down
             self.on_left_button_down.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0
         elif msg == WM_LBUTTONUP: # left mouse button up
             self.on_left_button_up.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0
         elif msg == WM_LBUTTONDBLCLK: # left mouse button double-clicked
             self.on_left_button_double_click.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0
         elif msg == WM_RBUTTONDOWN: # right mouse button down
             self.on_right_button_down.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0
         elif msg == WM_RBUTTONUP: # right mouse button up
             self.on_right_button_up.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0
         elif msg == WM_RBUTTONDBLCLK: # right mouse button double-clicked
             self.on_right_button_double_click.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0
         elif msg == WM_CLOSE: # window closed
             if all(self.on_close.execute()):
                 self.destroy()
+            return 0
         elif msg == WM_DESTROY: # window destroyed
             self.on_destroy.execute()
-            self.running = False
+            return 0
         elif msg == WM_COMMAND: # command send from child to window
-            self.on_command(LOWORD(wParam), HIWORD(wParam), lParam)
+            self.on_command.execute(LOWORD(wParam), HIWORD(wParam), lParam)
             return 0
         elif msg == WM_SIZE: # window sized
             self.on_size(wParam, LOWORD(lParam), HIWORD(lParam))
@@ -346,6 +362,7 @@ class Window(HWND, Abs.Object):
             if (fKeyFlags & KF_EXTENDED) == KF_EXTENDED: # if extended scan code
                 wScanCode = MAKEWORD(wScanCode, 0xE0) # when manually extend
             self.on_key_down.execute(wVK, fKeyFlags, wScanCode) # execute handler
+            return 0
         elif msg == WM_KEYUP: # key up
             wVK = LOWORD(wParam) # virtual key code
             fKeyFlags = HIWORD(lParam) # key flags
@@ -353,18 +370,25 @@ class Window(HWND, Abs.Object):
             if (fKeyFlags & KF_EXTENDED) == KF_EXTENDED: # if extended scan code
                 wScanCode = MAKEWORD(wScanCode, 0xE0) # when manually extend
             self.on_key_up.execute(wVK, fKeyFlags, wScanCode) # execute handler
+            return 0
         elif msg == WM_MOVE: # window moved
             self.on_move.execute(LOWORD(lParam), HIWORD(lParam))
+            return 0
         elif msg == WM_SHOWWINDOW: # window showed
-            self.on_show.execute(wParam == TRUE)
+            self.on_show.execute(wParam == TRUE, lParam)
+            return 0
         elif msg == WM_STYLECHANGED: # window styles changed
             self.on_style_changed.execute(i_cast(lParam, LPSTYLESTRUCT).contents, wParam == GWL_EXSTYLE)
+            return 0
         elif msg == WM_THEMECHANGED: # window theme changed
             self.on_theme_changed.execute()
+            return 0
         elif msg == WM_USERCHANGED: # user changed in system
             self.on_user_changed.execute()
+            return 0
         elif msg == WM_ENABLE: # window enabled
             self.on_enable.execute(wParam == TRUE)
+            return 0
         elif msg == WM_ERASEBKGND: # erase background request
             dc = DC.foreign_owner(wParam) # pack the hDC into DC wrapper
             if self.on_erase_background(dc): # the background was erased
@@ -372,6 +396,9 @@ class Window(HWND, Abs.Object):
             return FALSE # the background wasn't erased
         elif msg == WM_SETFONT: # set window font request
             self.on_set_font.execute(Font.foreign_owner(wParam), LOWORD(lParam) == TRUE)
+            return 0
+        elif msg == WM_MOUSEWHEEL:
+            self.on_mouse_wheel.execute(SHORT(HIWORD(wParam)).value, LOWORD(wParam), LOWORD(lParam), HIWORD(lParam))
             return 0
         elif msg == WM_TIMER: # timer message
             self.on_timer.execute(wParam, i_cast(lParam, TIMERPROC))
@@ -396,6 +423,7 @@ class Window(HWND, Abs.Object):
             return 0
         elif msg == WM_PALETTECHANGED: # window palette changed
             self.on_palette_changed.execute(Palette.foreign_owner(wParam))
+            return 0
         elif msg == WM_SETCURSOR: # set window cursor request
             result = self.on_set_cursor(Window.foreign(wParam), LOWORD(lParam), HIWORD(lParam))
             if result is not None: # return True/False
@@ -410,6 +438,18 @@ class Window(HWND, Abs.Object):
                 self.on_compare_item.execute(wParam, i_cast_value(lParam, COMPAREITEMSTRUCT))
                 return TRUE # WM_COMPAREITEM handled
             return FALSE # not handled
+        elif msg == WM_CHAR:
+            self.on_char.execute(chr(wParam))
+            return FALSE
+        elif msg == WM_HSCROLL:
+            self.on_hscroll.execute(LOWORD(wParam), HIWORD(wParam), Window.foreign(lParam))
+            return 0
+        elif msg == WM_VSCROLL:
+            self.on_vscroll.execute(LOWORD(wParam), HIWORD(wParam), Window.foreign(lParam))
+            return 0
+        elif msg == WM_NCDESTROY:
+            self.on_nc_destroy.execute()
+            return 0
         else:
             # unknown window message received
             result = self.on_unknown_message.execute(hwnd, msg, wParam, lParam) # trying to call all unknown message handlers
@@ -806,11 +846,17 @@ class Application:
     
     def __init__(self):
         if Application.INSTANCE is None:
+            # application events
             self.after_message = Event()
-            self.modeless_dialogs = []
+            self.on_destroy = Event()
             self.on_message = Event()
+            
+            # application instance data
+            self.modeless_dialogs = []
             self.running = False
             self.windows = 0
+            
+            # set application singleton
             Application.INSTANCE = self
             
     def notify(self):
@@ -832,21 +878,40 @@ class Application:
         pMsg = byref(msg)
         
         while self.running:
-            if PeekMessage(pMsg, NULL, 0, 0, PM_REMOVE): # asynchronous PeekMessage
-                dispatch = True
-                # check if window belongs to one of modeless dialogs
-                for modeless_dialog in self.modeless_dialogs:
-                    if IsDialogMessage(modeless_dialog, pMsg):
-                        dispatch = False # if true, don't dispatch the message into main cycle
-                        break
-                if dispatch: # if we can dispatch message, do it
-                    TranslateMessage(pMsg)
-                    self.on_message.execute(msg) # execute the application.on_message handler before dispatching
-                    DispatchMessageW(pMsg)
-            
-            self.after_message.execute() # execute the application.after_message handler for after-message handling
-            MsgWaitForMultipleObjects(0, NULL, FALSE, 10, QS_ALLEVENTS) # block the event cycle for 10 ms while waiting new messages into queue
-
+            try:
+                if PeekMessage(pMsg, NULL, 0, 0, PM_REMOVE): # asynchronous PeekMessage
+                    dispatch = True
+                    # check if window belongs to one of modeless dialogs
+                    for modeless_dialog in self.modeless_dialogs:
+                        if IsDialogMessage(modeless_dialog, pMsg):
+                            dispatch = False # if true, don't dispatch the message into main cycle
+                            break
+                    if dispatch: # if we can dispatch message, do it
+                        TranslateMessage(pMsg)
+                        self.on_message.execute(msg) # execute the application.on_message handler before dispatching
+                        DispatchMessageW(pMsg)
+                
+                self.after_message.execute() # execute the application.after_message handler for after-message handling
+                MsgWaitForMultipleObjects(0, NULL, FALSE, 10, QS_ALLEVENTS) # block the event cycle for 10 ms while waiting new messages into queue
+            except KeyboardInterrupt:
+                break
+        
+        self.on_destroy.execute() # execute the application.on_destroy because application event loop was destroyed
+    
+    def hook(self, hwnd: int | HANDLE, procedure: Callable[[MSG], None], message: int=None):
+        if isinstance(hwnd, HANDLE): hwnd = hwnd.value
+        
+        if message is not None:
+            def on_message_handler(msg: MSG):
+                if msg.message == message and msg.hWnd == hwnd:
+                    procedure(msg)
+        else:
+            def on_message_handler(msg: MSG):
+                if msg.hWnd == hwnd:
+                    procedure(msg)
+                    
+        self.on_message += on_message_handler
+    
 class IdentifiersT:
     """
     Class specifically for generating new item identifiers by instance get-item access.
