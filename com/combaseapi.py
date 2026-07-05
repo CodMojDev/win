@@ -277,7 +277,7 @@ def CoRegisterSurrogate(pSurrogate: IPointer[ISurrogate]) -> int:
     
 @ole_foreign(PULONG, REFIID, LPUNKNOWN, DWORD, LPVOID, DWORD,
              intermediate_method=True)
-def CoGetMarshalSizeMax(pulSize: PULONG, iid: IID, pUnk: IPointer[IUnknown],
+def CoGetMarshalSizeMax(pulSize: IPointer[ULONG], iid: IID, pUnk: IPointer[IUnknown],
                         dwDestContext: int, pvDestContext: LPVOID, 
                         mshlflags: int, **kwargs) -> int:
     """

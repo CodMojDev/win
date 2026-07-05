@@ -41,9 +41,9 @@ class PropertySheet(Dialog):
         self.sheet.pfnCallback = callback
         self.add_ref(callback)
         
-        self.on_button_pressed = Event()
-        self.on_before_create = Event()
-        self.on_create = Event()
+        self.on_button_pressed = MultiEvent()
+        self.on_before_create = MultiEvent()
+        self.on_create = MultiEvent()
         
         self.pages = self.Pages(self)
         self.sheet.dwFlags = flags
@@ -118,8 +118,8 @@ class PropertySheet(Dialog):
             Abs.Object.__init__(self)
             
             # property sheet page evens
-            self.on_create = Event()
-            self.on_destroy = Event()
+            self.on_create = MultiEvent()
+            self.on_destroy = MultiEvent()
             
             # property sheet page data
             self.page = PROPSHEETPAGEW_V4()

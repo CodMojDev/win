@@ -377,3 +377,6 @@ class CImplAssembly:
         
     def address(self) -> int:
         return self.assembly.executable
+    
+    def size(self) -> int:
+        return len(self.assembly.buffer)

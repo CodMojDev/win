@@ -152,9 +152,9 @@ from .. import _defbase_ctypinit as _defb_ci
 # manually fix the CPython bug with "initialized is readonly object attribute"
 _defb_ci.PyType_CAST_DEREF(COM_GLOBAL_STATE).SetTPFLAG(_defb_ci.Py_TPFLAGS_MANAGED_DICT)
 
-def CheckCOMInitialized():
+def CheckCOMInitialized(flags: int=COINIT_APARTMENTTHREADED):
     if not com_state.initialized:
-        if FAILED(CoInitialize(NULL)):
+        if FAILED(CoInitializeEx(NULL, flags)):
             raise RuntimeError('COM cannot initialize')
 
 from .errors import _StdErrorInfoProvider

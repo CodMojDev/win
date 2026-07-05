@@ -32,19 +32,29 @@ if cpreproc.pragma_once("s_addr"):
                     ("s_b3", BYTE),
                     ("s_b4", BYTE)
                 ]
+                s_b1: int
+                s_b2: int
+                s_b3: int
+                s_b4: int
             class CLS_S_un_w(CStructure):
                 _fields_ = [
                     ("s_w1", USHORT),
                     ("s_w2", USHORT)
                 ]
+                s_w1: int
+                s_w2: int
             _fields_ = [
                 ("S_un_b", CLS_S_un_b),
                 ("S_un_w", CLS_S_un_w),
                 ("S_addr", ULONG)
             ]
+            S_un_b: CLS_S_un_b
+            S_un_w: CLS_S_un_w
+            S_addr: int
         _fields_ = [
             ("S_un", CLS_S_un)
         ]
+        S_un: CLS_S_un
     IN_ADDR = in_addr
     PIN_ADDR = LPIN_ADDR = POINTER(IN_ADDR)
     

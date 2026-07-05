@@ -10,10 +10,10 @@ class ISequentialStream(IUnknown):
     _iid_ = IID('{0c733a30-2a1c-11ce-ade5-00aa0044773d}')
     
     @virtual_table.com_function(PVOID, ULONG, PULONG)
-    def Read(self, pv: PVOID, cb: int, pcbRead: PULONG) -> int: ...
+    def Read(self, pv: PVOID, cb: int, pcbRead: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(LPCVOID, ULONG, PULONG)
-    def Write(self, pv: LPCVOID, cb: int, pcbWritten: PULONG) -> int: ...
+    def Write(self, pv: LPCVOID, cb: int, pcbWritten: IPointer[ULONG]) -> int: ...
     
     virtual_table.build()
     
@@ -277,7 +277,7 @@ class IEnumUnknown(IUnknown):
     
     @virtual_table.com_function(ULONG, POINTER(LPUNKNOWN), PULONG)
     def Next(self, celt: int, rgelt: IDoublePtr[IUnknown],
-             pceltFetched: PULONG) -> int: ...
+             pceltFetched: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(ULONG)
     def Skip(self, celt: int) -> int: ...
@@ -298,7 +298,7 @@ class IEnumString(IUnknown):
     
     @virtual_table.com_function(ULONG, POINTER(LPOLESTR), PULONG)
     def Next(self, celt: int, rgelt: IPointer[LPOLESTR],
-             pceltFetched: PULONG) -> int: ...
+             pceltFetched: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(ULONG)
     def Skip(self, celt: int) -> int: ...
@@ -347,7 +347,7 @@ class IAsyncManager(IUnknown):
         return self.virt_delegate(iid.ref(), pInterface)
     
     @virtual_table.com_function(PULONG)
-    def GetState(self, pulStateFlags: PULONG) -> int: ...
+    def GetState(self, pulStateFlags: IPointer[ULONG]) -> int: ...
     
     virtual_table.build()
     
@@ -382,7 +382,7 @@ class IRpcChannelBuffer(IUnknown):
         return self.virt_delegate(pMessage, iid.ref())
     
     @virtual_table.com_function(PRPCOLEMESSAGE, PULONG)
-    def SendReceive(self, pMessage: IPointer[RPCOLEMESSAGE], pStatus: PULONG) -> int: ...
+    def SendReceive(self, pMessage: IPointer[RPCOLEMESSAGE], pStatus: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(PRPCOLEMESSAGE)
     def FreeBuffer(self, pMessage: IPointer[RPCOLEMESSAGE]) -> int: ...
@@ -412,10 +412,10 @@ class IAsyncRpcChannelBuffer(IRpcChannelBuffer2):
     
     @virtual_table.com_function(PRPCOLEMESSAGE, ISynchronize.PTR(), PULONG)
     def Send(self, pMsg: IPointer[RPCOLEMESSAGE], 
-             pSync: IPointer[ISynchronize], pulStatus: PULONG) -> int: ...
+             pSync: IPointer[ISynchronize], pulStatus: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(PRPCOLEMESSAGE, PULONG)
-    def Receive(self, pMsg: IPointer[RPCOLEMESSAGE], pulStatus: PULONG) -> int: ...
+    def Receive(self, pMsg: IPointer[RPCOLEMESSAGE], pulStatus: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(PRPCOLEMESSAGE, PDWORD, PVOID)
     def GetDestCtxEx(self, pMsg: IPointer[RPCOLEMESSAGE], 
@@ -429,10 +429,10 @@ class IRpcChannelBuffer3(IRpcChannelBuffer2):
     _iid_ = IID('{25B15600-0115-11d0-BF0D-00AA00B8DFD2}')
     
     @virtual_table.com_function(PRPCOLEMESSAGE, PULONG)
-    def Send(self, pMsg: IPointer[RPCOLEMESSAGE], pulStatus: PULONG) -> int: ...
+    def Send(self, pMsg: IPointer[RPCOLEMESSAGE], pulStatus: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(PRPCOLEMESSAGE, ULONG, PULONG)
-    def Receive(self, pMsg: IPointer[RPCOLEMESSAGE], ulSize: int, pulStatus: PULONG) -> int: ...
+    def Receive(self, pMsg: IPointer[RPCOLEMESSAGE], ulSize: int, pulStatus: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(PRPCOLEMESSAGE)
     def Cancel(self, pMsg: IPointer[RPCOLEMESSAGE]) -> int: ...
@@ -554,11 +554,11 @@ class IChannelHook(IUnknown):
     _iid_ = IID('{1008c4a0-7613-11cf-9af1-0020af6e72f4}')
     
     @virtual_table.function(VOID, REFGUID, REFIID, PULONG, intermediate_method=True)
-    def ClientGetSize(self, uExtent: GUID, iid: IID, pDataSize: PULONG, **kwargs):
+    def ClientGetSize(self, uExtent: GUID, iid: IID, pDataSize: IPointer[ULONG], **kwargs):
         return self.virt_delegate(uExtent.ref(), iid.ref(), pDataSize)
     
     @virtual_table.function(VOID, REFGUID, REFIID, PULONG, PVOID, intermediate_method=True)
-    def ClientFillBuffer(self, uExtent: GUID, iid: IID, pDataSize: PULONG,
+    def ClientFillBuffer(self, uExtent: GUID, iid: IID, pDataSize: IPointer[ULONG],
                       pDataBuffer: PVOID, **kwargs):
         return self.virt_delegate(uExtent.ref(), iid.ref(), pDataSize, pDataBuffer)
     
@@ -579,13 +579,13 @@ class IChannelHook(IUnknown):
     @virtual_table.function(VOID, REFGUID, REFIID, HRESULT, PULONG, 
                             intermediate_method=True)
     def ServerGetSize(self, uExtent: GUID, iid: IID, hrFault: int, 
-                      pDataSize: PULONG, **kwargs) -> int:
+                      pDataSize: IPointer[ULONG], **kwargs) -> int:
         return self.virt_delegate(uExtent.ref(), iid.ref(),
                                      hrFault, pDataSize)
         
     @virtual_table.function(VOID, REFGUID, REFIID, PULONG, PVOID, 
                             HRESULT, intermediate_method=True)
-    def ServerFillBuffer(self, uExtent: GUID, iid: IID, pDataSize: PULONG,
+    def ServerFillBuffer(self, uExtent: GUID, iid: IID, pDataSize: IPointer[ULONG],
                          pDataBuffer: PVOID, hrFault: int, **kwargs) -> int: 
         return self.virt_delegate(uExtent.ref(), iid.ref(), 
                                      pDataSize, pDataBuffer, hrFault)
@@ -722,7 +722,7 @@ class IRpcOptions(IUnknown):
     def Set(self, pPrx: IPointer[IUnknown], dwProperty: int, dwValue: int) -> int: ...
     
     @virtual_table.com_function(LPUNKNOWN, RPCOPT_PROPERTIES, PULONG_PTR)
-    def Query(self, pPrx: IPointer[IUnknown], dwProperty: int, pdwValue: PULONG_PTR) -> int: ...
+    def Query(self, pPrx: IPointer[IUnknown], dwProperty: int, pdwValue: IPointer[ULONG_PTR]) -> int: ...
     
     virtual_table.build()
     
@@ -773,7 +773,7 @@ class IGlobalProperties(IUnknown):
     def Set(self, dwProperty: int, dwValue: int) -> int: ...
     
     @virtual_table.com_function(GLOBALOPT_PROPERTIES, PULONG_PTR)
-    def Query(self, dwProperty: int, pdwValue: PULONG_PTR) -> int: ...
+    def Query(self, dwProperty: int, pdwValue: IPointer[ULONG_PTR]) -> int: ...
     
     virtual_table.build()
     
@@ -956,7 +956,7 @@ class IPipeByte(IUnknown):
     _iid_ = IID('{DB2F3ACA-2F86-11d1-8E04-00C04FB9989A}')
     
     @virtual_table.com_function(PBYTE, ULONG, PULONG)
-    def Pull(self, buf: PBYTE, cRequest: int, pcReturned: PULONG) -> int: ...
+    def Pull(self, buf: PBYTE, cRequest: int, pcReturned: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(PBYTE, ULONG)
     def Push(self, buf: PBYTE, cSent: int) -> int: ...
@@ -972,7 +972,7 @@ class AsyncIPipeByte(IUnknown):
     def Begin_Pull(self, cRequest: int) -> int: ...
     
     @virtual_table.com_function(PBYTE, ULONG, PULONG)
-    def Finish_Pull(self, buf: PBYTE, pcReturned: PULONG) -> int: ...
+    def Finish_Pull(self, buf: PBYTE, pcReturned: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(PBYTE, ULONG)
     def Begin_Push(self, buf: PBYTE, cSent: int) -> int: ...
@@ -988,7 +988,7 @@ class IPipeLong(IUnknown):
     _iid_ = IID('{DB2F3ACC-2F86-11d1-8E04-00C04FB9989A}')
     
     @virtual_table.com_function(PLONG, ULONG, PULONG)
-    def Pull(self, buf: PLONG, cRequest: int, pcReturned: PULONG) -> int: ...
+    def Pull(self, buf: PLONG, cRequest: int, pcReturned: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(PLONG, ULONG)
     def Push(self, buf: PLONG, cSent: int) -> int: ...
@@ -1004,7 +1004,7 @@ class AsyncIPipeLong(IUnknown):
     def Begin_Pull(self, cRequest: int) -> int: ...
     
     @virtual_table.com_function(PLONG, ULONG, PULONG)
-    def Finish_Pull(self, buf: PLONG, pcReturned: PULONG) -> int: ...
+    def Finish_Pull(self, buf: PLONG, pcReturned: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(PLONG, ULONG)
     def Begin_Push(self, buf: PLONG, cSent: int) -> int: ...
@@ -1020,7 +1020,7 @@ class IPipeDouble(IUnknown):
     _iid_ = IID('{DB2F3ACE-2F86-11d1-8E04-00C04FB9989A}')
     
     @virtual_table.com_function(POINTER(DOUBLE), ULONG, PULONG)
-    def Pull(self, buf: IPointer[DOUBLE], cRequest: int, pcReturned: PULONG) -> int: ...
+    def Pull(self, buf: IPointer[DOUBLE], cRequest: int, pcReturned: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(POINTER(DOUBLE), ULONG)
     def Push(self, buf: IPointer[DOUBLE], cSent: int) -> int: ...
@@ -1036,7 +1036,7 @@ class AsyncIPipeDouble(IUnknown):
     def Begin_Pull(self, cRequest: int) -> int: ...
     
     @virtual_table.com_function(POINTER(DOUBLE), ULONG, PULONG)
-    def Finish_Pull(self, buf: IPointer[DOUBLE], pcReturned: PULONG) -> int: ...
+    def Finish_Pull(self, buf: IPointer[DOUBLE], pcReturned: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(POINTER(DOUBLE), ULONG)
     def Begin_Push(self, buf: IPointer[DOUBLE], cSent: int) -> int: ...
@@ -1134,7 +1134,7 @@ class IMarshalingStream(IStream):
     
     @virtual_table.com_function(CO_MARSHALING_CONTEXT_ATTRIBUTES, PULONG_PTR)
     def GetMarshalingContextAttributes(self, attribute: int, 
-                                       pAttributeValue: PULONG_PTR) -> int: ...
+                                       pAttributeValue: IPointer[ULONG_PTR]) -> int: ...
     
     virtual_table.build()
    

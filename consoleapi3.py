@@ -37,6 +37,12 @@ if cpreproc.pragma_once("_APISETCONSOLEL3_"):
                     ("FontWeight", UINT),
                     ("FaceName", WCHAR * LF_FACESIZE)
                 ]
+                cbSize: int
+                nFont: int
+                dwFontSize: int
+                FontFamily: int
+                FontWeight: int
+                FaceName: IWideCharArray
             PCONSOLE_FONT_INFOEX = POINTER(CONSOLE_FONT_INFOEX)
 
             GetCurrentConsoleFontEx = declare(kernel32.GetCurrentConsoleFontEx, BOOL, HANDLE, BOOL, PCONSOLE_FONT_INFOEX)
@@ -58,6 +64,9 @@ if cpreproc.pragma_once("_APISETCONSOLEL3_"):
                 ("dwSelectionAnchor", COORD),
                 ("srSelection", SMALL_RECT)
             ]
+            dwFlags: int
+            dwSelectionAnchor: int
+            srSelection: SMALL_RECT
         PCONSOLE_SELECTION_INFO = POINTER(CONSOLE_SELECTION_INFO)
 
         GetConsoleSelectionInfo = declare(kernel32.GetConsoleSelectionInfo, BOOL, PCONSOLE_SELECTION_INFO)
@@ -75,6 +84,10 @@ if cpreproc.pragma_once("_APISETCONSOLEL3_"):
                 ("NumberOfHistoryBuffers", UINT),
                 ("dwFlags", DWORD)
             ]
+            cbSize: int
+            HistoryBufferSize: int
+            NumberOfHistoryBuffers: int
+            dwFlags: int
         PCONSOLE_HISTORY_INFO = POINTER(CONSOLE_HISTORY_INFO)
 
         GetConsoleHistoryInfo = declare(kernel32.GetConsoleHistoryInfo, BOOL, PCONSOLE_HISTORY_INFO)

@@ -16,8 +16,8 @@ class ButtonBase(Control):
         self._height = height
         
         # button events
-        self.on_click = Event()
-        self.on_double_click = Event()
+        self.on_click = MultiEvent()
+        self.on_double_click = MultiEvent()
         
         # if parent is window and Abs-managed object, then subscribe on events
         if isinstance(parent, Window) and Abs.managed(parent):

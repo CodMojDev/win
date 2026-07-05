@@ -502,7 +502,7 @@ class IDebugAdvanced2(IDebugAdvanced):
     
     @virtual_table.com_function(ULONG, PVOID, ULONG, PVOID, ULONG, PULONG)
     def Request(self, Request: int, InBuffer: PVOID, InBufferSize: int,
-                OutBuffer: PVOID, OutBufferSize: int, OutSize: PULONG) -> int: ...
+                OutBuffer: PVOID, OutBufferSize: int, OutSize: IPointer[ULONG]) -> int: ...
     
     
     

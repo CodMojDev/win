@@ -134,7 +134,7 @@ class wireVARIANT(CStructure):
     pdecVal: IPointer[DECIMAL]
     pcVal: PCHAR
     puiVal: PUSHORT
-    pulVal: PULONG
+    pulVal: IPointer[ULONG]
     pullVal: IPointer[ULONGLONG]
     pintVal: PINT
     puintVal: PUINT
@@ -467,7 +467,12 @@ class VARIANT(CStructure):
         ('_u002', VARIANT_UNION)
     ]
     
-    vt: VARTYPE
+    vt: int
+    wReserved1: int
+    wReserved2: int
+    wReserved3: int
+    
+    decVal: DECIMAL
     
     llVal: int
     lVal: int
@@ -482,20 +487,20 @@ class VARIANT(CStructure):
     bstrVal: BSTR
     punkVal: IPointer[IUnknown]
     parray: IPointer[SAFEARRAY]
-    pbVal: PBYTE
-    piVal: PSHORT
-    plVal: PLONG
+    pbVal: IPointer[BYTE]
+    piVal: IPointer[SHORT]
+    plVal: IPointer[LONG]
     pllVal: IPointer[LONGLONG]
-    pfltVal: PFLOAT
+    pfltVal: IPointer[FLOAT]
     pdblVal: IPointer[DOUBLE]
-    pboolVal: PINT
-    pscode: PINT
+    pboolVal: IPointer[INT]
+    pscode: IPointer[INT]
     pcyVal: IPointer[CY]
-    pdate: PFLOAT
+    pdate: IPointer[DATE]
     pbstrVal: IPointer[BSTR]
     ppunkVal: IDoublePtr[IUnknown]
     pparray: IDoublePtr[SAFEARRAY]
-    byref: PVOID
+    byref: int
     cVal: int
     uiVal: int
     ulVal: int
@@ -503,13 +508,13 @@ class VARIANT(CStructure):
     intVal: int
     uintVal: int
     pdecVal: IPointer[DECIMAL]
-    pcVal: IPointer[c_byte]
-    puiVal: PUSHORT
-    pulVal: PULONG
+    pcVal: IPointer[byte]
+    puiVal: IPointer[USHORT]
+    pulVal: IPointer[ULONG]
     pullVal: IPointer[ULONGLONG]
-    pintVal: PINT
-    puintVal: PUINT
-    pvRecord: PVOID
+    pintVal: IPointer[INT]
+    puintVal: IPointer[UINT]
+    pvRecord: int
     
     @property
     def pvarVal(self) -> IPointer['VARIANT']:
@@ -529,6 +534,175 @@ class VARIANT(CStructure):
         
 LPVARIANTARG = REFVARIANT = LPVARIANT = VARIANT.PTR()
 VARIANTARG = VARIANT
+
+class VERSIONEDSTREAM(CStructure):
+    _fields_ = [
+        ('guidVersion', GUID),
+        ('pStream', LPSTREAM)
+    ]
+    guidVersion: GUID
+    pStream: IPointer[IStream]
+
+LPVERSIONEDSTREAM = PTR(VERSIONEDSTREAM)
+
+class CLIPDATA(CStructure):
+    _fields_ = [
+        ('cbSize', ULONG),
+        ('ulClipFmt', LONG),
+        ('pClipData', PBYTE)
+    ]
+    cbSize: int
+    ulClipFmt: int
+    pClipData: IPointer[BYTE]
+
+LPCLIPDATA = PCLIPDATA = PTR(CLIPDATA)
+
+class PROPVARIANT(CStructure):
+    class _U(CUnion):
+        _fields_ = [
+            ('cVal', byte),
+            ('bVal', BYTE),
+            ('iVal', SHORT),
+            ('uiVal', USHORT),
+            ('iVal', LONG),
+            ('uiVal', ULONG),
+            ('intVal', INT),
+            ('uintVal', UINT),
+            ('hVal', LARGE_INTEGER),
+            ('uhVal', ULARGE_INTEGER),
+            ('fltVal', FLOAT),
+            ('dblVal', DOUBLE),
+            ('boolVal', VARIANT_BOOL),
+            ('scode', SCODE),
+            ('cyVal', CY),
+            ('date', DATE),
+            ('filetime', FILETIME),
+            ('puuid', LPCLSID),
+            ('pclipdata', LPCLIPDATA),
+            ('bstrVal', BSTR),
+            ('bstrblobVal', BSTRBLOB),
+            ('blob', BLOB),
+            ('pszVal', LPSTR),
+            ('pwszVal', LPWSTR),
+            ('punkVal', LPUNKNOWN),
+            ('_pdispVal', LPUNKNOWN),
+            ('pStream', LPSTREAM),
+            ('pStorage', LPSTORAGE),
+            ('pVersionedStream', LPVERSIONEDSTREAM),
+            ('parray', LPSAFEARRAY),
+            ('pcVal', PTR(byte)),
+            ('pbVal', PBYTE),
+            ('piVal', PSHORT),
+            ('puiVal', PUSHORT)
+            ('plVal', PLONG),
+            ('pulVal', PULONG),
+            ('pintVal', PINT),
+            ('puintVal', PUINT),
+            ('pfltVal', PFLOAT),
+            ('pdblVal', PTR(DOUBLE)),
+            ('pboolVal', PTR(VARIANT_BOOL)),
+            ('pdecVal', LPDECIMAL),
+            ('pscode', PTR(SCODE)),
+            ('pcyVal', LPCY),
+            ('pdate', PTR(DATE)),
+            ('pbstrVal', PTR(BSTR)),
+            ('ppunkVal', PTR(LPUNKNOWN)),
+            ('_ppdispVal', PVOID),
+            ('pparray', PTR(LPSAFEARRAY)),
+            ('_pvarVal', PVOID)
+        ]
+    _fields_ = [
+        ('vt', VARTYPE),
+        ('wReserved1', WORD),
+        ('wReserved2', WORD),
+        ('wReserved3', WORD),
+        ('_u', _U)
+    ]
+    _anonymous_ = ['_u']
+    vt: int
+    wReserved1: int
+    wReserved2: int
+    wReserved3: int
+    cVal: int
+    bVal: int
+    iVal: int
+    uiVal: int
+    lVal: int
+    ulVal: int
+    intVal: int
+    uintVal: int
+    hVal: int
+    uhVal: int
+    fltVal: float
+    dblVal: float
+    boolVal: int
+    scode: int
+    cyVal: int
+    date: float
+    filetime: FILETIME
+    puuid: IPointer[CLSID]
+    pclipdata: IPointer[CLIPDATA]
+    bstrVal: BSTR
+    bstrblobVal: BSTRBLOB
+    blob: BLOB
+    pszVal: LPSTR
+    pwszVal: LPWSTR
+    punkVal: IPointer[IUnknown]
+    _pdispVal: int
+    @property
+    def pdispVal(self) -> IPointer['IDispatch']:
+        return i_cast(self._pdispVal, LPDISPATCH)
+    @pdispVal.setter
+    def pdispVal(self, pdispVal: IPointer['IDispatch']):
+        self._pdispVal = pdispVal
+    pStream: IPointer[IStream]
+    pStorage: IPointer[IStorage]
+    pVersionedStream: IPointer[VERSIONEDSTREAM]
+    parray: IPointer[SAFEARRAY]
+    pcVal: IPointer[byte]
+    pbVal: IPointer[BYTE]
+    piVal: IPointer[SHORT]
+    puiVal: IPointer[USHORT]
+    plVal: IPointer[LONG]
+    pulVal: IPointer[ULONG]
+    pintVal: IPointer[INT]
+    puintVal: IPointer[UINT]
+    pfltVal: IPointer[FLOAT]
+    pdblVal: IPointer[DOUBLE]
+    pboolVal: IPointer[VARIANT_BOOL]
+    pdecVal: IPointer[DECIMAL]
+    pscode: IPointer[SCODE]
+    pcyVal: IPointer[CY]
+    pdate: IPointer[DATE]
+    pbstrVal: IPointer[BSTR]
+    ppunkVal: IDoublePtr[IUnknown]
+    _ppdispVal: int
+    @property
+    def ppdispVal(self) -> IDoublePtr['IDispatch']:
+        return i_cast(self._ppdispVal, PTR(LPDISPATCH))
+    @ppdispVal.setter
+    def ppdispVal(self, ppdispVal: IDoublePtr['IDispatch']):
+        self._ppdispVal = ppdispVal
+    pparray: IDoublePtr[SAFEARRAY]
+    _pvarVal: int
+    @property
+    def pvarVal(self) -> IPointer['PROPVARIANT']:
+        return i_cast(self._pvarVal, LPPROPVARIANT)
+    @pvarVal.setter
+    def pvarVal(self, pvarVal: IPointer['PROPVARIANT']):
+        self._pvarVal = pvarVal
+
+LPPROPVARIANT = PPROPVARIANT = REFPROPVARIANT = PTR(PROPVARIANT)
+
+class PROPERTYKEY(CStructure):
+    _fields_ = [
+        ('fmtid', GUID),
+        ('pid', DWORD)
+    ]
+    fmtid: GUID
+    pid: int
+    
+LPPROPERTYKEY = PPROPERTYKEY = REFPROPERTYKEY = PTR(PROPERTYKEY)
 
 MEMBERID = DISPID = LONG
 HREFTYPE = DWORD
@@ -1192,7 +1366,7 @@ class IEnumVARIANT(IUnknown):
     _iid_ = IID('{00020404-0000-0000-C000-000000000046}')
 
     @virtual_table.com_function(ULONG, LPVARIANT, PULONG)
-    def Next(self, celt: int, rgVar: IPointer[VARIANT], pCeltFetched: PULONG) -> int: ...
+    def Next(self, celt: int, rgVar: IPointer[VARIANT], pCeltFetched: IPointer[ULONG]) -> int: ...
 
     @virtual_table.com_function(ULONG)
     def Skip(self, celt: int) -> int: ...
@@ -1351,7 +1525,7 @@ class ITypeInfo2(ITypeInfo):
 	def GetTypeKind(self, pTypeKind: IPointer[TYPEKIND]) -> int: ...
 
 	@virtual_table.com_function(PULONG)
-	def GetTypeFlags(self, pTypeFlags: PULONG) -> int: ...
+	def GetTypeFlags(self, pTypeFlags: IPointer[ULONG]) -> int: ...
 
 	@virtual_table.com_function(MEMBERID, INVOKEKIND, PUINT)
 	def GetFuncIndexOfMemId(self, memid: MEMBERID, invKind: INVOKEKIND, pFuncIndex: PUINT) -> int: ...
@@ -1488,7 +1662,7 @@ class ITypeLib2(ITypeLib):
 		return self.virt_delegate(guid.ref(), pVarVal)
 
 	@virtual_table.com_function(PULONG, PULONG)
-	def GetLibStatistics(self, pcUniqueNames: PULONG, pcchUniqueNames: PULONG) -> int: ...
+	def GetLibStatistics(self, pcUniqueNames: IPointer[ULONG], pcchUniqueNames: IPointer[ULONG]) -> int: ...
 
 	@virtual_table.com_function(INT, LCID, PTR(BSTR), PDWORD, PTR(BSTR))
 	def GetDocumentation2(self, index: int, lcid: LCID, pbstrHelpString: IPointer[BSTR], pdwHelpStringContext: PDWORD, pbstrHelpStringDll: IPointer[BSTR]) -> int: ...
@@ -1603,13 +1777,13 @@ class ITypeMarshal(IUnknown):
 	_iid_ = IID("{0000002D-0000-0000-C000-000000000046}")
 
 	@virtual_table.com_function(PVOID, DWORD, PVOID, PULONG)
-	def Size(self, pvType: PVOID, dwDestContext: int, pvDestContext: PVOID, pSize: PULONG) -> int: ...
+	def Size(self, pvType: PVOID, dwDestContext: int, pvDestContext: PVOID, pSize: IPointer[ULONG]) -> int: ...
 
 	@virtual_table.com_function(PVOID, DWORD, PVOID, ULONG, PBYTE, PULONG)
-	def Marshal(self, pvType: PVOID, dwDestContext: int, pvDestContext: PVOID, cbBufferLength: int, pBuffer: PBYTE, pcbWritten: PULONG) -> int: ...
+	def Marshal(self, pvType: PVOID, dwDestContext: int, pvDestContext: PVOID, cbBufferLength: int, pBuffer: PBYTE, pcbWritten: IPointer[ULONG]) -> int: ...
 
 	@virtual_table.com_function(PVOID, DWORD, ULONG, PBYTE, PULONG)
-	def Unmarshal(self, pvType: PVOID, dwFlags: int, cbBufferLength: int, pBuffer: PBYTE, pcbRead: PULONG) -> int: ...
+	def Unmarshal(self, pvType: PVOID, dwFlags: int, cbBufferLength: int, pBuffer: PBYTE, pcbRead: IPointer[ULONG]) -> int: ...
 
 	@virtual_table.com_function(PVOID)
 	def Free(self, pvType: PVOID) -> int: ...
@@ -1636,7 +1810,7 @@ class IRecordInfo(IUnknown):
 	def GetName(self, pbstrName: IPointer[BSTR]) -> int: ...
 
 	@virtual_table.com_function(PULONG)
-	def GetSize(self, pcbSize: PULONG) -> int: ...
+	def GetSize(self, pcbSize: IPointer[ULONG]) -> int: ...
 
 	@virtual_table.com_function(DOUBLE_PTR(ITypeInfo))
 	def GetTypeInfo(self, ppTypeInfo: IDoublePtr[ITypeInfo]) -> int: ...
@@ -1654,7 +1828,7 @@ class IRecordInfo(IUnknown):
 	def PutFieldNoCopy(self, wFlags: int, pvData: PVOID, szFieldName: LPCOLESTR, pvarField: IPointer[VARIANT]) -> int: ...
 
 	@virtual_table.com_function(PULONG, PTR(BSTR))
-	def GetFieldNames(self, pcNames: PULONG, rgBstrNames: IPointer[BSTR]) -> int: ...
+	def GetFieldNames(self, pcNames: IPointer[ULONG], rgBstrNames: IPointer[BSTR]) -> int: ...
 
 	@virtual_table.com_function(PVOID)
 	def IsMatchingType(self, pRecordInfo: IPointer['IRecordInfo']) -> int: ...

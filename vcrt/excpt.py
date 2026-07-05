@@ -20,27 +20,27 @@ EXCEPTION_DISPOSITION = INT
 
 # SEH handler
 if cpreproc.defined('_M_IX86'):
-    @vcruntime140d.foreign(EXCEPTION_DISPOSITION, EXCEPTION_RECORD.PTR(),
+    @msvcrt.foreign(EXCEPTION_DISPOSITION, EXCEPTION_RECORD.PTR(),
                            PVOID, PCONTEXT, PVOID)
     def _except_handler(_ExceptionRecord: IPointer[EXCEPTION_RECORD],
                         _EstablisherFrame: IVoidPtr, 
                         _ContextRecord: IPointer[CONTEXT],
                         _DispatcherContext: IVoidPtr) -> int: ...
 elif cpreproc.defined('_M_X64') or cpreproc.defined('_M_ARM') or cpreproc.defined('_M_ARM64'):
-    @vcruntime140d.foreign(EXCEPTION_DISPOSITION, EXCEPTION_RECORD.PTR(), 
+    @msvcrt.foreign(EXCEPTION_DISPOSITION, EXCEPTION_RECORD.PTR(), 
                            PVOID, PCONTEXT, PVOID)
     def __C_specific_handler(ExceptionRecord: IPointer[EXCEPTION_RECORD], 
                              EstablisherFrame: IVoidPtr,
                              ContextRecord: IPointer[CONTEXT],
                              DispatcherContext: IVoidPtr) -> int: ...
     
-@vcruntime140d.foreign(ULONG)
+@msvcrt.foreign(ULONG)
 def _exception_code() -> int: ...
 
-@vcruntime140d.foreign(PVOID)
+@msvcrt.foreign(PVOID)
 def _exception_info() -> IVoidPtr: ...
 
-@vcruntime140d.foreign(INT)
+@msvcrt.foreign(INT)
 def _abnormal_termination() -> int: ...
 
 # SEH intrinsics

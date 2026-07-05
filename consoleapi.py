@@ -66,6 +66,10 @@ if cpreproc.pragma_once("_APISETCONSOLE_"):
             ("dwCtrlWakeupMask", ULONG),
             ("dwControlKeyState", ULONG)
         ]
+        nLength: int
+        nInitialChars: int
+        dwCtrlWakeupMask: int
+        dwControlKeyState: int
     PCONSOLE_READCONSOLE_CONTROL = POINTER(CONSOLE_READCONSOLE_CONTROL)
 
     ReadConsoleA = declare(kernelbase.ReadConsoleA, BOOL, HANDLE, LPVOID, DWORD, LPDWORD, PCONSOLE_READCONSOLE_CONTROL)

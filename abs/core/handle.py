@@ -8,6 +8,15 @@ from win.winuser import *
 from win.wingdi import *
 from win.winnt import *
 
+# Win DEFB Allocator API
+from win.defbase_allocator import *
+
+# WinAbs I/O API
+from .io import *
+
+# WinAbs utilities
+from .absutils import *
+
 class Rect(RECT, CStructure):
     """
     Rectangle.
@@ -42,7 +51,7 @@ class Rect(RECT, CStructure):
     def height(self, height: int):
         self.bottom = self.top + height
         
-    def offset(self, dx: int, dy: int):
+    def Offset(self, dx: int, dy: int):
         """
         Offset the rect by delta X and delta Y.
         """
@@ -67,6 +76,32 @@ class Rect(RECT, CStructure):
     def __contains__(self, pt: 'GraphicUtils.Point') -> bool:
         pt = GraphicUtils.point(pt)
         return PtInRect(byref(self), pt)
+    
+    def __str__(self) -> str:
+        return StringUtil.to_string(self)
+    
+    def __repr__(self) -> str:
+        return str(self)
+    
+    @property
+    def x(self) -> int:
+        return self.left
+    
+    @x.setter
+    def x(self, x: int):
+        width = self.width
+        self.left = x
+        self.width = width
+    
+    @property
+    def y(self) -> int:
+        return self.top
+    
+    @y.setter
+    def y(self, y: int):
+        height = self.height
+        self.top = y
+        self.height = height
     
 class Point(POINT, CStructure): ...
     
@@ -193,8 +228,29 @@ class StockObject(GDIObjectHandle):
 # i don't know why UxTheme is there, but let it stay here
 uxtheme = get_win_library('uxtheme.dll')
 
+HTHEME = HANDLE
+
 @uxtheme.foreign(HRESULT, HWND, HDC, PRECT)
 def DrawThemeParentBackground(hwnd: int | HANDLE, hdc: int | HANDLE, prc: PRECT) -> int: ...
+
+@uxtheme.foreign(HTHEME, HWND, LPCWSTR)
+def OpenThemeData(hwnd: int | HANDLE, pszClassList: str | LPCWSTR) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME)
+def CloseThemeData(hTheme: int | HANDLE): ...
+
+@uxtheme.foreign(BOOL, HTHEME, INT, INT)
+def IsThemeBackgroundPartiallyTransparent(hTheme: int | HANDLE, iPartId: int, iStateId: int) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, HDC, INT, INT, LPCWSTR, INT, DWORD, DWORD, LPCRECT)
+def DrawThemeText(
+    hTheme: int | HANDLE, hdc: int | HANDLE, iPartId: int, iStateId: int,
+    pszText: str | LPCWSTR, cchText: int, dwTextFlags: int,
+    dwTextFlags2: int, pRect: IPointer[RECT]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, HDC, INT, INT, LPCRECT, LPCRECT)
+def DrawThemeBackground(hTheme: int | HANDLE, hdc: int | HANDLE, iPartId: int, iStateId: int, 
+                        pRect: IPointer[RECT], pClipRect: IPointer[RECT]) -> int: ...
 
 class DC(Handle):
     """
@@ -406,6 +462,14 @@ class DC(Handle):
             complexity = OffsetClipRgn(self.dc, x, y)
             if complexity == ERROR: raise WinException()
             return complexity
+        
+        def exclude(self, x: int, y: int, width: int, height: int) -> int:
+            """
+            Exclude the rectangle from clip region.
+            """
+            complexity = ExcludeClipRect(self.dc, x, y, x+width, y+height)
+            if complexity == ERROR: raise WinException()
+            return complexity
     
     pixels: 'DC.Pixels'
     _created: bool
@@ -451,12 +515,15 @@ class DC(Handle):
         return bitmap
         
     @classmethod
-    def get(self, hwnd: int | HWND = NULL) -> 'DC':
+    def get(cls, hwnd: int | HWND = NULL, region: int | HANDLE = NULL, flags: int = 0) -> 'DC':
         """
         Get the device context for HWND.
         """
         
-        hDC = GetDC(hwnd)
+        if region is None:
+            hDC = GetDC(hwnd)
+        else:
+            hDC = GetDCEx(hwnd, region, flags)
         if not hDC:
             raise WinException()
         return DC(hDC)
@@ -835,7 +902,7 @@ class DC(Handle):
     @property
     def viewport_extents(self) -> tuple[int, int]:
         extents = SIZE()
-        if not GetViewportExtEx(byref(extents)):
+        if not GetViewportExtEx(self, byref(extents)):
             raise WinException()
         return (extents.cx, extents.cy)
     
@@ -861,7 +928,7 @@ class DC(Handle):
     @property
     def window_extents(self) -> tuple[int, int]:
         extents = SIZE()
-        if not GetWindowExtEx(byref(extents)):
+        if not GetWindowExtEx(self, byref(extents)):
             raise WinException()
         return (extents.cx, extents.cy)
     
@@ -898,6 +965,88 @@ class DC(Handle):
         if not OffsetWindowOrgEx(self, x, y, byref(pt)):
             raise WinException()
         return (pt.x, pt.y)
+    
+    def stretch_di_bits(
+        self, x0: int, y0: int, x1: int, y1: int, 
+        w0: int, h0: int, w1: int, h1: int,
+        bits: bytes | int, bmi: BITMAPINFO, 
+        rop: int = SRCCOPY, usage: int = DIB_RGB_COLORS):
+        """
+        Stretch DIB bits from buffer to window.
+        """
+        if not StretchDIBits(self, x0, y0, w0, h0, x1, y1, w1, h1, bits, bmi.ref(), usage, rop):
+            raise WinException()
+        
+    def get_di_bits(self, bm: int | HANDLE, bits: WT_ADDRLIKE, info: BITMAPINFO, 
+                    start: int = 0, lines: int = 0, usage: int = DIB_RGB_COLORS):
+        """
+        Get DIB bits from bitmap.
+        """
+        if not GetDIBits(self, bm, start, lines, bits, info.ref(), usage):
+            raise WinException()
+        
+    def draw_edge(self, rect: RECT, edge: int, flags: int):
+        """
+        Draw 1 edge or 1+ edges of rectangle.
+        """
+        if not DrawEdge(self, rect.ref(), edge, flags):
+            raise WinException()
+        
+    def draw_focus_rect(self, rect: RECT):
+        """
+        Draw rectangle in focused style.
+        """
+        if not DrawFocusRect(self, rect.ref()):
+            raise WinException()
+        
+    def draw_frame_control(self, rect: RECT, type: int, state: int):
+        """
+        Draw frame control of the specified type and style.
+        """
+        if not DrawFrameControl(self, rect.ref(), type, state):
+            raise WinException()
+
+class BitmapInfo(BITMAPINFO):
+    def __init__(self, width: int, height: int, bpp: int, **kwargs):
+        super().__init__(**kwargs)
+        self.bmiHeader.biSize = BITMAPINFOHEADER.size()
+        if bpp == -1: return
+        self.bmiHeader.biWidth = width
+        self.bmiHeader.biHeight = -height
+        self.bmiHeader.biPlanes = 1
+        self.bmiHeader.biBitCount = bpp
+        
+    @property
+    def width(self) -> int:
+        return self.bmiHeader.biWidth
+    
+    @width.setter
+    def width(self, width: int):
+        self.bmiHeader.biWidth = width
+        
+    @property
+    def height(self) -> int:
+        return self.bmiHeader.biHeight
+    
+    @height.setter
+    def height(self, height: int):
+        self.bmiHeader.biHeight = height
+        
+    @property
+    def image_size(self) -> int:
+        return self.bmiHeader.biSizeImage
+    
+    @image_size.setter
+    def image_size(self, image_size: int):
+        self.bmiHeader.biSizeImage = image_size
+        
+    @property
+    def bpp(self) -> int:
+        return self.bmiHeader.biBitCount
+    
+    @bpp.setter
+    def bpp(self, bpp: int):
+        self.bmiHeader.biBitCount = bpp
 
 class GraphicUtils:
     Point: TypeAlias = POINT | tuple[SupportsInt, SupportsInt]
@@ -1979,6 +2128,26 @@ class IconInfo(ICONINFO):
             self.color.close()
             self.mask.close()
 
+class ICONDIRENTRY(CStructure):
+    _fields_ = [
+        ('nWidth', BYTE),
+        ('nHeight', BYTE),
+        ('nNumColorsInPalette', BYTE),
+        ('nReserved', BYTE),
+        ('nNumColorPlanes', WORD),
+        ('nBitsPerPixel', WORD),
+        ('nDataLength', ULONG),
+        ('nOffset', ULONG)
+    ]
+    nWidth: int
+    nHeight: int
+    nNumColorsInPalette: int
+    nReserved: int
+    nNumColorPlanes: int
+    nBitsPerPixel: int
+    nDataLength: int
+    nOffset: int
+
 class Icon(Handle):
     """
     Class, representing Win32 ICO icon.
@@ -2059,6 +2228,84 @@ class Icon(Handle):
             raise WinException()
         
         return icon
+    
+    def save(self, path: str, bpp: int=24):
+        with open(path, 'wb') as icon:
+            with DC.create_compatible(NULL) as dc:
+                # write icon header and retrieve icon info
+                icon.write(b'\x00\x00\x01\x00\x01\x00')
+                info = self.icon_info
+                
+                # get color and mask of icon
+                color = info.color.exchange_owner()
+                mask = info.mask.exchange_owner()
+                
+                # retrieve the input color bitmap info
+                bm_info = BitmapInfo(0, 0, -1)
+                dc.get_di_bits(color, NULL, bm_info)
+                
+                # calculate out bitmap info size
+                out_bm_info_size = BitmapInfo.size()
+                if bpp < 24: out_bm_info_size += RGBQUAD.size() * (1 << bpp)
+                
+                # create instance of local allocator (malloc)
+                allocator = CLocalAllocator()
+                
+                # allocate and fill the bitmap info
+                out_bm_info = BitmapInfo.allocate(out_bm_info_size, allocator)
+                allocator.copy(out_bm_info.ref(), bm_info.ref(), BitmapInfo.size())
+                out_bm_info.bpp = bpp
+                
+                # allocate and retrieve bitmap bits
+                out_bm_bits = allocator.allocate(bm_info.image_size)
+                dc.get_di_bits(color, out_bm_bits, out_bm_info, lines=bm_info.height)
+                
+                # get mask data
+                mask_info = BitmapInfo(0, 0, -1)
+                dc.get_di_bits(mask, NULL, mask_info)
+                
+                # allocate and fill the mask bitmap info
+                out_mask_info = BitmapInfo.allocate(
+                    BitmapInfo.size() + 2 * RGBQUAD.size(), allocator)
+                allocator.copy(out_mask_info.ref(), mask_info.ref(), mask_info.size())
+                
+                # allocate and retrieve mask bits
+                out_mask_bits = allocator.allocate(mask_info.image_size)
+                dc.get_di_bits(mask, out_mask_bits, out_mask_info, lines=mask_info.height)
+                
+                # create and fill the icon directory
+                d = ICONDIRENTRY()
+                d.nWidth = bm_info.width
+                d.nHeight = bm_info.height
+                d.nNumColorsInPalette = 16 if bpp == 4 else 0
+                d.nBitsPerPixel = bm_info.bpp
+                d.nDataLength = bm_info.image_size + mask_info.image_size + out_bm_info_size
+                d.nOffset = d.size() + 6
+                
+                # create Memory I/O for bitmap info and write to icon
+                out_bm_info_io = MemoryIO(out_bm_info.ref(), out_bm_info_size)
+                icon.write(out_bm_info_io.read())
+                
+                # create Memory I/O for icon directory and write to icon
+                icondir_io = MemoryIO(d.ref(), d.size())
+                icon.write(icondir_io.read())
+                
+                # preserve image size for writing, we are modifying field value
+                out_bm_size = out_bm_info.image_size
+                # write DIB header (including color table):
+                out_bm_info.height *= 2 # because the header is for both bm and mask
+                out_bm_info.image_size += mask_info.image_size
+                
+                # write bitmap info I/O again, but with modified values
+                icon.write(out_bm_info_io.read())
+                
+                # create Memory I/O for color bitmap bits and write to icon
+                bm_bits_io = MemoryIO(out_bm_bits, out_bm_size)
+                icon.write(bm_bits_io.read())
+                
+                # create Memory I/O for mask bitmap bits and write to icon
+                mask_bits_io = MemoryIO(out_mask_bits, mask_info.image_size)
+                icon.write(mask_bits_io.read())
     
 class CursorMeta(Handle.__class__):
     @property
@@ -2150,7 +2397,7 @@ class Palette(GDIObjectHandle):
     """
     
     @classmethod
-    def create(cls, entries: Iterable[PALETTEENTRY]) -> 'Palette':
+    def create(cls, entries: Iterable[tagPALETTEENTRY]) -> 'Palette':
         """
         Create the palette.
         """
@@ -2308,6 +2555,9 @@ class Event(Handle):
     
     @classmethod
     def open(cls, name: str, access: int = EVENT_MODIFY_STATE | SYNCHRONIZE, inherit_handle: bool = False) -> 'Event':
+        """
+        Open event by its name.
+        """
         if not name.startswith('\\'):
             name = '\\Local\\' + name
         event = cls(OpenEventW(access, inherit_handle, name))
@@ -2320,13 +2570,22 @@ class Event(Handle):
         self._closed = True
     
     def trigger(self):
+        """
+        Trigger event.
+        """
         SetEvent(self)
-        
-    def wait(self, time: int=INFINITE):
-        WaitForSingleObject(self, time)
     
     def reset(self):
+        """
+        Reset event.
+        """
         ResetEvent(self)
+        
+    def wait(self, time: int=INFINITE):
+        """
+        Wait for given time at event.
+        """
+        Abs.Synchronization.wait(time, self)
         
 class CriticalSection(RTL_CRITICAL_SECTION):
     """
@@ -2346,9 +2605,15 @@ class CriticalSection(RTL_CRITICAL_SECTION):
         self.leave()
         
     def enter(self):
+        """
+        Enter critical section.
+        """
         EnterCriticalSection(byref(self))
         
     def leave(self):
+        """
+        Leave critical section.
+        """
         LeaveCriticalSection(byref(self))
         
 class Semaphore(Handle):
@@ -2368,7 +2633,10 @@ class Semaphore(Handle):
         return event
     
     @classmethod
-    def open(cls, name: str, inherit_handle: bool=False, access: int=SEMAPHORE_MODIFY_STATE | SYNCHRONIZE) -> 'Event':
+    def open(cls, name: str, inherit_handle: bool=False, access: int=SEMAPHORE_MODIFY_STATE | SYNCHRONIZE) -> 'Semaphore':
+        """
+        Open semaphore by its name.
+        """
         if name is not None and not name.startswith('\\'):
             name = '\\Local\\' + name
         event = cls(OpenSemaphoreW(access, inherit_handle, name))
@@ -2376,9 +2644,48 @@ class Semaphore(Handle):
             raise WinException()
         return event
     
+    def __enter__(self):
+        self.wait()
+        
+    def __exit__(self, *_):
+        self.release()
+    
     def release(self, count: int = 1):
+        """
+        Release semaphore.
+        """
         if not ReleaseSemaphore(self, count, NULL):
             raise WinException()
         
     def wait(self, time: int=INFINITE):
-        WaitForSingleObject(self, time)
+        """
+        Wait for semaphore signal state.
+        """
+        Abs.Synchronization.wait(time, self)
+    
+    def close(self):
+        CloseHandle(self)
+        self._closed = True
+        
+class Theme(Handle):
+    """
+    Class, representing Windows theme.
+    """
+    
+    @classmethod
+    def create(cls, hwnd: int | HANDLE, class_list: str) -> 'Theme':
+        theme = cls(OpenThemeData(hwnd, class_list))
+        if not theme.value: raise RuntimeError('Theme not found.')
+        return theme
+    
+    def close(self):
+        hr = CloseThemeData(self)
+        if FAILED(hr): raise COMError(hr)
+        self._closed = True
+        
+    def draw_background(self, dc: int | HANDLE, part_id: int, state_id: int, rect: RECT, clip: RECT=NULL):
+        """
+        Draw the border and fill defined by the visual style for the specified control part.
+        """
+        hr = DrawThemeBackground(self, dc, part_id, state_id, rect.ref(), clip.ref() if clip is not NULL else NULL)
+        if FAILED(hr): raise COMError(hr)

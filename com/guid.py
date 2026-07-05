@@ -19,10 +19,13 @@ class GUID(CStructure):
 
     _fields_ = [("Data1", DWORD), ("Data2", WORD), ("Data3", WORD), ("Data4", BYTE * 8)]
     
+    Data1: int
+    Data2: int
+    Data3: int
+    Data4: IArray[int]
+    
     @classmethod
     def new(cls):
-        CheckCOMInitialized()
-        
         guid = cls()
         hr = CoCreateGuid(guid.ref())
         if FAILED(hr): raise COMError(hr)
@@ -38,8 +41,6 @@ class GUID(CStructure):
         return f'<GUID {str(self)}>'
     
     def __str__(self) -> str:
-        CheckCOMInitialized()
-        
         szGUID = create_unicode_buffer(39) # 32 GUID characters, 4 dashes, 2 curly braces and 1 zero-terminator
         hr = StringFromGUID2(self, szGUID, 39)
         if FAILED(hr): raise COMError(hr)
@@ -102,8 +103,6 @@ class CLSID(GUID):
     
     def __init__(self, value: str = None):
         if value is not None:
-            CheckCOMInitialized()
-            
             if value.startswith('{'):
                 hr = CLSIDFromString(value, self.ref())
             else:
@@ -112,8 +111,6 @@ class CLSID(GUID):
             if FAILED(hr): raise COMError(hr)
                 
     def __str__(self) -> str:
-        CheckCOMInitialized()
-        
         lpsz = LPOLESTR()
         
         hr = StringFromCLSID(self, byref(lpsz))
@@ -126,8 +123,6 @@ class CLSID(GUID):
     
     @property
     def progid(self) -> str:
-        CheckCOMInitialized()
-        
         lpsz = LPOLESTR()
         
         hr = ProgIDFromCLSID(self, byref(lpsz))
@@ -205,13 +200,10 @@ class IID(GUID):
     
     def __init__(self, iid: str = None):
         if iid is not None:
-            CheckCOMInitialized()
-            
             hr = IIDFromString(iid, self.ref())
             if FAILED(hr): raise COMError(hr)
     
     def __str__(self) -> str: 
-        CheckCOMInitialized()
         lpsz = LPOLESTR()
         
         hr = StringFromIID(self, byref(lpsz))
@@ -262,11 +254,11 @@ def IIDFromString(lpsz: str, lpiid: IPointer[IID]) -> int:
     """
         
 @ole_foreign(REFIID, POINTER(LPOLESTR), intermediate_method=True)
-def StringFromIID(clsid: CLSID, lplpsz: IPointer[LPOLESTR], **kwargs) -> int:
+def StringFromIID(iid: IID, lplpsz: IPointer[LPOLESTR], **kwargs) -> int:
     """
     Converts an interface identifier into a string of printable characters.
     """
-    return delegate(clsid.ref(), lplpsz)
+    return delegate(iid.ref(), lplpsz)
 
 if TYPE_CHECKING:
     from .interfacedef import COMInterface

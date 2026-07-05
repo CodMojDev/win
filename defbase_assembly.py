@@ -31,6 +31,7 @@ class CAssembly:
         self.buffer = code
     
     def allocate(self):
+        if self.executable: self.allocator.deallocate(self.executable)
         buffer_length = len(self.buffer)
         self.executable = self.allocator.allocate(buffer_length, flags=PAGE_EXECUTE_READWRITE)
         self.allocator.copy(self.executable, self.buffer, buffer_length)

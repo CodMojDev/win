@@ -38,6 +38,12 @@ class CVirtualAllocator(CLocalAllocator):
         
     def __repr__(self) -> str:
         return f'<allocator CVirtualAllocator>'
+    
+    def protect(self, address: WT_ADDRLIKE, size: int, new: int) -> int:
+        old = DWORD()
+        bRet = VirtualProtect(address, size, new, byref(old))
+        if not bRet: raise WinException()
+        return old.value
         
 class CRemoteAllocator(IAllocator):
     process: CProcess
@@ -55,6 +61,12 @@ class CRemoteAllocator(IAllocator):
         
     def copy(self, address: WT_ADDRLIKE, source: WT_ADDRLIKE, size: int): 
         self.process.write(address, source, size)
+    
+    def protect(self, address: WT_ADDRLIKE, size: int, new: int) -> int:
+        old = DWORD()
+        bRet = VirtualProtectEx(self.process.handle, address, size, new, byref(old))
+        if not bRet: raise WinException()
+        return old.value
         
     def __repr__(self) -> str:
         return f'<allocator CRemoteAllocator process.pid={self.process.pid}>'
@@ -253,6 +265,12 @@ class CVirtualPoolAllocator(CLocalPoolAllocator):
         
     def __repr__(self) -> str:
         return f'<allocator CVirtualPoolAllocator, quota={self.quota}>'
+    
+    def protect(self, address: WT_ADDRLIKE, size: int, new: int) -> int:
+        old = DWORD()
+        bRet = VirtualProtect(address, size, new, byref(old))
+        if not bRet: raise WinException()
+        return old.value
         
 class CRemotePoolAllocator(PoolAllocator, CRemoteAllocator):
     process: CProcess

@@ -176,13 +176,12 @@ if cpreproc.pragma_once("_GDIPLUSTYPES_H"):
     # Represents a location in a 2D coordinate system (floating-point coordinates)
     #--------------------------------------------------------------------------
 
-    class PointF:
-        class SPointF(CStructure):
-            _pack_ = 8
-            _fields_ = [
-                ("X", FLOAT),
-                ("Y", FLOAT)
-            ]
+    class PointF(CStructure):
+        _pack_ = 8
+        _fields_ = [
+            ("X", FLOAT),
+            ("Y", FLOAT)
+        ]
         X: float
         Y: float
         def __init__(self, varying_type: float | Self | SizeF = 0.0, y: float = 0.0):
@@ -195,9 +194,6 @@ if cpreproc.pragma_once("_GDIPLUSTYPES_H"):
             else:
                 self.X = varying_type
                 self.Y = y
-
-        def to_ctypes(self):
-            return self.SPointF(self.X, self.Y)
         
         def __add__(self, point: Self) -> Self:
             return self.__class__(self.X + point.X,
@@ -214,7 +210,11 @@ if cpreproc.pragma_once("_GDIPLUSTYPES_H"):
     # Represents a location in a 2D coordinate system (integer coordinates)
     #--------------------------------------------------------------------------
 
-    class Point:
+    class Point(CStructure):
+        _fields_ = [
+            ('X', INT),
+            ('Y', INT)
+        ]
         X: int
         Y: int
         def __init__(self, varying_type: int | Self | Size = 0, y: float = 0):
@@ -243,7 +243,13 @@ if cpreproc.pragma_once("_GDIPLUSTYPES_H"):
     # Represents a rectangle in a 2D coordinate system (floating-point coordinates)
     #--------------------------------------------------------------------------
 
-    class RectF:
+    class RectF(CStructure):
+        _fields_ = [
+            ('X', FLOAT),
+            ('Y', FLOAT),
+            ('Width', FLOAT),
+            ('Height', FLOAT)
+        ]
         X: float
         Y: float
         Width: float
@@ -264,36 +270,36 @@ if cpreproc.pragma_once("_GDIPLUSTYPES_H"):
                 self.Width = width
                 self.Height = height
         
-        def clone(self) -> Self:
+        def Clone(self) -> Self:
             return self.__class__(self.X, self.Y, self.Width, self.Height)
 
-        def get_location(self, point: PointF) -> None:
+        def GetLocation(self, point: PointF) -> None:
             point.X = self.X
             point.Y = self.Y
         
-        def get_size(self, size: SizeF) -> None:
+        def GetSize(self, size: SizeF) -> None:
             size.Width = self.Width
             size.Height = self.Height
         
-        def get_bounds(self, rect: Self) -> None:
+        def GetBounds(self, rect: Self) -> None:
             rect.X = self.X
             rect.Y = self.Y
             rect.Width = self.Width
             rect.Height = self.Height
         
-        def get_left(self) -> float:
+        def GetLeft(self) -> float:
             return self.X
         
-        def get_top(self) -> float:
+        def GetTop(self) -> float:
             return self.Y
         
-        def get_right(self) -> float:
+        def GetRight(self) -> float:
             return self.X + self.Width
         
-        def get_bottom(self) -> float:
+        def GetBottom(self) -> float:
             return self.Y + self.Height
         
-        def is_empty_area(self) -> bool:
+        def IsEmptyArea(self) -> bool:
             return (self.Width <= REAL_EPSILON) or (self.Height <= REAL_EPSILON)
         
         def __eq__(self, rect: Self) -> bool:
@@ -302,58 +308,58 @@ if cpreproc.pragma_once("_GDIPLUSTYPES_H"):
                     self.Width == rect.Width  ) and (
                     self.Height == rect.Height)
         
-        def contains(self, varying_type: float | PointF | Self, y: float = 0.0) -> bool:
+        def Contains(self, varying_type: float | PointF | Self, y: float = 0.0) -> bool:
             if isinstance(varying_type, PointF):
-                return self.contains(varying_type.X, varying_type.Y)
+                return self.Contains(varying_type.X, varying_type.Y)
             elif isinstance(varying_type, self.__class__):
-                return (self.X <= varying_type.X) and (varying_type.get_right()  <= self.get_right() ) and (
-                       (self.Y <= varying_type.Y) and (varying_type.get_bottom() <= self.get_bottom())     )
+                return (self.X <= varying_type.X) and (varying_type.GetRight()  <= self.GetRight() ) and (
+                       (self.Y <= varying_type.Y) and (varying_type.GetBottom() <= self.GetBottom())     )
             else:
                 return varying_type >= self.X and varying_type < self.X + self.Width  and (
                        y >= self.Y            and y            < self.Y + self.Height     )
         
-        def inflate(self, varying_type: float | PointF | Self, dy: float = 0.0) -> None:
+        def Inflate(self, varying_type: float | PointF | Self, dy: float = 0.0) -> None:
             if isinstance(varying_type, PointF):
-                self.inflate(varying_type.X, varying_type.Y)
+                self.Inflate(varying_type.X, varying_type.Y)
             else:
                 self.X -= varying_type
                 self.Y -= dy
                 self.Width += 2 * varying_type
                 self.Height += 2 * dy
         
-        def intersect(self, c: Self, a: Self = None, b: Self = None) -> bool:
+        def Intersect(self, c: Self, a: Self = None, b: Self = None) -> bool:
             if not a:
-                return self.intersect(self, self, c)
-            right = min(a.get_right(), b.get_right())
-            bottom = min(a.get_bottom(), b.get_bottom())
-            left = max(a.get_left(), b.get_left())
-            top = max(a.get_top(), b.get_top())
+                return self.Intersect(self, self, c)
+            right = min(a.GetRight(), b.GetRight())
+            bottom = min(a.GetBottom(), b.GetBottom())
+            left = max(a.GetLeft(), b.GetLeft())
+            top = max(a.GetTop(), b.GetTop())
             c.X = left
             c.Y = top
             c.Width = right - left
             c.Height = bottom - top
-            return not c.is_empty_area()
+            return not c.IsEmptyArea()
         
-        def intersects_with(self, rect: Self) -> bool:
-            return (self.get_left()   < rect.get_right()   and
-                    self.get_top()    < rect.get_bottom()  and
-                    self.get_right()  > rect.get_left()    and
-                    self.get_bottom() > rect.get_top()        )
+        def IntersectsWith(self, rect: Self) -> bool:
+            return (self.GetLeft()   < rect.GetRight()   and
+                    self.GetTop()    < rect.GetBottom()  and
+                    self.GetRight()  > rect.GetLeft()    and
+                    self.GetBottom() > rect.GetTop()        )
         
-        def union(self, c: Self, a: Self, b: Self) -> bool:
-            right = max(a.get_right(), b.get_right())
-            bottom = max(a.get_bottom(), b.get_bottom())
-            left = min(a.get_left(), b.get_left())
-            top = min(a.get_top(), b.get_top())
+        def Union(self, c: Self, a: Self, b: Self) -> bool:
+            right = max(a.GetRight(), b.GetRight())
+            bottom = max(a.GetBottom(), b.GetBottom())
+            left = min(a.GetLeft(), b.GetLeft())
+            top = min(a.GetTop(), b.GetTop())
             c.X = left
             c.Y = top
             c.Width = right - left
             c.Height = bottom - top
-            return not c.is_empty_area()
+            return not c.IsEmptyArea()
         
-        def offset(self, varying_type: float | PointF, dy: float = 0.0) -> None:
+        def Offset(self, varying_type: float | PointF, dy: float = 0.0) -> None:
             if isinstance(varying_type, PointF):
-                return self.offset(varying_type.X, varying_type.Y)
+                return self.Offset(varying_type.X, varying_type.Y)
             self.X += varying_type
             self.Y += dy
 
@@ -361,7 +367,13 @@ if cpreproc.pragma_once("_GDIPLUSTYPES_H"):
     # Represents a rectangle in a 2D coordinate system (integer coordinates)
     #--------------------------------------------------------------------------
     
-    class Rect:
+    class Rect(CStructure):
+        _fields_ = [
+            ('X', INT),
+            ('Y', INT),
+            ('Width', INT),
+            ('Height', INT)
+        ]
         X: int
         Y: int
         Width: int
@@ -382,36 +394,36 @@ if cpreproc.pragma_once("_GDIPLUSTYPES_H"):
                 self.Width = width
                 self.Height = height
         
-        def clone(self) -> Self:
+        def Clone(self) -> Self:
             return self.__class__(self.X, self.Y, self.Width, self.Height)
 
-        def get_location(self, point: Point) -> None:
+        def GetLocation(self, point: Point) -> None:
             point.X = self.X
             point.Y = self.Y
         
-        def get_size(self, size: Size) -> None:
+        def GetSize(self, size: Size) -> None:
             size.Width = self.Width
             size.Height = self.Height
         
-        def get_bounds(self, rect: Self) -> None:
+        def GetBounds(self, rect: Self) -> None:
             rect.X = self.X
             rect.Y = self.Y
             rect.Width = self.Width
             rect.Height = self.Height
         
-        def get_left(self) -> int:
+        def GetLeft(self) -> int:
             return self.X
         
-        def get_top(self) -> int:
+        def GetTop(self) -> int:
             return self.Y
         
-        def get_right(self) -> int:
+        def GetRight(self) -> int:
             return self.X + self.Width
         
-        def get_bottom(self) -> int:
+        def GetBottom(self) -> int:
             return self.Y + self.Height
         
-        def is_empty_area(self) -> bool:
+        def IsEmptyArea(self) -> bool:
             return (self.Width <= 0) or (self.Height <= 0)
         
         def __eq__(self, rect: Self) -> bool:
@@ -420,58 +432,58 @@ if cpreproc.pragma_once("_GDIPLUSTYPES_H"):
                     self.Width == rect.Width  ) and (
                     self.Height == rect.Height)
         
-        def contains(self, varying_type: int | Point | Self, y: int = 0) -> bool:
+        def Contains(self, varying_type: int | Point | Self, y: int = 0) -> bool:
             if isinstance(varying_type, Point):
-                return self.contains(varying_type.X, varying_type.Y)
+                return self.Contains(varying_type.X, varying_type.Y)
             elif isinstance(varying_type, self.__class__):
-                return (self.X <= varying_type.X) and (varying_type.get_right()  <= self.get_right() ) and (
-                    (self.Y <= varying_type.Y) and (varying_type.get_bottom() <= self.get_bottom())     )
+                return (self.X <= varying_type.X) and (varying_type.GetRight()  <= self.GetRight() ) and (
+                    (self.Y <= varying_type.Y) and (varying_type.GetBottom() <= self.GetBottom())     )
             else:
                 return varying_type >= self.X and varying_type < self.X + self.Width  and (
                     y >= self.Y            and y            < self.Y + self.Height     )
         
-        def inflate(self, varying_type: int | Point | Self, dy: int = 0) -> None:
+        def Inflate(self, varying_type: int | Point | Self, dy: int = 0) -> None:
             if isinstance(varying_type, Point):
-                self.inflate(varying_type.X, varying_type.Y)
+                self.iInflate(varying_type.X, varying_type.Y)
             else:
                 self.X -= varying_type
                 self.Y -= dy
                 self.Width += 2 * varying_type
                 self.Height += 2 * dy
         
-        def intersect(self, c: Self, a: Self = None, b: Self = None) -> bool:
+        def Intersect(self, c: Self, a: Self = None, b: Self = None) -> bool:
             if not a:
-                return self.intersect(self, self, c)
-            right = min(a.get_right(), b.get_right())
-            bottom = min(a.get_bottom(), b.get_bottom())
-            left = max(a.get_left(), b.get_left())
-            top = max(a.get_top(), b.get_top())
+                return self.Intersect(self, self, c)
+            right = min(a.GetRight(), b.GetRight())
+            bottom = min(a.GetBottom(), b.GetBottom())
+            left = max(a.GetLeft(), b.GetLeft())
+            top = max(a.GetTop(), b.GetTop())
             c.X = left
             c.Y = top
             c.Width = right - left
             c.Height = bottom - top
-            return not c.is_empty_area()
+            return not c.IsEmptyArea()
         
-        def intersects_with(self, rect: Self) -> bool:
-            return (self.get_left()   < rect.get_right()   and
-                    self.get_top()    < rect.get_bottom()  and
-                    self.get_right()  > rect.get_left()    and
-                    self.get_bottom() > rect.get_top()        )
+        def IntersectsWith(self, rect: Self) -> bool:
+            return (self.GetLeft()   < rect.GetRight()   and
+                    self.GetTop()    < rect.GetBottom()  and
+                    self.GetRight()  > rect.GetLeft()    and
+                    self.GetBottom() > rect.GetTop()        )
         
-        def union(self, c: Self, a: Self, b: Self) -> bool:
-            right = max(a.get_right(), b.get_right())
-            bottom = max(a.get_bottom(), b.get_bottom())
-            left = min(a.get_left(), b.get_left())
-            top = min(a.get_top(), b.get_top())
+        def Union(self, c: Self, a: Self, b: Self) -> bool:
+            right = max(a.GetRight(), b.GetRight())
+            bottom = max(a.GetBottom(), b.GetBottom())
+            left = min(a.GetLeft(), b.GetLeft())
+            top = min(a.GetTop(), b.GetTop())
             c.X = left
             c.Y = top
             c.Width = right - left
             c.Height = bottom - top
-            return not c.is_empty_area()
+            return not c.IsEmptyArea()
         
-        def offset(self, varying_type: int | Point, dy: int = 0) -> None:
+        def Offset(self, varying_type: int | Point, dy: int = 0) -> None:
             if isinstance(varying_type, Point):
-                return self.offset(varying_type.X, varying_type.Y)
+                return self.Offset(varying_type.X, varying_type.Y)
             self.X += varying_type
             self.Y += dy
 
@@ -483,7 +495,7 @@ if cpreproc.pragma_once("_GDIPLUSTYPES_H"):
 
         def __invert__(self):
             if self.Points:
-                memset(cast(self.Points, PVOID), 0, sizeof(PointF.SPointF))
+                memset(cast(self.Points, PVOID), 0, sizeof(PointF))
             if self.Types:
                 memset(cast(self.Types, PVOID), 0, sizeof(BYTE))
 

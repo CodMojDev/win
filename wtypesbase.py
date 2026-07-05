@@ -379,7 +379,7 @@ if cpreproc.pragma_once():
     class DWORD_SIZEDARR(CStructure):
         _fields_ = [('clSize', ULONG), ('pData', PULONG)]
         
-        pData: PULONG
+        pData: IPointer[ULONG]
         clSize: int
     
     class HYPER_SIZEDARR(CStructure):

@@ -332,7 +332,7 @@ class CProcess:
         processes: list[CProcess] = []
         nPids = 2048
         
-        cbPids = PtrArithmetic.size_bytes(DWORD, nPids)
+        cbPids = PtrArithmetic.size(DWORD, nPids)
         pids: IArray[int] = (DWORD * nPids)()
         
         cbNeeded = DWORD()

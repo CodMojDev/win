@@ -232,7 +232,7 @@ class Detail_Inspectable(CComObject, IInspectable):
         self.implement(self.GetRuntimeClassName)
         self.implement(self.GetTrustLevel)
         
-    def GetIids_Impl(self, iidCount: PULONG, iids: IDoublePtr[IID]) -> int:
+    def GetIids_Impl(self, iidCount: IPointer[ULONG], iids: IDoublePtr[IID]) -> int:
         if not (iids and iidCount):
             return E_POINTER
         map = self._com_map_ + [(IUnknown, None), (IInspectable, None)]

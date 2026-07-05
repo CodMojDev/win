@@ -7,8 +7,8 @@ import traceback
 import queue
 
 if TYPE_CHECKING:
+    from .handle import CriticalSection, Win32Event
     from ..window import Window, Application
-    from .handle import CriticalSection
 
 def _abs_is_main(stack_level: int = 0) -> bool:
     # check upper frame + stack_level is running as main script (standard __name__ == __main__ check)
@@ -133,6 +133,7 @@ class Abs:
                 self.close(thread)
             # clear threads dictionary
             self.threads.clear()
+            return True
                         
         def running(self):
             """

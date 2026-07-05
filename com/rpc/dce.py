@@ -264,7 +264,7 @@ def RpcBindingReset(Binding: WT_HANDLE) -> int: ...
 def RpcBindingSetObject(Binding: WT_HANDLE, ObjectUuid: IPointer[UUID]) -> int: ...
 
 @rpcrt_foreign(ULONG, PULONG)
-def RpcMgmtInqDefaultProtectLevel(AuthnSvc: int, AuthnLevel: PULONG) -> int: ...
+def RpcMgmtInqDefaultProtectLevel(AuthnSvc: int, AuthnLevel: IPointer[ULONG]) -> int: ...
 
 @rpcrt_foreign(RPC_BINDING_HANDLE, PTR(RPC_CSTR))
 def RpcBindingToStringBindingA(Binding: WT_HANDLE, StringBinding: IPointer[RPC_CSTR]) -> int: ...
@@ -826,7 +826,7 @@ if _version >= WIN32_WINNT_WINXP:
         ServerCertificateSubject: LPWSTR
         AuthenticationTarget: int
         NumberOfAuthnSchemes: int
-        AuthnSchemes: PULONG
+        AuthnSchemes: IPointer[ULONG]
         Flags: int
         
     PRPC_HTTP_TRANSPORT_CREDENTIALS_W = RPC_HTTP_TRANSPORT_CREDENTIALS_W.PTR()
@@ -845,7 +845,7 @@ if _version >= WIN32_WINNT_WINXP:
         ServerCertificateSubject: LPSTR
         AuthenticationTarget: int
         NumberOfAuthnSchemes: int
-        AuthnSchemes: PULONG
+        AuthnSchemes: IPointer[ULONG]
         Flags: int
         
     PRPC_HTTP_TRANSPORT_CREDENTIALS_A = RPC_HTTP_TRANSPORT_CREDENTIALS_A.PTR()
@@ -860,7 +860,7 @@ if _version >= WIN32_WINNT_WINXP:
             
             ProxyCredentials: SEC_WINNT_AUTH_IDENTITY_W
             NumberOfProxyAuthnSchemes: int
-            ProxyAuthnSchemes: PULONG
+            ProxyAuthnSchemes: IPointer[ULONG]
             
         PRPC_HTTP_TRANSPORT_CREDENTIALS_V2_W = RPC_HTTP_TRANSPORT_CREDENTIALS_V2_W.PTR()
         
@@ -873,7 +873,7 @@ if _version >= WIN32_WINNT_WINXP:
             
             ProxyCredentials: SEC_WINNT_AUTH_IDENTITY_A
             NumberOfProxyAuthnSchemes: int
-            ProxyAuthnSchemes: PULONG
+            ProxyAuthnSchemes: IPointer[ULONG]
             
         PRPC_HTTP_TRANSPORT_CREDENTIALS_V2_A = RPC_HTTP_TRANSPORT_CREDENTIALS_V2_A.PTR()
         RPC_HTTP_TRANSPORT_CREDENTIALS_V2 = unicode(RPC_HTTP_TRANSPORT_CREDENTIALS_V2_W, RPC_HTTP_TRANSPORT_CREDENTIALS_V2_A)
@@ -898,8 +898,8 @@ if _version >= WIN32_WINNT_WINXP:
             NumberOfProxyAuthnSchemes: int
             NumberOfAuthnSchemes: int
             
-            ProxyAuthnSchemes: PULONG
-            AuthnSchemes: PULONG
+            ProxyAuthnSchemes: IPointer[ULONG]
+            AuthnSchemes: IPointer[ULONG]
             
             ServerCertificateSubject: LPWSTR
             AuthenticationTarget: int
@@ -926,8 +926,8 @@ if _version >= WIN32_WINNT_WINXP:
             NumberOfProxyAuthnSchemes: int
             NumberOfAuthnSchemes: int
             
-            ProxyAuthnSchemes: PULONG
-            AuthnSchemes: PULONG
+            ProxyAuthnSchemes: IPointer[ULONG]
+            AuthnSchemes: IPointer[ULONG]
             
             ServerCertificateSubject: LPSTR
             AuthenticationTarget: int
@@ -1261,9 +1261,9 @@ def RpcBindingInqAuthClientA(
     ClientBinding: WT_HANDLE,
     Privs: IPointer[RPC_AUTHZ_HANDLE],
     ServerPrincName: IPointer[RPC_CSTR],
-    AuthnLevel: PULONG, 
-    AuthnSvc: PULONG,
-    AuthzSvc: PULONG) -> int: ...
+    AuthnLevel: IPointer[ULONG], 
+    AuthnSvc: IPointer[ULONG],
+    AuthzSvc: IPointer[ULONG]) -> int: ...
 
 @rpcrt_foreign(RPC_BINDING_HANDLE, PTR(RPC_AUTHZ_HANDLE), 
                PTR(RPC_WSTR), PULONG, PULONG, PULONG)
@@ -1271,9 +1271,9 @@ def RpcBindingInqAuthClientW(
     ClientBinding: WT_HANDLE,
     Privs: IPointer[RPC_AUTHZ_HANDLE],
     ServerPrincName: IPointer[RPC_WSTR],
-    AuthnLevel: PULONG, 
-    AuthnSvc: PULONG,
-    AuthzSvc: PULONG) -> int: ...
+    AuthnLevel: IPointer[ULONG], 
+    AuthnSvc: IPointer[ULONG],
+    AuthzSvc: IPointer[ULONG]) -> int: ...
 
 
 @rpcrt_foreign(RPC_BINDING_HANDLE, PTR(RPC_AUTHZ_HANDLE), 
@@ -1282,8 +1282,8 @@ def RpcBindingInqAuthClientExA(
     ClientBinding: WT_HANDLE,
     Privs: IPointer[RPC_AUTHZ_HANDLE],
     ServerPrincName: IPointer[RPC_CSTR],
-    AuthnLevel: PULONG, AuthnSvc: PULONG,
-    AuthzSvc: PULONG, Flags: int) -> int: ...
+    AuthnLevel: IPointer[ULONG], AuthnSvc: IPointer[ULONG],
+    AuthzSvc: IPointer[ULONG], Flags: int) -> int: ...
 
 @rpcrt_foreign(RPC_BINDING_HANDLE, PTR(RPC_AUTHZ_HANDLE), 
                PTR(RPC_WSTR), PULONG, PULONG, PULONG, ULONG)
@@ -1291,26 +1291,26 @@ def RpcBindingInqAuthClientExW(
     ClientBinding: WT_HANDLE,
     Privs: IPointer[RPC_AUTHZ_HANDLE],
     ServerPrincName: IPointer[RPC_WSTR],
-    AuthnLevel: PULONG, AuthnSvc: PULONG,
-    AuthzSvc: PULONG, Flags: int) -> int: ...
+    AuthnLevel: IPointer[ULONG], AuthnSvc: IPointer[ULONG],
+    AuthzSvc: IPointer[ULONG], Flags: int) -> int: ...
 
 @rpcrt_foreign(RPC_BINDING_HANDLE, PTR(RPC_CSTR), PULONG, PULONG, 
                PTR(RPC_AUTH_IDENTITY_HANDLE), PULONG)
 def RpcBindingInqAuthInfoA(
     Binding: WT_HANDLE,
     ServerPrincName: IPointer[RPC_CSTR],
-    AuthnLevel: PULONG, AuthnSvc: PULONG,
+    AuthnLevel: IPointer[ULONG], AuthnSvc: IPointer[ULONG],
     AuthIdentity: IPointer[RPC_AUTH_IDENTITY_HANDLE],
-    AuthzSvc: PULONG) -> int: ...
+    AuthzSvc: IPointer[ULONG]) -> int: ...
 
 @rpcrt_foreign(RPC_BINDING_HANDLE, PTR(RPC_WSTR), PULONG, PULONG, 
                PTR(RPC_AUTH_IDENTITY_HANDLE), PULONG)
 def RpcBindingInqAuthInfoW(
     Binding: WT_HANDLE,
     ServerPrincName: IPointer[RPC_WSTR],
-    AuthnLevel: PULONG, AuthnSvc: PULONG,
+    AuthnLevel: IPointer[ULONG], AuthnSvc: IPointer[ULONG],
     AuthIdentity: IPointer[RPC_AUTH_IDENTITY_HANDLE],
-    AuthzSvc: PULONG) -> int: ...
+    AuthzSvc: IPointer[ULONG]) -> int: ...
 
 @rpcrt_foreign(RPC_BINDING_HANDLE, RPC_CSTR, ULONG, ULONG, 
                RPC_AUTH_IDENTITY_HANDLE, ULONG)
@@ -1360,9 +1360,9 @@ def RpcBindingSetAuthInfoExW(
 def RpcBindingInqAuthInfoExA(
     Binding: WT_HANDLE,
     ServerPrincName: IPointer[RPC_CSTR],
-    AuthnLevel: PULONG, AuthnSvc: PULONG,
+    AuthnLevel: IPointer[ULONG], AuthnSvc: IPointer[ULONG],
     AuthIdentity: IPointer[RPC_AUTH_IDENTITY_HANDLE],
-    AuthzSvc: PULONG, RpcQosVersion: int,
+    AuthzSvc: IPointer[ULONG], RpcQosVersion: int,
     SecurityQos: IPointer[RPC_SECURITY_QOS]) -> int: ...
 
 @rpcrt_foreign(RPC_BINDING_HANDLE, PTR(RPC_WSTR), PULONG, PULONG, 
@@ -1371,9 +1371,9 @@ def RpcBindingInqAuthInfoExA(
 def RpcBindingInqAuthInfoExW(
     Binding: WT_HANDLE,
     ServerPrincName: IPointer[RPC_WSTR],
-    AuthnLevel: PULONG, AuthnSvc: PULONG,
+    AuthnLevel: IPointer[ULONG], AuthnSvc: IPointer[ULONG],
     AuthIdentity: IPointer[RPC_AUTH_IDENTITY_HANDLE],
-    AuthzSvc: PULONG, RpcQosVersion: int,
+    AuthzSvc: IPointer[ULONG], RpcQosVersion: int,
     SecurityQos: IPointer[RPC_SECURITY_QOS]) -> int: ...
 
 RPC_AUTH_KEY_RETRIEVAL_FN = WINAPI(PVOID, RPC_WSTR, ULONG, PVOID, PTR(RPC_STATUS))

@@ -198,7 +198,7 @@ if cpreproc.pragma_once('_DBGHELP_'):
         Base: PVOID,
         MappedAsImage: bool,
         DirectoryEntry: int,
-        Size: PULONG,
+        Size: IPointer[ULONG],
         FoundHeader: IDoublePtr[IMAGE_SECTION_HEADER]) -> int: ...
     
     @DbgHelp.foreign(PVOID, PVOID, BOOLEAN, USHORT, PULONG)
@@ -206,7 +206,7 @@ if cpreproc.pragma_once('_DBGHELP_'):
         Base: PVOID,
         MappedAsImage: bool,
         DirectoryEntry: int,
-        Size: PULONG) -> int: ...
+        Size: IPointer[ULONG]) -> int: ...
     
     @DbgHelp.foreign(PIMAGE_SECTION_HEADER,
                      PIMAGE_NT_HEADERS,

@@ -47,6 +47,10 @@ if cpreproc.pragma_once("__SENSAPI_H__"):
             ("dwInSpeed", DWORD),
             ("dwOutSpeed", DWORD)
         ]
+        dwSize: int
+        dwFlas: int
+        dwInSpeed: int
+        dwOutSpeed: int
     QOCINFO = tagQOCINFO
     LPQOCINFO = POINTER(QOCINFO)
     IsDestinationReachableA = declare(sensapi.IsDestinationReachableA, BOOL, LPCSTR, LPQOCINFO)

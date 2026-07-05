@@ -75,6 +75,7 @@ def com_interfacespec(spec: type[IT]):
                 itf = spec.NULL()
                 hr = self.QueryInterface(spec, byref(itf))
                 if FAILED(hr): raise COMError(hr)
+                itf = itf.contents
                 qi_cache[spec] = itf
                 guard = _COM_REF_GUARD(itf)
                 setattr(itf, '_com_ref_guard', guard)
@@ -98,7 +99,8 @@ class COMClass:
         for interface in interfaces:
             for k, v in interface.__dict__.items():
                 if isinstance(v, types.FunctionType) and hasattr(v, 'proto'):
-                    setattr(cls, k, com_interfacespec(interface)(v))
+                    if v.__name__ != 'QueryInterface':
+                        setattr(cls, k, com_interfacespec(interface)(v))
         
     @staticmethod
     def build_interfaces(cls) -> list[COMInterface]:

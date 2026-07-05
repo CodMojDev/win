@@ -18,7 +18,7 @@ class EventCallback:
     def execute(self, *args, **kwargs) -> Any:
         return self._callback(*args, **kwargs)
 
-class Event:
+class MultiEvent:
     _callbacks: list[EventCallback]
     _blocked: bool
     

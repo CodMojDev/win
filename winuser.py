@@ -1984,6 +1984,8 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("rgrc", RECT * 3),
                     ("lppos", PWINDOWPOS)
                 ]
+                rgrc: IArray[RECT]
+                lppos: IPointer[WINDOWPOS]
             NCCALCSIZE_PARAMS = tagNCCALCSIZE_PARAMS
             LPNCCALCSIZE_PARAMS = POINTER(NCCALCSIZE_PARAMS)
 
@@ -2951,7 +2953,7 @@ if cpreproc.pragma_once("_WINUSER_"):
 
                 # REGION *** Desktop Family ***
 
-                UpdateLayeredWindow = declare(user32.UpdateLayeredWindow, HWND, HDC, PPOINT, PSIZE, HDC, PPOINT, COLORREF, PBLENDFUNCTION, DWORD)
+                UpdateLayeredWindow = declare(user32.UpdateLayeredWindow, BOOL, HWND, HDC, PPOINT, PSIZE, HDC, PPOINT, COLORREF, PBLENDFUNCTION, DWORD)
 
                 """
                 * Layered Window Update information

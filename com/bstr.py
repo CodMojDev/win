@@ -52,6 +52,12 @@ class BSTR(LPOLESTR):
         if len(value) > 25:
             value = value[:25] + '...'
         return f'<BSTR at {address}, value="{value}">'
+    
+    def free(self):
+        SysFreeString(self)
+        
+    def ref(self) -> IPointer['BSTR']:
+        return byref(self)
 
 LPBSTR = POINTER(BSTR)
 BSTR_NULL = BSTR()

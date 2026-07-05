@@ -433,7 +433,7 @@ if cpreproc.pragma_once("_IPMIB_"):
     PMIB_MFE_TABLE = POINTER(MIB_MFE_TABLE)
 
     SIZEOF_BASIC_MIB_MFE         = \
-        (MIB_IPMCAST_MFE.offset)
+        (MIB_IPMCAST_MFE.Offset)
 
     SIZEOF_MIB_MFE = lambda X:             \
         (SIZEOF_BASIC_MIB_MFE + ((X) * sizeof(MIB_IPMCAST_OIF)))

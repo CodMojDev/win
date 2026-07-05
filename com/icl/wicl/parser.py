@@ -17,6 +17,7 @@ CLASS = 3
 IFDEF = 4
 IMPORTS = 5
 ENUM = 6
+INTERFACE = 7
 
 class ICLParser(IIMLParser):
     class ICLContext(IIMLContext):
@@ -28,7 +29,6 @@ class ICLParser(IIMLParser):
         no_vb_bases: list[str]
         declaring_class: bool
         enum_entry_count: int
-        in_ifdef_block: bool
         declaring_enum: str
         function_count: int
         closing: list[int]
@@ -49,7 +49,6 @@ class ICLParser(IIMLParser):
             self.last_defined_interface = ''
             self.declaring_structure = ''
             self.declaring_class = False
-            self.in_ifdef_block = False
             self.enum_entry_count = 0
             self.declaring_enum = ''
             self.function_count = 0
@@ -406,13 +405,11 @@ class ICLParser(IIMLParser):
                 self.code.append_field('virtual_table', value=f"COMVirtualTable('{interface_name}')")
         
         self.context.last_defined_interface = interface_name
+        self.context.closing.append(INTERFACE)
         
     def generic_end(self) -> bool:
         if self.context.silent:
             self.context.silent = False
-            return True
-        elif self.context.function_count != 0:
-            self.interface_end()
             return True
         last = self.context.closing.pop()
         if last == ENUM:
@@ -432,13 +429,15 @@ class ICLParser(IIMLParser):
             self.code.append_newline()
             return True
         elif last == IFDEF:
-            self.context.in_ifdef_block = False
             self.code.unindent()
             self.code.append_newline()
             return True
         elif last == IMPORTS:
             self.context.in_imports = False
             self.code.append_newline()
+            return True
+        elif last == INTERFACE:
+            self.interface_end()
             return True
         return False
         
@@ -451,6 +450,8 @@ class ICLParser(IIMLParser):
         self.context.function_count = 0
         
     def include(self):
+        # TODO
+        
         if self.context.tokens_length == 1:
             self.syntax_error('Incorrect usage of ".inc(l)" instruction,'
                                 'missing ICL file name.')
@@ -536,7 +537,10 @@ class ICLParser(IIMLParser):
                                 len(function_name)+len(result_type)+5)
             
             
-            self.parse_arguments(decorator_args, decorator_named_args, args, 3, has_refs, refs)
+        self.context.tokens.insert(2, '_Ret_')
+        self.parse_arguments(decorator_args, decorator_named_args, args, 2, has_refs, refs)
+        result_type = args[0][1]
+        args.pop(0)
         
         self.new_function(has_refs, function_name, result_type, args, 
                           'virtual_table.function', decorator_args, 
@@ -702,7 +706,7 @@ class ICLParser(IIMLParser):
         function_name = self.context.tokens[1]
         lib_name, function_name = function_name.split('.')
         result_type = self.context.tokens[2]
-        decorator_args = [result_type]
+        decorator_args = []
         decorator_named_args = []
         has_refs: Ref[bool] = Ref(bool)
         if result_type == 'BOOL':
@@ -718,9 +722,12 @@ class ICLParser(IIMLParser):
                                 '(tokens count is not even or == 4)',
                                 len(function_name)+len(result_type)+5)
             
-            
-            self.parse_arguments(decorator_args, decorator_named_args, args, 3, has_refs, refs)
-            
+        
+        self.context.tokens.insert(2, '_Ret_')
+        self.parse_arguments(decorator_args, decorator_named_args, args, 2, has_refs, refs)
+        result_type = args[0][1]
+        args.pop(0)
+        
         self.context.external_function_count += 1
         if self.context.external_function_count == 1:
             self.code.append_newline()
@@ -815,6 +822,7 @@ class ICLParser(IIMLParser):
                 self.code.append_field('virtual_table', value=f"COMVirtualTable('{interface_name}')")
         
         self.context.last_defined_interface = interface_name
+        self.context.closing.append(INTERFACE)
         
     def define_coclass(self):
         if self.context.tokens_length == 1:
@@ -854,7 +862,6 @@ class ICLParser(IIMLParser):
             version = 'WIN32_WINNT_' + version[1:]
         self.code.append(f'if _version {op} {version}:')
         self.code.indent()
-        self.context.in_ifdef_block = True
         self.context.closing.append(IFDEF)
         
     def ifver_ge(self):
@@ -883,7 +890,6 @@ class ICLParser(IIMLParser):
             self.syntax_error('Incorrect usage of "ifdef" instruction, '
                               'missing define name.', len(self.context.last_line)+1)
             
-        self.context.in_ifdef_block = True
         self.context.closing.append(IFDEF)
         self.code.append(f'if cpreproc.ifdef("{self.context.tokens[1]}"):')
         self.code.indent()
@@ -903,7 +909,6 @@ class ICLParser(IIMLParser):
             self.syntax_error('Incorrect usage of "ifndef" instruction, '
                               'missing define name.', len(self.context.last_line)+1)
             
-        self.context.in_ifdef_block = True
         self.context.closing.append(IFDEF)
         self.code.append(f'if cpreproc.ifndef("{self.context.tokens[1]}"):')
         self.code.indent()
@@ -918,7 +923,6 @@ class ICLParser(IIMLParser):
             version = 'WIN32_IE_' + version[1:]
         self.code.append(f'if WIN32_IE {op} {version}:')
         self.code.indent()
-        self.context.in_ifdef_block = True
         self.context.closing.append(IFDEF)
         
     def ifver_ie_ge(self):

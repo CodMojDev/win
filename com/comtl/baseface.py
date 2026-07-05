@@ -258,7 +258,7 @@ class _TL_ENUMERATOR(IUnknown):
     
     @virtual_table.com_function(ULONG, PVOID, PULONG)
     def Next(self, celt: int, rgelt: PVOID,
-             pceltFetched: PULONG) -> int: ...
+             pceltFetched: IPointer[ULONG]) -> int: ...
     
     @virtual_table.com_function(ULONG)
     def Skip(self, celt: int) -> int: ...
@@ -683,7 +683,7 @@ def TlGetMethodPtrEx(self, method_name: str, virtual_table: VirtualTable) -> int
     Indiectly get the method pointer in virtual table.
     """
     vtable_ptr = TlGetVtablePtrEx(self, virtual_table)
-    method_offset = virtual_table.VType.offset(method_name)
+    method_offset = virtual_table.VType.Offset(method_name)
     return vtable_ptr + method_offset
 
 def TlGetMethodPtr(self, method_name: str) -> int:

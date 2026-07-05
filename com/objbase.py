@@ -121,7 +121,7 @@ if _version >= WIN32_WINNT_WIN2K:
         """
         
     @ole_foreign(LPVOID, PULONG, HRESULT)
-    def DcomChannelSetHResult(pvReserved: LPVOID, pulReserved: PULONG, appsHR: HRESULT) -> int: ...
+    def DcomChannelSetHResult(pvReserved: LPVOID, pulReserved: IPointer[ULONG], appsHR: HRESULT) -> int: ...
 
 # other helpers
 @ole32.foreign(BOOL, REFCLSID, intermediate_method=True, result_function=bool)
@@ -227,7 +227,7 @@ def CoGetObject(pszName: LPCWSTR, pBindOptions: IPointer[BIND_OPTS],
 
 @ole_foreign(LPBC, LPCOLESTR, PULONG, PTR(LPMONIKER))
 def MkParseDisplayName(pbc: IPointer[IBindCtx], szUserName: LPCOLESTR,
-                       pchEaten: PULONG, ppmk: IDoublePtr[IMoniker]) -> int:
+                       pchEaten: IPointer[ULONG], ppmk: IDoublePtr[IMoniker]) -> int:
     """
     Converts a string into a moniker that identifies the object named by the string.
     """

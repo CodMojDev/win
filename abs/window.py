@@ -2,6 +2,7 @@
 from win.defbase_errordef import *
 
 # WinAPI header files
+from win.errhandlingapi import *
 from win.libloaderapi import *
 from win.commctrl import *
 
@@ -9,6 +10,9 @@ from win.commctrl import *
 from .core.handle import * # Handles, colors and utils core logic
 from .core.event import * # Event class
 from .core.absutils import * # Abs.* access
+
+# COM HRESULTs
+from win.com.comdefbase import HRESULT, COMError, FAILED
 
 # random module for class name generation
 import random
@@ -23,6 +27,96 @@ def _abs_init():
     # initialize the common controls (comctl32)
     if not InitCommonControlsEx(icex.ref()):
         raise WinException()
+
+dwmapi = get_win_library('dwmapi.dll')
+
+WINDOWCOMPOSITIONATTRIB = INT
+
+class WINDOWCOMPOSITIONATTRIBDATA(CStructure):
+    _fields_ = [
+        ('Attrib', WINDOWCOMPOSITIONATTRIB),
+        ('pvData', PVOID),
+        ('cbData', UINT)
+    ]
+    Attrib: int
+    pvData: int
+    cbData: int
+
+LPWINDOWCOMPOSITIONATTRIBDATA = PTR(WINDOWCOMPOSITIONATTRIBDATA)
+
+@user32.foreign(BOOL, HWND, LPWINDOWCOMPOSITIONATTRIBDATA)
+def SetWindowCompositionAttribute(hwnd: int, pwcad: IPointer[WINDOWCOMPOSITIONATTRIBDATA]) -> int: pass
+
+@dwmapi.foreign(HRESULT, HWND, DWORD, LPCVOID, DWORD)
+def DwmSetWindowAttribute(hwnd: int, dwAttribute: int, pvAtribute: int, cbAttribute: int): pass
+
+DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+DWMWA_USE_HOSTBACKDROPBRUSH = 17
+DWMWA_SYSTEMBACKDROP_TYPE = 38
+DWMSBT_AUTO = 0
+DWMSBT_NONE = 1
+DWMSBT_MAINWINDOW = 2
+DWMSBT_TRANSIENTWINDOW = 3
+DWMSBT_TABBEDWINDOW = 4
+
+# document "undocumented" composition attribs.
+WCA_TRANSITIONS_FORCEDISABLED = 3
+WCA_ALLOW_NCPAINT = 4
+WCA_CAPTION_BUTTON_BOUNDS = 5
+WCA_NONCLIENT_RTL_LAYOUT = 6
+WCA_EXTENDED_FRAME_BOUNDS = 8
+WCA_DISALLOW_PEEK = 16
+WCA_CLOAK = 17
+WCA_CLOAKED = 18
+WCA_ACCENT_POLICY = 19
+WCA_EXCLUDED_FROM_DDA = 24
+WCA_USEDARKMODECOLORS = 26
+
+ACCENT_DISABLED = 0
+ACCENT_ENABLE_GRADIENT = 1
+ACCENT_ENABLE_TRANSPARENTGRADIENT = 2
+ACCENT_ENABLE_BLURBEHIND = 3
+ACCENT_ENABLE_SLOWMOVE = 4
+ACCENT_STATE = INT
+
+# document "undocumented" window band infrastructure
+@user32.foreign(BOOL, HWND, PDWORD)
+def GetWindowBand(hwnd: int, pdwBand: IPointer[DWORD]) -> int: ...
+
+ZBID_DEFAULT = 0
+ZBID_DESKTOP = 1
+ZBID_UIACCESS = 2
+ZBID_IMMERSIVE_IHM = 3
+ZBID_IMMERSIVE_NOTIFICATION = 4
+ZBID_IMMERSIVE_APPCHROME = 5
+ZBID_IMMERSIVE_MOGO = 6
+ZBID_IMMERSIVE_EDGY = 7
+ZBID_IMMERSIVE_INACTIVEMOBODY = 8
+ZBID_IMMERSIVE_INACTIVEDOCK = 9
+ZBID_IMMERSIVE_ACTIVEMOBODY = 10
+ZBID_IMMERSIVE_ACTIVEDOCK = 11
+ZBID_IMMERSIVE_BACKGROUND = 12
+ZBID_IMMERSIVE_SEARCH = 13
+ZBID_GENUINE_WINDOWS = 14
+ZBID_IMMERSIVE_RESTRICTED = 15
+ZBID_SYSTEM_TOOLS = 16
+ZBID_LOCK = 17
+ZBID_ABOVELOCK_UX = 18
+
+@kernel32.foreign(UINT, ATOM, LPWSTR, INT)
+def GlobalGetAtomNameW(nAtom: int, lpBuffer: WT_LPWSTR, nSize: int) -> int: ...
+
+class ACCENTPOLICY(CStructure):
+    _fields_ = [
+        ('AccentState', ACCENT_STATE),
+        ('AccentFlags', UINT),
+        ('GradientColor', COLORREF),
+        ('AnimationId', UINT)
+    ]
+    AccentState: int
+    AccentFlags: int
+    GradientColor: int
+    AnimationId: int
 
 class Menu(Handle):
     """
@@ -84,6 +178,39 @@ class Window(HWND, Abs.Object):
     """
     Class, wrapping functionality of Win32 Window.
     """
+    class Styles:
+        window: 'Window'
+        
+        def __init__(self, window: 'Window'):
+            self.window = window
+            
+        def add(self, *styles: int):
+            """
+            Add specific style (or styles).
+            """
+            for style in styles:
+                self.window.style |= style
+            
+        def remove(self, *styles: int):
+            """
+            Remove specific style (or styles).
+            """
+            for style in styles:
+                self.window.style &= ~style
+            
+        def add_ex(self, *styles: int):
+            """
+            Add specific extended style (or styles).
+            """
+            for style in styles:
+                self.window.extended_style |= style
+            
+        def remove_ex(self, *styles: int):
+            """
+            Remove specific extended style (or styles).
+            """
+            for style in styles:
+                self.window.extended_style &= ~style
     
     _foreign_cache: dict[int, 'Window'] = {}
     
@@ -103,16 +230,17 @@ class Window(HWND, Abs.Object):
         
         hwnd = PtrUtil.get_address(hwnd)
         if hwnd == 0: return None
-        if not IsWindow(hwnd):
-            raise WinException()
         window = Window._foreign_cache.get(hwnd)
         if window is None:
             window = cls(hwnd, headless=True)
             Window._foreign_cache[hwnd] = window
         return window
     
+    styles: Styles
+    
     def __init__(self, *args, **kwargs):
         HWND.__init__(self, *args)
+        self.styles = self.Styles(self)
         
         # headless construct = construct `Window` object from HWND
         if 'headless' not in kwargs:
@@ -132,43 +260,43 @@ class Window(HWND, Abs.Object):
             self._timers = {}
             
             # events collection
-            self.on_create = Event()
-            self.on_left_button_down = Event()
-            self.on_left_button_up = Event()
-            self.on_left_button_double_click = Event()
-            self.on_right_button_down = Event()
-            self.on_right_button_up = Event()
-            self.on_right_button_double_click = Event()
-            self.on_close = Event()
-            self.on_destroy = Event()
-            self.on_key_down = Event()
-            self.on_key_up = Event()
-            self.on_move = Event()
-            self.on_show = Event()
-            self.on_style_changed = Event()
-            self.on_theme_changed = Event()
-            self.on_user_changed = Event()
-            self.on_unknown_message = Event()
-            self.on_enable = Event()
-            self.on_set_font = Event()
-            self.on_mouse_wheel = Event()
-            self.on_timer = Event()
-            self.after_message = Event()
-            self.on_notify = Event()
-            self.on_message = Event()
-            self.on_mouse_move = Event()
-            self.on_draw_item = Event()
-            self.on_palette_changed = Event()
-            self.on_measure_item = Event()
-            self.on_compare_item = Event()
-            self.on_char = Event()
-            self.on_command = Event()
-            self.on_hscroll = Event()
-            self.on_vscroll = Event()
-            self.on_nc_destroy = Event()
+            self.on_create = MultiEvent()
+            self.on_left_button_down = MultiEvent()
+            self.on_left_button_up = MultiEvent()
+            self.on_left_button_double_click = MultiEvent()
+            self.on_right_button_down = MultiEvent()
+            self.on_right_button_up = MultiEvent()
+            self.on_right_button_double_click = MultiEvent()
+            self.on_close = MultiEvent()
+            self.on_destroy = MultiEvent()
+            self.on_key_down = MultiEvent()
+            self.on_key_up = MultiEvent()
+            self.on_move = MultiEvent()
+            self.on_show = MultiEvent()
+            self.on_style_changed = MultiEvent()
+            self.on_theme_changed = MultiEvent()
+            self.on_user_changed = MultiEvent()
+            self.on_unknown_message = MultiEvent()
+            self.on_enable = MultiEvent()
+            self.on_set_font = MultiEvent()
+            self.on_mouse_wheel = MultiEvent()
+            self.on_timer = MultiEvent()
+            self.after_message = MultiEvent()
+            self.on_notify = MultiEvent()
+            self.on_message = MultiEvent()
+            self.on_mouse_move = MultiEvent()
+            self.on_draw_item = MultiEvent()
+            self.on_palette_changed = MultiEvent()
+            self.on_measure_item = MultiEvent()
+            self.on_compare_item = MultiEvent()
+            self.on_char = MultiEvent()
+            self.on_command = MultiEvent()
+            self.on_hscroll = MultiEvent()
+            self.on_vscroll = MultiEvent()
+            self.on_nc_destroy = MultiEvent()
             
             # bind the standard handler for destroy: application cycle notifier
-            self.on_destroy += self.Window_on_nc_destroy
+            self.on_nc_destroy += self.Window_on_nc_destroy
             
             # bind the standard handler for creation: application cycle notifier
             self.on_create += self.Window_on_create
@@ -213,22 +341,6 @@ class Window(HWND, Abs.Object):
         self._extended_style = extended_style
         if self.value:
             SetWindowLongW(self, GWL_EXSTYLE, extended_style)
-    
-    def remove(self, *styles: int):
-        """
-        Remove given styles from window.
-        """
-        
-        for style in styles:
-            self.style &= ~style
-    
-    def remove_extended(self, *extended_styles: int):
-        """
-        Remove given extended styles from window.
-        """
-        
-        for extended_style in extended_styles:
-            self.extended_style &= ~extended_style
     
     def enable(self):
         """
@@ -294,6 +406,8 @@ class Window(HWND, Abs.Object):
                                      x, y, width, height, parent, identifier, GetModuleHandle(NULL), NULL)
         if not self.value:
             raise WinException()
+        
+        Window._foreign_cache[self.value] = self
     
     def on_paint(self, dc: PaintDC):
         pass
@@ -312,6 +426,15 @@ class Window(HWND, Abs.Object):
     
     def on_set_cursor(self, hwnd: int, ht: int, message: int) -> bool:
         return None
+    
+    def on_nc_paint(self, dc: DC, region: Region):
+        return self # sentinel value
+    
+    def on_nc_hittest(self, x: int, y: int) -> int:
+        return None
+    
+    def on_nc_calcsize(self, rect: RECT, rectangles: list=None, position: WINDOWPOS=None) -> int:
+        return self # sentinel value
     
     # ** Main window procedure ** #
     def window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
@@ -441,25 +564,57 @@ class Window(HWND, Abs.Object):
         elif msg == WM_CHAR:
             self.on_char.execute(chr(wParam))
             return FALSE
-        elif msg == WM_HSCROLL:
+        elif msg == WM_HSCROLL: # horizontal scroll message
             self.on_hscroll.execute(LOWORD(wParam), HIWORD(wParam), Window.foreign(lParam))
             return 0
-        elif msg == WM_VSCROLL:
+        elif msg == WM_VSCROLL: # vertical scroll message
             self.on_vscroll.execute(LOWORD(wParam), HIWORD(wParam), Window.foreign(lParam))
             return 0
-        elif msg == WM_NCDESTROY:
-            self.on_nc_destroy.execute()
+        elif msg == WM_NCDESTROY: # window was completely destroyed
+            self.on_nc_destroy.execute() # execute handlers
             return 0
+        elif msg == WM_NCPAINT: # non-client area paint
+            region = Region.foreign_owner(wParam) # create Region from wParam
+            if wParam == 1:
+                with DC.get(self) as dc:
+                    result = self.on_nc_paint(dc, None)
+            else:
+                with DC.get(self, region, DCX_WINDOW | DCX_INTERSECTRGN | DCX_CACHE) as dc: # call GetDCEx
+                    result = self.on_nc_paint(dc, region) # call handler
+            # if sentinel value matches, we are falling back to default procedure
+            if result is not self:
+                return 0 # otherwise we are handled the message
+        elif msg == WM_NCHITTEST: # non-client area hit test message
+            result = self.on_nc_hittest(LOWORD(wParam), HIWORD(wParam)) # call message handler
+            if result is not None: return result # if message is handled, when return hit test result
+        elif msg == WM_NCCALCSIZE: # non-client area calculate size
+            if wParam: # if need to indicate valid client area size
+                # marshal WM_NCCALCSIZE lParam parameters pointer to structure
+                parameters = i_cast_value(lParam, NCCALCSIZE_PARAMS)
+                
+                # setup rectangles list from NCCALCSIZE_PARAMS
+                rectangle0 = i_cast_structure(parameters.rgrc[0], Rect)
+                rectangle1 = i_cast_structure(parameters.rgrc[1], Rect)
+                rectangle2 = i_cast_structure(parameters.rgrc[2], Rect)
+                rectangles = [rectangle0, rectangle1, rectangle2]
+                
+                # call WM_NCCALCSIZE handler
+                result = self.on_nc_calcsize(rectangle0, rectangles, parameters.lppos.contents)
+            else: # don't need
+                result = self.on_nc_calcsize(i_cast_value(lParam, Rect)) # call handler
+            # if sentinel value matches, we are falling back to default procedure
+            if result is not self: 
+                return 0 # otherwise we are handled the message
         else:
             # unknown window message received
             result = self.on_unknown_message.execute(hwnd, msg, wParam, lParam) # trying to call all unknown message handlers
             for value in result: # iterate through returned values tuple
                 if value is not None: # if value != None, when handler is handled our message
                     return value # return handler value as procedure LRESULT
-                
-        return self.wnd_proc_fallback(hwnd, msg, wParam, lParam) # otherwise let procedure fallback into defined fallback procedure (commonly DefWindowProc)
+        
+        return self.default_window_proc(hwnd, msg, wParam, lParam) # otherwise let procedure fallback into defined fallback procedure (commonly DefWindowProc)
     
-    def wnd_proc_fallback(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
+    def default_window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         return DefWindowProcW(hwnd, msg, wParam, lParam) # standard window procedure fallback
     
     def focus(self):
@@ -543,14 +698,14 @@ class Window(HWND, Abs.Object):
         Hide the window.
         """
         
-        self.post(SW_HIDE)
+        ShowWindowAsync(self, SW_HIDE)
     
     def show(self, nCmdShow: int = SW_SHOW):
         """
         Show the window.
         """
         
-        ShowWindow(self, nCmdShow)
+        ShowWindowAsync(self, nCmdShow)
         
     def set_font(self, font: int | HANDLE, redraw: bool = True):
         """
@@ -813,12 +968,17 @@ class Window(HWND, Abs.Object):
         point = GraphicUtils.point(position)
         self.set_position(x=point.x, y=point.y)
         
-    def invalidate(self, rect: RECT = None, erase: bool = True):
+    def invalidate(self, region: RECT | Region = None, erase: bool = True):
         """
-        Invalidate the given rectangle (or NULL) of window.
+        Invalidate the given rectangle/region (or NULL) of window.
         """
         
-        InvalidateRect(self, byref(rect) if rect is not None else rect, erase)
+        if region is NULL:
+            InvalidateRect(self, NULL, erase)
+        elif isinstance(region, Region):
+            InvalidateRgn(self, region, erase)
+        else:
+            InvalidateRect(self, region.ref(), erase)
     
     def update(self):
         """
@@ -827,7 +987,235 @@ class Window(HWND, Abs.Object):
         
         if not UpdateWindow(self):
             raise WinException()
+        
+    def set_dwm_attribute(self, attribute: int, value: CData):
+        """
+        Set the DWM attribute of window.
+        """
+        hr = DwmSetWindowAttribute(self, attribute, addressof(value), sizeof(value))
+        if FAILED(hr): raise COMError(hr)
+        
+    def set_composition_attribute(self, attribute: int, value: CData):
+        """
+        Set the composition attribute of window.
+        """
+        wcad = WINDOWCOMPOSITIONATTRIBDATA(attribute, addressof(value), sizeof(value))
+        hr = SetWindowCompositionAttribute(self, wcad.ref())
+        if FAILED(hr): raise COMError(hr)
+    
+    def get_long(self, index: int) -> int:
+        """
+        Get window long value.
+        """
+        index = PtrUtil.get_address(index)
+        SetLastError(0)
+        result = GetWindowLongW(self, index)
+        if not result: 
+            if GetLastError() != 0: raise WinException()
+        return result
+    
+    def set_long(self, index: int, value: int):
+        """
+        Set window long value.
+        """
+        index = PtrUtil.get_address(index)
+        SetLastError(0)
+        if not SetWindowLongW(self, index, value):
+            if GetLastError() != 0: raise WinException()
+    
+    def get_long_ptr(self, index: int) -> int:
+        """
+        Get window long pointer value.
+        """
+        index = PtrUtil.get_address(index)
+        SetLastError(0)
+        result = GetWindowLongPtrW(self, index)
+        if not result: 
+            if GetLastError() != 0: raise WinException()
+        return result
+    
+    def set_long_ptr(self, index: int, value: int):
+        """
+        Set window long pointer value.
+        """
+        index = PtrUtil.get_address(index)
+        SetLastError(0)
+        if not SetWindowLongPtrW(self, index, value):
+            if GetLastError() != 0: raise WinException()
+            
+    def redraw(self, flags: int, region: RECT | Region=NULL):
+        """
+        Redraw the window.
+        """
+        if region is NULL:
+            result = RedrawWindow(self, NULL, NULL, flags)
+        elif isinstance(region, Region): 
+            result = RedrawWindow(self, NULL, region, flags)
+        else: 
+            result = RedrawWindow(self, region.ref(), NULL, flags)
+        if not result: raise WinException()
+        
+    def validate(self, region: RECT | Region = None):
+        """
+        Validate the given rectangle/region (or NULL) of window.
+        """
+        
+        if region is NULL:
+            ValidateRect(self, NULL)
+        elif isinstance(region, Region):
+            ValidateRgn(self, region)
+        else:
+            ValidateRect(self, region.ref())
+            
+    @classmethod
+    def from_dc(cls, dc: DC) -> 'Window':
+        """
+        Get the window from DC.
+        """
+        return cls.foreign(WindowFromDC(dc))
+    
+    def draw_caption(self, dc: DC, rect: RECT, flags: int):
+        """
+        Draw the caption of window.
+        """
+        if not DrawCaption(self, dc, rect.ref(), flags):
+            raise WinException()
+        
+    @classmethod
+    def from_point(cls, point: POINT, physical: bool = False) -> 'Window':
+        """
+        Get the window from point (DPI-adjusted or physical).
+        """
+        if not physical: return cls.foreign(WindowFromPoint(point))
+        else: return cls.foreign(WindowFromPhysicalPoint(point))
 
+    def set_layered_attributes(self, color: Color.IColorAlpha | int, alpha: bool, flags: int):
+        """
+        Set the opacity and transparency color key of a layered window.
+        """
+        if not SetLayeredWindowAttributes(self, int(color), alpha, flags):
+            raise WinException()
+    
+    def update_layered(self, flags: int, color: Color.IColorAlpha | int, dest_dc: DC=NULL, 
+                       dest_point: GraphicUtils.Point=NULL, size: GraphicUtils.Size=NULL, src_dc: DC=NULL, 
+                       src_point: GraphicUtils.Point=NULL, blend: BLENDFUNCTION=NULL):
+        """
+        Update the position, size, shape, content, and translucency of a layered window.
+        """
+        if not UpdateLayeredWindow(self, dest_dc, GraphicUtils.point(dest_point).ref() if dest_point is not NULL else NULL,
+                                   GraphicUtils.size(size).ref() if size is not NULL else NULL, src_dc,
+                                   GraphicUtils.point(src_point).ref() if src_point is not NULL else NULL,
+                                   color, blend.ref() if blend is not NULL else NULL, flags):
+            raise WinException()
+        
+    def tile_windows(self, how: int, windows: Iterable['Window'], rect: RECT = NULL):
+        """
+        Tile specified child windows.
+        """
+        if rect is not NULL: rect = rect.ref()
+        cKids = len(windows)
+        lpKids = (HWND * cKids)(*windows)
+        if not TileWindows(self, how, rect, cKids, lpKids) and cKids:
+            raise WinException()
+        
+    def tile(self, how: int, rect: RECT = NULL):
+        """
+        Tile current window.
+        """
+        self.parent.tile_windows(how, [self], rect)
+        
+    def get_prop(self, prop: str | int) -> int:
+        """
+        Get the property value in window property list.
+        """
+        if isinstance(prop, str):
+            prop = create_unicode_buffer(prop)
+        prop = i_cast(PtrUtil.get_address(prop), LPCWSTR)
+        return GetPropW(self, prop)
+        
+    def set_prop(self, prop: str | int, data: int):
+        """
+        Set the property value in window property list.
+        """
+        if isinstance(prop, str):
+            prop = create_unicode_buffer(prop)
+        prop = i_cast(PtrUtil.get_address(prop), LPCWSTR)
+        data = PtrUtil.get_address(data)
+        if not SetPropW(self, prop, data):
+            raise WinException()
+        
+    def draw_theme_parent_bk(self, dc: int | HANDLE, rect: RECT = NULL):
+        """
+        Draw the part of a parent control that is covered by a partially-transparent or alpha-blended child control.
+        """
+        if rect is not None: rect = rect.ref()
+        hr = DrawThemeParentBackground(self, dc, rect)
+        if FAILED(hr): raise COMError(hr)
+        
+    @property
+    def band(self) -> int:
+        band = DWORD()
+        if not GetWindowBand(self, byref(band)):
+            raise WinException()
+        return band.value
+    
+    @classmethod
+    def find(cls, name: str = NULL, class_name: str = NULL, 
+             parent: int | HANDLE = NULL, after: int | HANDLE = NULL) -> 'Window':
+        """
+        Find window.
+        """
+        return Window.foreign(FindWindowExW(parent, after, class_name, name))
+
+    def enum_props(self, callback: Callable[[str, int], bool], parameter: int=0) -> bool:
+        """
+        Enumerate properties of a window.
+        """
+        def callback_thunk(hwndUnused: int, lpwszProp: LPCWSTR, hData: int, lParam: int) -> bool:
+            pvProp = PtrUtil.get_address(lpwszProp)
+            if pvProp < 65536:
+                buffer = create_unicode_buffer(256)
+                GlobalGetAtomNameW(pvProp, buffer, 256)
+                prop = buffer.value
+            else:
+                prop = lpwszProp.value
+            return callback(prop, hData, lParam)
+        
+        pfnEnumProc = PROPENUMPROCEXW(callback_thunk)
+        iResult = EnumPropsExW(self, pfnEnumProc, PtrUtil.get_address(parameter))
+        
+        return iResult != -1
+    
+    def get(self, command: int) -> 'Window':
+        """
+        Get window by command, which is related with instance window.
+        """
+        return Window.foreign(GetWindow(self, command))
+    
+    @classmethod
+    def enum_windows(cls, callback: Callable[['Window', int], bool], parameter: int = 0) -> bool:
+        """
+        Enumerate all top-level windows.
+        """
+        def callback_thunk(hwnd: int, lParam: int) -> bool:
+            return callback(Window.foreign(hwnd), lParam)
+        
+        pfnEnumProc = WNDENUMPROC(callback_thunk)
+        SetLastError(0)
+        iResult = EnumWindows(pfnEnumProc, parameter)
+        dwError = GetLastError()
+        
+        if not iResult and dwError != 0: 
+            raise WinException(dwError)
+        
+        return iResult != 0
+    
+    def top(self) -> 'Window':
+        """
+        Get top window.
+        """
+        return Window.foreign(GetTopWindow(self))
+    
 class Application:
     """
     Main application class. 
@@ -847,9 +1235,9 @@ class Application:
     def __init__(self):
         if Application.INSTANCE is None:
             # application events
-            self.after_message = Event()
-            self.on_destroy = Event()
-            self.on_message = Event()
+            self.after_message = MultiEvent()
+            self.on_destroy = MultiEvent()
+            self.on_message = MultiEvent()
             
             # application instance data
             self.modeless_dialogs = []
@@ -1029,8 +1417,8 @@ class GLWindow(Window):
         self.class_style = CS_OWNDC # for singleton DC for all window.
         
         # custom OpenGL window events
-        self.gl_tick = Event()
-        self.gl_ready = Event()
+        self.gl_tick = MultiEvent()
+        self.gl_ready = MultiEvent()
         
         # OpenGL window settings
         self.enable_after_message_render = True # by default, after-message rendering is ON
@@ -1075,6 +1463,7 @@ class GLWindow(Window):
         # OpenGL window closed, if enabled after-message render when unbind it from application
         if self.enable_after_message_render:
             Application().after_message -= self.GL_after_message
+        return True
     
     def initialize_gl(self):
         """

@@ -14,11 +14,10 @@ Environment:
 
 from . import cpreproc
 
-from .minwindef import BYTE, USHORT, CStructure, Union, POINTER
+from .minwindef import BYTE, USHORT, CStructure, Union, POINTER, IArray
 
 if cpreproc.pragma_once("__IN_6_ADDR__"):
     # REGION *** Desktop Family or OneCore Family or Games Family ***
-    
     
     class in6_addr(CStructure):
         """
@@ -33,6 +32,8 @@ if cpreproc.pragma_once("__IN_6_ADDR__"):
         _fields_ = [
             ("u", U)
         ]
+        Byte: IArray[int]
+        Word: IArray[int]
     IN6_ADDR = in6_addr
     PIN6_ADDR = LPIN6_ADDR = POINTER(IN6_ADDR)
 

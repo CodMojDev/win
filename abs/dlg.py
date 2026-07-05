@@ -30,7 +30,7 @@ class Dialog(Window):
         self.modal = True
         
         # dialog-specific events
-        self.on_init_dialog = Event()
+        self.on_init_dialog = MultiEvent()
     
     def end(self, ret: int = 0): 
         """
@@ -64,7 +64,7 @@ class Dialog(Window):
             return FALSE # FALSE otherwise
         return None
     
-    def wnd_proc_fallback(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
+    def default_window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         return FALSE # Dialog procedure is not for DefWindowProc.
     
     def create(self, x: int, y: int, window_name: str = 'Dialog', parent: int | HWND = NULL):

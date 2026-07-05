@@ -808,8 +808,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         class tagBITMAPINFO(CStructure):
             _fields_ = [
-                ("bmiHeader", BITMAPINFOHEADER),
-                ("bmiColors", RGBQUAD * 1)
+                ("bmiHeader", BITMAPINFOHEADER)
             ]
             
             bmiHeader: BITMAPINFOHEADER
@@ -824,8 +823,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         class tagBITMAPCOREINFO(CStructure):
             _fields_ = [
-                ("bmciHeader", BITMAPCOREHEADER),
-                ("bmciColors", RGBTRIPLE * 1)
+                ("bmciHeader", BITMAPCOREHEADER)
             ]
             
             bmciHeader: BITMAPCOREHEADER
@@ -3873,7 +3871,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         SetPolyFillMode = declare(gdi32.SetPolyFillMode, INT, HDC, INT)
         StretchBlt = declare(gdi32.StretchBlt, BOOL, HDC, INT, INT, INT, INT, HDC, INT, INT, INT, INT, DWORD)
         SetRectRgn = declare(gdi32.SetRectRgn, BOOL, HRGN, INT, INT, INT, INT)
-        StretchDIBits = declare(gdi32.StretchDIBits, INT, HDC, INT, INT, INT, INT, INT, INT, INT, INT, PVOID, UINT)
+        StretchDIBits = declare(gdi32.StretchDIBits, INT, HDC, INT, INT, INT, INT, INT, INT, INT, INT, PVOID, LPBITMAPINFO, UINT, DWORD)
         SetROP2 = declare(gdi32.SetROP2, INT, HDC, INT)
         SetStretchBltMode = declare(gdi32.SetStretchBltMode, INT, HDC, INT)
         SetSystemPaletteUse = declare(gdi32.SetSystemPaletteUse, UINT, HDC, UINT)

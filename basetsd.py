@@ -18,24 +18,234 @@ Revision History:
 
 from . import cpreproc
 
-from .defbase import WT, IPointer, W_CDLL
-from typing import overload, Any, Type
-
 from ctypes import pointer as _pointer
 
 from ctypes import *
-from ctypes.wintypes import *
 from .defbase import *
 
+#
+# type definitions for independence from ctypes.wintypes
+#
+
+BYTE = c_ubyte
+WORD = c_ushort
+DWORD = c_ulong
+CHAR = c_char
+WCHAR = c_wchar
+UINT = c_uint
+INT = c_int
+DOUBLE = c_double
+FLOAT = c_float
+BOOLEAN = BYTE
+BOOL = c_long
+ULONG = c_ulong
+LONG = c_long
+USHORT = c_ushort
+SHORT = c_short
+LARGE_INTEGER = c_longlong
+ULARGE_INTEGER = c_ulonglong
+LPCVOID = LPVOID = c_void_p
+if sizeof(c_void_p) == 4:
+    WPARAM = c_ulong
+    LPARAM = c_long
+else:
+    WPARAM = c_ulonglong
+    LPARAM = c_longlong
+ATOM = WORD
+LANGID = WORD
+COLORREF = DWORD
+LGRPID = DWORD
+LCTYPE = DWORD
+LCID = DWORD
+HANDLE = c_void_p
+HACCEL = HANDLE
+HBITMAP = HANDLE
+HBRUSH = HANDLE
+HCOLORSPACE = HANDLE
+HCURSOR = HANDLE
+HDC = HANDLE
+HDESK = HANDLE
+HDWP = HANDLE
+HENHMETAFILE = HANDLE
+HFONT = HANDLE
+HGDIOBJ = HANDLE
+HGLOBAL = HANDLE
+HHOOK = HANDLE
+HICON = HANDLE
+HINSTANCE = HANDLE
+HKEY = HANDLE
+HKL = HANDLE
+HLOCAL = HANDLE
+HMENU = HANDLE
+HMETAFILE = HANDLE
+HMODULE = HANDLE
+HMONITOR = HANDLE
+HPALETTE = HANDLE
+HPEN = HANDLE
+HRGN = HANDLE
+HRSRC = HANDLE
+HSTR = HANDLE
+HTASK = HANDLE
+HWINSTA = HANDLE
+HWND = HANDLE
+SC_HANDLE = HANDLE
+SERVICE_STATUS_HANDLE = HANDLE
+MAX_PATH = 260
+HRESULT = LONG
+
+class RECT(CStructure):
+    _fields_ = [
+        ('left', LONG),
+        ('top', LONG),
+        ('right', LONG),
+        ('bottom', LONG)
+    ]
+    left: int
+    top: int
+    right: int
+    bottom: int
+
+RECTL = RECT
+    
+class SMALL_RECT(CStructure):
+    _fields_ = [('Left', SHORT),
+                ('Top', SHORT),
+                ('Right', SHORT),
+                ('Bottom', SHORT)]
+    Left: int
+    Top: int
+    Right: int
+    Bottom: int
+tagSMALL_RECT = SMALL_RECT
+
+class COORD(CStructure):
+    _fields_ = [('X', SHORT), ('Y', SHORT)]
+    X: int
+    Y: int
+tagCOORD = COORD
+
+class POINT(CStructure):
+    _fields_ = [("x", LONG),
+                ("y", LONG)]
+    x: int
+    y: int
+tagPOINT = POINTL = POINT
+
+class SIZE(CStructure):
+    _fields_ = [("cx", LONG),
+                ("cy", LONG)]
+    cx: int
+    cy: int
+tagSIZE = SIZEL = SIZE
+
+class MSG(CStructure):
+    _fields_ = [("hWnd", HWND),
+                ("message", UINT),
+                ("wParam", WPARAM),
+                ("lParam", LPARAM),
+                ("time", DWORD),
+                ("pt", POINT)]
+    hWnd: int
+    message: int
+    wParam: int
+    lParam: int
+    time: int
+    pt: POINT
+
+_PWCH = PTRD(WCHAR)
+_PCH = PTRD(CHAR)
+
 class LPWSTR(c_wchar_p):
-    ...
+    from_param = c_wchar_p.from_param
+    
+    def __getitem__(self, i: int) -> str:
+        return i_cast(addressof(self), _PWCH)[i]
+    
+    def __setitem__(self, i: int, c: str):
+        i_cast(addressof(self), _PWCH)[i] = c
     
 class LPSTR(c_char_p):
-    ...
+    from_param = c_char_p.from_param
+    
+    def __getitem__(self, i: int) -> int:
+        return i_cast(addressof(self), _PCH)[i][0]
+    
+    def __setitem__(self, i: int, c: bytes):
+        i_cast(addressof(self), _PCH)[i] = c
+
+LPCOLESTR = LPOLESTR = OLESTR = LPCWSTR = LPWSTR
+LPCSTR = LPSTR
+
+from typing import overload, Any, Type
+        
+import ctypes.wintypes
+        
+LPBOOL = PBOOL = PTR(BOOL)
+PBOOLEAN = LPBOOLEAN = PTR(BOOLEAN)
+LPBYTE = PBYTE = PTR(BYTE)
+PCHAR = LPCHAR = LPSTR
+LPCOLORREF = PTR(COLORREF)
+LPDWORD = PDWORD = PTR(DWORD)
+PFLOAT = PTR(FLOAT)
+LPHANDLE = PHANDLE = PTR(HANDLE)
+PHKEY = PTR(HKEY)
+LPHKL = PHKL = PTR(HKL)
+LPINT = PINT = PTR(INT)
+PLARGE_INTEGER = PTR(LARGE_INTEGER)
+PLCID = PTR(LCID)
+LPLONG = PLONG = PTR(LONG)
+LPMSG = PMSG = PTR(MSG)
+LPPOINT = PPOINT = PTR(POINT)
+PPOINTL = PTR(POINTL)
+LPRECT = LPCRECT = PRECT = PTR(RECT)
+LPRECTL = LPCRECTL = PRECTL = PTR(RECTL)
+LPSC_HANDLE = PTR(SC_HANDLE)
+PSHORT = LPSHORT = LPCSHORT = PTR(SHORT)
+LPSIZE = LPCSIZE = PSIZE = PTR(SIZE)
+LPSIZEL = LPCSIZEL = PSIZEL = PTR(SIZEL)
+PSMALL_RECT = LPSMALL_RECT = PTR(SMALL_RECT)
+LPUINT = PUINT = PTR(UINT)
+PULARGE_INTEGER = PTR(ULARGE_INTEGER)
+PULONG = LPULONG = PTR(ULONG)
+PUSHORT = LPUSHORT = PTR(USHORT)
+PWCHAR = PTR(WCHAR)
+LPWORD = PWORD = PTR(WORD)
+
+class FILETIME(ctypes.Structure):
+    _fields_ = [("dwLowDateTime", DWORD),
+                ("dwHighDateTime", DWORD)]
+_FILETIME = FILETIME
+
+class WIN32_FIND_DATAA(CStructure):
+    _fields_ = [("dwFileAttributes", DWORD),
+                ("ftCreationTime", FILETIME),
+                ("ftLastAccessTime", FILETIME),
+                ("ftLastWriteTime", FILETIME),
+                ("nFileSizeHigh", DWORD),
+                ("nFileSizeLow", DWORD),
+                ("dwReserved0", DWORD),
+                ("dwReserved1", DWORD),
+                ("cFileName", CHAR * MAX_PATH),
+                ("cAlternateFileName", CHAR * 14)]
+
+LPWIN32_FIND_DATAA = PTR(WIN32_FIND_DATAA)
+
+class WIN32_FIND_DATAW(CStructure):
+    _fields_ = [("dwFileAttributes", DWORD),
+                ("ftCreationTime", FILETIME),
+                ("ftLastAccessTime", FILETIME),
+                ("ftLastWriteTime", FILETIME),
+                ("nFileSizeHigh", DWORD),
+                ("nFileSizeLow", DWORD),
+                ("dwReserved0", DWORD),
+                ("dwReserved1", DWORD),
+                ("cFileName", WCHAR * MAX_PATH),
+                ("cAlternateFileName", WCHAR * 14)]
+
+LPWIN32_FIND_DATAW = PTR(WIN32_FIND_DATAW)
 
 import sys
 
-POINTER
 def pointer(obj: WT, /) -> IPointer[WT]: ...
 
 pointer = _pointer

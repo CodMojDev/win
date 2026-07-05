@@ -93,7 +93,7 @@ class FileStream(CComObject, IStream, ILockBytes):
         
         return S_OK
     
-    def Read_Impl(self, pv: int, cb: int, pcbRead: PULONG) -> int:
+    def Read_Impl(self, pv: int, cb: int, pcbRead: IPointer[ULONG]) -> int:
         if not pv:
             return STG_E_INVALIDPOINTER
         buffer = self.file.read(cb)
@@ -103,7 +103,7 @@ class FileStream(CComObject, IStream, ILockBytes):
             pcbRead.contents.value = length
         return S_OK
     
-    def Write_Impl(self, pv: int, cb:  int, pcbWritten: PULONG) -> int:
+    def Write_Impl(self, pv: int, cb:  int, pcbWritten: IPointer[ULONG]) -> int:
         if not pv:
             return STG_E_INVALIDPOINTER
         buffer = create_string_buffer(cb)
@@ -127,7 +127,7 @@ class FileStream(CComObject, IStream, ILockBytes):
     def SetSize_Impl(self, libNewSize: int) -> int:
         return STG_E_INVALIDFUNCTION
     
-    def ReadAt_Impl(self, ulOffset: int, pv: int, cb: int, pcbRead: PULONG) -> int:
+    def ReadAt_Impl(self, ulOffset: int, pv: int, cb: int, pcbRead: IPointer[ULONG]) -> int:
         position = self.file.tell()
         self.file.seek(ulOffset)
         buffer = self.file.read(cb)
@@ -141,7 +141,7 @@ class FileStream(CComObject, IStream, ILockBytes):
         
         return S_OK
     
-    def WriteAt_Impl(self, ulOffset: int, pv: int, cb: int, pcbWritten: PULONG) -> int:
+    def WriteAt_Impl(self, ulOffset: int, pv: int, cb: int, pcbWritten: IPointer[ULONG]) -> int:
         position = self.file.tell()
         self.file.seek(ulOffset)
         buffer = create_string_buffer(cb)

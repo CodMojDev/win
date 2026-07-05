@@ -2,7 +2,7 @@
 # shellcoreinterfacedef.py
 #
 # File created by WICL generator version 1.00
-# Creation timestamp: Sat Jul  4 12:53:26 2026
+# Creation timestamp: Sat Jul  4 17:50:25 2026
 # Generated from ICL: shellcoreinterfacedef.icl
 #
 
@@ -250,7 +250,7 @@ class IRunnableTask(IUnknown):
     def Resume(self) -> int: ...
 
     @virtual_table.function(ULONG)
-    def IsRunning(self) -> int: ...
+    def IsRunning(): ...
 
     virtual_table.build()
 
@@ -1062,12 +1062,13 @@ if _version >= WIN32_WINNT_WIN2K:
 
     CDB2GVF_SHOWALLFILES = 0x00000001
 if _version >= WIN32_WINNT_VISTA:
-    CDB2GVF_ISFILESAVE = 0x00000002
-    CDB2GVF_ALLOWPREVIEWPANE = 0x00000004
-    CDB2GVF_NOSELECTVERB = 0x00000008
-    CDB2GVF_NOINCLUDEITEM = 0x00000010
-    CDB2GVF_ISFOLDERPICKER = 0x00000020
-    CDB2GVF_ADDSHIELD = 0x00000040
+        CDB2GVF_ISFILESAVE = 0x00000002
+        CDB2GVF_ALLOWPREVIEWPANE = 0x00000004
+        CDB2GVF_NOSELECTVERB = 0x00000008
+        CDB2GVF_NOINCLUDEITEM = 0x00000010
+        CDB2GVF_ISFOLDERPICKER = 0x00000020
+        CDB2GVF_ADDSHIELD = 0x00000040
+
 
     class ICommDlgBrowser2(ICommDlgBrowser):
         virtual_table = COMVirtualTable.from_ancestor(ICommDlgBrowser)
@@ -1295,8 +1296,8 @@ class IShellBrowser(IOleWindow):
     @virtual_table.com_function(DOUBLE_PTR(IShellView))
     def QueryActiveShellView(self, ppshv: IDoublePtr[IShellView]) -> int: ...
 
-    @virtual_table.com_function(PTR(TBBUTON), UINT, UINT)
-    def SetToolbarItems(self, lpButtons: IPointer[TBBUTON], nButtons: int, uFlags: int) -> int: ...
+    @virtual_table.com_function(PTR(TBBUTTON), UINT, UINT)
+    def SetToolbarItems(self, lpButtons: IPointer[TBBUTTON], nButtons: int, uFlags: int) -> int: ...
 
     virtual_table.build()
 
@@ -1362,48 +1363,48 @@ class IShellItem(IUnknown):
 
 
 @shell32.foreign(PITEMID_CHILD)
-def SHSimpleIDListFromPath(_Ret_: IPointer[ITEMID_CHILD]) -> .: ...
+def SHSimpleIDListFromPath() -> IPointer[ITEMID_CHILD]: ...
 
 if WIN32_IE >= WIN32_IE_IE70:
     @shell32.foreign(HRESULT, PITEMID_CHILD, LPIID, intermediate_method = True)
-    def SHCreateItemFromIDList(_Ret_: int, pidl: IPointer[ITEMID_CHILD], iid: IID, **kwargs) -> n:
-        return delegate(_Ret_, pidl, iid.ref() if iid else NULL)
+    def SHCreateItemFromIDList(pidl: IPointer[ITEMID_CHILD], iid: IID, **kwargs) -> int:
+        return delegate(pidl, iid)
 
     @shell32.foreign(HRESULT, PCWSTR, LPBINDCTX, LPIID, intermediate_method = True)
-    def SHCreateItemFromParsingName(_Ret_: int, pszPath: PCWSTR, pbc: IPointer[IBindCtx], iid: IID, **kwargs) -> n:
-        return delegate(_Ret_, pszPath, pbc, iid.ref() if iid else NULL)
+    def SHCreateItemFromParsingName(pszPath: PCWSTR, pbc: IPointer[IBindCtx], iid: IID, **kwargs) -> int:
+        return delegate(pszPath, pbc, iid)
 
     @shell32.foreign(HRESULT, PITEMID_CHILD, PTR(IShellFolder), PITEMID_CHILD, LPIID, intermediate_method = True)
-    def SHCreateItemWithParent(_Ret_: int, pidlParent: IPointer[ITEMID_CHILD], psfParent: IPointer[IShellFolder], pidl: IPointer[ITEMID_CHILD], iid: IID, **kwargs) -> n:
-        return delegate(_Ret_, pidlParent, psfParent, pidl, iid.ref() if iid else NULL)
+    def SHCreateItemWithParent(pidlParent: IPointer[ITEMID_CHILD], psfParent: IPointer[IShellFolder], pidl: IPointer[ITEMID_CHILD], iid: IID, **kwargs) -> int:
+        return delegate(pidlParent, psfParent, pidl, iid)
 
     @shell32.foreign(HRESULT, PTR(IShellItem), PCWSTR, LPBINDCTX, LPIID, intermediate_method = True)
-    def SHCreateItemFromRelativeName(_Ret_: int, psiParent: IPointer[IShellItem], pszName: PCWSTR, pbz: IPointer[IBindCtx], iid: IID, **kwargs) -> n:
-        return delegate(_Ret_, psiParent, pszName, pbz, iid.ref() if iid else NULL)
+    def SHCreateItemFromRelativeName(psiParent: IPointer[IShellItem], pszName: PCWSTR, pbz: IPointer[IBindCtx], iid: IID, **kwargs) -> int:
+        return delegate(psiParent, pszName, pbz, iid)
 
 
 if _version >= WIN32_WINNT_VISTA:
     @shell32.foreign(HRESULT, LPGUID, DWORD, PCWSTR, LPIID, intermediate_method = True)
-    def SHCreateItemInKnownFolder(_Ret_: int, kfid: GUID, dwKFFlags: int, pszItem: PCWSTR, iid: IID, **kwargs) -> n:
-        return delegate(_Ret_, kfid.ref() if kfid else NULL, dwKFFlags, pszItem, iid.ref() if iid else NULL)
+    def SHCreateItemInKnownFolder(kfid: GUID, dwKFFlags: int, pszItem: PCWSTR, iid: IID, **kwargs) -> int:
+        return delegate(kfid, kfid.ref() if kfid else NULL, pszItem, iid)
 
     @shell32.foreign(HRESULT, LPUNKNOWN)
-    def SHGetIDListFromObject(_Ret_: int, punk: IPointer[IUnknown]) -> n: ...
+    def SHGetIDListFromObject(punk: IPointer[IUnknown]) -> int: ...
 
     @shell32.foreign(HRESULT, LPUNKNOWN, LPIID, intermediate_method = True)
-    def SHGetItemFromObject(_Ret_: int, punk: IPointer[IUnknown], iid: IID, **kwargs) -> n:
-        return delegate(_Ret_, punk, iid.ref() if iid else NULL)
+    def SHGetItemFromObject(punk: IPointer[IUnknown], iid: IID, **kwargs) -> int:
+        return delegate(punk, iid)
 
     @shell32.foreign(HRESULT, PITEMID_CHILD, GETPROPERTYSTOREFLAGS, LPIID, intermediate_method = True)
-    def SHGetPropertyStoreFromIDList(_Ret_: int, pidl: IPointer[ITEMID_CHILD], flags: GETPROPERTYSTOREFLAGS, iid: IID, **kwargs) -> n:
-        return delegate(_Ret_, pidl, flags, iid.ref() if iid else NULL)
+    def SHGetPropertyStoreFromIDList(pidl: IPointer[ITEMID_CHILD], flags: GETPROPERTYSTOREFLAGS, iid: IID, **kwargs) -> int:
+        return delegate(pidl, flags, iid)
 
     @shell32.foreign(HRESULT, PCWSTR, LPBINDCTX, GETPROPERTYSTOREFLAGS, LPIID, intermediate_method = True)
-    def SHGetPropertyStoreFromParsingName(_Ret_: int, pszPath: PCWSTR, pbc: IPointer[IBindCtx], flags: GETPROPERTYSTOREFLAGS, iid: IID, **kwargs) -> n:
-        return delegate(_Ret_, pszPath, pbc, flags, iid.ref() if iid else NULL)
+    def SHGetPropertyStoreFromParsingName(pszPath: PCWSTR, pbc: IPointer[IBindCtx], flags: GETPROPERTYSTOREFLAGS, iid: IID, **kwargs) -> int:
+        return delegate(pszPath, pbc, flags, iid)
 
     @shell32.foreign(HRESULT, PITEMID_CHILD, SIGDN)
-    def SHGetNameFromIDList(_Ret_: int, pidl: IPointer[ITEMID_CHILD], sigdnName: int) -> n: ...
+    def SHGetNameFromIDList(pidl: IPointer[ITEMID_CHILD], sigdnName: int) -> int: ...
 
 
 
@@ -1416,8 +1417,8 @@ if _version >= WIN32_WINNT_WIN7:
     DATAOBJ_GET_ITEM_FLAGS = INT
 
     @shell32.foreign(HRESULT, LPDATAOBJECT, DATAOBJ_GET_ITEM_FLAGS, LPIID, intermediate_method = True)
-    def SHGetItemFromDataObject(_Ret_: int, pdtObj: IPointer[IDataObject], dwFlags: int, iid: IID, **kwargs) -> n:
-        return delegate(_Ret_, pdtObj, dwFlags, iid.ref() if iid else NULL)
+    def SHGetItemFromDataObject(pdtObj: IPointer[IDataObject], dwFlags: int, iid: IID, **kwargs) -> int:
+        return delegate(pdtObj, dwFlags, iid)
 
 
 
@@ -1444,9 +1445,9 @@ class IShellItem2(IShellItem):
     def GetPropertyStoreForKeys(self, rgKeys: IPointer[PROPERTYKEY], cKeys: int, flags: GETPROPERTYSTOREFLAGS, iid: IID, ppv: IPointer[PVOID], **kwargs) -> int:
         return self.virt_delegate(rgKeys, cKeys, iid.ref() if iid else NULL, iid, ppv)
 
-    @virtual_table.com_function(LPPROPERTYKEY, riid, PVOID, PVOID, intermediate_method = True)
-    def GetPropertyDescriptionList(self, keyType: PROPERTYKEY, R.IID: riid, ppv: IPointer[PVOID], **kwargs) -> int:
-        return self.virt_delegate(keyType, R.IID, ppv)
+    @virtual_table.com_function(LPPROPERTYKEY, LPIID, PVOID, PVOID, intermediate_method = True)
+    def GetPropertyDescriptionList(self, keyType: PROPERTYKEY, iid: IID, ppv: IPointer[PVOID], **kwargs) -> int:
+        return self.virt_delegate(iid.ref() if iid else NULL, iid, ppv)
 
     @virtual_table.com_function(LPBINDCTX)
     def Update(self, pbc: IPointer[IBindCtx]) -> int: ...

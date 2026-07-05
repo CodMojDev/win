@@ -106,7 +106,7 @@ class IParseDisplayName(IUnknown):
 	_iid_ = IID("{0000011a-0000-0000-C000-000000000046}")
 
 	@virtual_table.com_function(LPBINDCTX, LPOLESTR, PULONG, DOUBLE_PTR(IMoniker))
-	def ParseDisplayName(self, pbc: IPointer[IBindCtx], pszDisplayName: LPOLESTR, pchEaten: PULONG, ppmkOut: IDoublePtr[IMoniker]) -> int: ...
+	def ParseDisplayName(self, pbc: IPointer[IBindCtx], pszDisplayName: LPOLESTR, pchEaten: IPointer[ULONG], ppmkOut: IDoublePtr[IMoniker]) -> int: ...
 
 	virtual_table.build()
 
@@ -743,7 +743,7 @@ class IEnumOLEVERB(IUnknown):
 	_iid_ = IID("{00000104-0000-0000-C000-000000000046}")
 
 	@virtual_table.com_function(ULONG, LPOLEVERB, PULONG)
-	def Next(self, celt: int, rgelt: IPointer[OLEVERB], pceltFetched: PULONG) -> int: ...
+	def Next(self, celt: int, rgelt: IPointer[OLEVERB], pceltFetched: IPointer[ULONG]) -> int: ...
 
 	@virtual_table.com_function(ULONG)
 	def Skip(self, celt: int) -> int: ...

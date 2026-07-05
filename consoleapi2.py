@@ -58,6 +58,8 @@ if cpreproc.pragma_once("_APISETCONSOLEL2_"):
             ("dwSize", DWORD),
             ("bVisible", BOOL)
         ]
+        dwSize: int
+        bVisible: int
     PCONSOLE_CURSOR_INFO = POINTER(CONSOLE_CURSOR_INFO)
 
     GetConsoleCursorInfo = declare(kernel32.GetConsoleCursorInfo, BOOL, HANDLE, PCONSOLE_CURSOR_INFO)
@@ -71,6 +73,11 @@ if cpreproc.pragma_once("_APISETCONSOLEL2_"):
             ("srWindow", SMALL_RECT),
             ("dwMaximumWindowSize", COORD)
         ]
+        dwSize: int
+        dwCursorPosition: int
+        wAttributes: int
+        srWindow: SMALL_RECT
+        dwMaximumWindowSize: COORD
     PCONSOLE_SCREEN_BUFFER_INFO = POINTER(CONSOLE_SCREEN_BUFFER_INFO)
 
     GetConsoleScreenBufferInfo = declare(kernel32.GetConsoleScreenBufferInfo, BOOL, HANDLE, PCONSOLE_SCREEN_BUFFER_INFO)
@@ -87,6 +94,15 @@ if cpreproc.pragma_once("_APISETCONSOLEL2_"):
             ("bFullscreenSupported", BOOL),
             ("ColorTable", COLORREF * 16)
         ]
+        cbSize: int
+        dwSize: COORD
+        dwCursorPosition: COORD
+        wAttributes: int
+        srWindow: SMALL_RECT
+        dwMaximumWindowSize: COORD
+        wPopupAttributes: int
+        bFullscreenSupported: int
+        ColorTable: IArray[int]
     PCONSOLE_SCREEN_BUFFER_INFOEX = POINTER(CONSOLE_SCREEN_BUFFER_INFOEX)
 
     GetConsoleScreenBufferInfoEx = declare(kernel32.GetConsoleScreenBufferInfoEx, BOOL, HANDLE, PCONSOLE_SCREEN_BUFFER_INFOEX)

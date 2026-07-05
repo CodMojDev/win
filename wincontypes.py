@@ -43,6 +43,8 @@ if cpreproc.pragma_once("_WINCONTYPES_"):
                 ("UnicodeChar", WCHAR),
                 ("AsciiChar", CHAR)
             ]
+            UnicodeChar: IWideChar
+            AsciiChar: IChar
         _fields_ = [
             ("bKeyDown", BOOL),
             ("wRepeatCount", WORD),
@@ -51,6 +53,12 @@ if cpreproc.pragma_once("_WINCONTYPES_"):
             ("uChar", _uChar),
             ("dwControlKeyState", DWORD)
         ]
+        bKeyDown: int
+        wRepeatCount: int
+        wVirtualKeyCode: int
+        wVirtualScanCode: int
+        uChar: _uChar
+        dwControlKeyState: int
     PKEY_EVENT_RECORD = POINTER(KEY_EVENT_RECORD)
 
     #
@@ -81,6 +89,10 @@ if cpreproc.pragma_once("_WINCONTYPES_"):
             ("dwControlKeyState", DWORD),
             ("dwEventFlags", DWORD)
         ]
+        dwMousePosition: COORD
+        dwButtonState: int
+        dwControlKeyState: int
+        dwEventFlags: int
     PMOUSE_EVENT_RECORD = POINTER(MOUSE_EVENT_RECORD)
 
     #
@@ -121,6 +133,7 @@ if cpreproc.pragma_once("_WINCONTYPES_"):
         _fields_ = [
             ("bSetFocus", BOOL)
         ]
+        bSetFocus: int
     PFOCUS_EVENT_RECORD = POINTER(FOCUS_EVENT_RECORD)
 
     class INPUT_RECORD(CStructure):
@@ -132,9 +145,16 @@ if cpreproc.pragma_once("_WINCONTYPES_"):
                 ("MenuEvent", MENU_EVENT_RECORD),
                 ("FocusEvent", FOCUS_EVENT_RECORD)
             ]
+            KeyEvent: KEY_EVENT_RECORD
+            MouseEvent: MOUSE_EVENT_RECORD
+            WindowBufferSizeEvent: WINDOW_BUFFER_SIZE_RECORD
+            MenuEvent: MENU_EVENT_RECORD
+            FocusEvent: FOCUS_EVENT_RECORD
         _fields_ = [
             ("EventType", WORD),
             ("Event", _Event)
+            Event: _Event
+            EventType: int
         ]
     PINPUT_RECORD = POINTER(INPUT_RECORD)
 
@@ -153,10 +173,14 @@ if cpreproc.pragma_once("_WINCONTYPES_"):
                 ("UnicodeChar", WCHAR),
                 ("AsciiChar", CHAR)
             ]
+            UnicodeChar: IWideChar
+            AsciiChar: IChar
         _fields_ = [
             ("Char", _Char),
             ("Attributes", WORD)
         ]
+        Char: _Char
+        Attributes: int
     PCHAR_INFO = POINTER(CHAR_INFO)
 
     class CONSOLE_FONT_INFO(CStructure):
@@ -164,6 +188,8 @@ if cpreproc.pragma_once("_WINCONTYPES_"):
             ("nFont", DWORD),
             ("dwFontSize", COORD)
         ]
+        nFont: int
+        dwFontSize: int
     PCONSOLE_FONT_INFO = POINTER(CONSOLE_FONT_INFO)
 
     HPCON = HANDLE

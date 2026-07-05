@@ -294,7 +294,7 @@ error_status_t = ULONG
 # end of unused
 
 def NdrFieldOffset(s: CStructure, f: str) -> int:
-    return s.offset(f)
+    return s.Offset(f)
 
 def NdrFieldPad(s: CStructure, f: str, p: str, t) -> int:
     return ((NdrFieldOffset(s, f) - NdrFieldOffset(s, p)) - sizeof(t))
@@ -350,11 +350,11 @@ class ARRAY_INFO(CStructure):
         ('ActualCountArray', PULONG)
     ]
     
-    BufferConformanceMark: PULONG
-    BufferVarianceMark: PULONG
-    ActualCountArray: PULONG
-    MaxCountArray: PULONG
-    OffsetArray: PULONG
+    BufferConformanceMark: IPointer[ULONG]
+    BufferVarianceMark: IPointer[ULONG]
+    ActualCountArray: IPointer[ULONG]
+    MaxCountArray: IPointer[ULONG]
+    OffsetArray: IPointer[ULONG]
     Dimension: int
     
 PARRAY_INFO = ARRAY_INFO.PTR()
@@ -535,9 +535,9 @@ CS_TAG_GETTING_ROUTINE = WINAPI(VOID, RPC_BINDING_HANDLE, INT, PULONG, PULONG, P
 @rpcrt4.foreign(VOID, RPC_BINDING_HANDLE, INT, PULONG, PULONG, PULONG, PTR(error_status_t))
 def RpcCsGetTags(hBinding: RPC_BINDING_HANDLE,
                  fServerSide: int,
-                 pulSendingTag: PULONG,
-                 pulDesiredReceivingTag: PULONG,
-                 pulReceivingTag: PULONG,
+                 pulSendingTag: IPointer[ULONG],
+                 pulDesiredReceivingTag: IPointer[ULONG],
+                 pulReceivingTag: IPointer[ULONG],
                  pStatus: IPointer[error_status_t]): ...
 
 class NDR_CS_SIZE_CONVERT_ROUTINES(CStructure):
@@ -820,9 +820,9 @@ class MIDL_STUB_MESSAGE(CStructure):
     pRpcChannelBuffer: IPointer[IRpcChannelBuffer]
     
     pArrayInfo: IPointer[ARRAY_INFO]
-    SizePtrCountArray: PULONG
-    SizePtrOffsetArray: PULONG
-    SizePtrLengthArray: PULONG
+    SizePtrCountArray: IPointer[ULONG]
+    SizePtrOffsetArray: IPointer[ULONG]
+    SizePtrLengthArray: IPointer[ULONG]
     
     #
     # Interpreter argument queue.  Used on server side only.
@@ -1079,15 +1079,15 @@ PMIDL_WINRT_TYPE_SERIALIZATION_INFO = MIDL_WINRT_TYPE_SERIALIZATION_INFO.PTR()
 @rpcrt_foreign(PRPC_CLIENT_INTERFACE, PULONG, PTR(PMIDL_SYNTAX_INFO))
 def NdrClientGetSupportedSyntaxes(
     pInf: IPointer[RPC_CLIENT_INTERFACE],
-    pCount: PULONG,
+    pCount: IPointer[ULONG],
     pArr: IDoublePtr[MIDL_SYNTAX_INFO]) -> int: ...
 
 @rpcrt_foreign(PRPC_SERVER_INTERFACE, PULONG, PTR(PMIDL_SYNTAX_INFO), PULONG)
 def NdrServerGetSupportedSyntaxes(
     pInf: IPointer[RPC_SERVER_INTERFACE],
-    pCount: PULONG,
+    pCount: IPointer[ULONG],
     pArr: IDoublePtr[MIDL_SYNTAX_INFO],
-    pPreferSyntaxIndex: PULONG) -> int: ...
+    pPreferSyntaxIndex: IPointer[ULONG]) -> int: ...
 
 #
 # Marshall routines

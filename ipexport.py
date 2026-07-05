@@ -56,10 +56,15 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
             ("OptionsSize", BYTE),        # Size in bytes of options data
             ("OptionsData", PCHAR)        # Pointer to options data
         ]
+        Ttl: int
+        Tos: int
+        Flags: int
+        OptionsSize: int
+        OptionsData: PCHAR
     IP_OPTION_INFORMATION = ip_option_information
     PIP_OPTION_INFORMATION = POINTER(IP_OPTION_INFORMATION)
 
-    if cpreproc.ifdef("_WIN64"):
+    if cpreproc.ifndef("_WIN64"):
         class ip_option_information32(CStructure):
             _fields_ = [
                 ("Ttl", BYTE),                # Time To Live
@@ -68,6 +73,11 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
                 ("OptionsSize", BYTE),        # Size in bytes of options data
                 ("OptionsData", DWORD)        # Pointer to options data
             ]
+            Ttl: int
+            Tos: int
+            Flags: int
+            OptionsSize: int
+            OptionsData: int
         IP_OPTION_INFORMATION32 = ip_option_information32
         PIP_OPTION_INFORMATION32 = POINTER(IP_OPTION_INFORMATION32)
     # _WIN64
@@ -87,10 +97,17 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
             ("Data", PVOID),                   # Pointer to the reply data
             ("Options", ip_option_information) # Reply options
         ]
+        Address: int
+        Status: int
+        RoundTripTime: int
+        DataSize: int
+        Reserved: int
+        Data: int
+        Options: ip_option_information
     ICMP_ECHO_REPLY = icmp_echo_reply
     PICMP_ECHO_REPLY = POINTER(ICMP_ECHO_REPLY)
 
-    if cpreproc.ifdef("_WIN64"):
+    if cpreproc.ifndef("_WIN64"):
         class icmp_echo_reply32(CStructure):
             _fields_ = [
                 ("Address", IPAddr),                 # Replying address
@@ -101,6 +118,13 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
                 ("Data", DWORD),                     # Pointer to the reply data
                 ("Options", ip_option_information32) # Reply options
             ]
+            Address: int
+            Status: int
+            RoundTripTime: int
+            DataSize: int
+            Reserved: int
+            Data: int
+            Options: ip_option_information32
         ICMP_ECHO_REPLY32 = icmp_echo_reply32
         PICMP_ECHO_REPLY32 = POINTER(ICMP_ECHO_REPLY32)
     # _WIN64
@@ -114,6 +138,10 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
                 ("sin6_addr", USHORT * 8),
                 ("sin6_scope_id", ULONG)
             ]
+            sin6_port: int
+            sin6_flowinfo: int
+            sin6_addr: IArray[int]
+            sin6_scope_id: int
         PIPV6_ADDRESS_EX = POINTER(IPV6_ADDRESS_EX)
 
         class icmpv6_echo_reply_lh(CStructure):
@@ -123,6 +151,9 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
                 ("RoundTripTime", UINT)          # RTT in milliseconds.
                 # Reply data follows this structure in memory.
             ]
+            Address: int
+            Status: int
+            RoundTripTime: int
         ICMPV6_ECHO_REPLY_LH = icmpv6_echo_reply_lh
         PICMPV6_ECHO_REPLY_LH = POINTER(ICMPV6_ECHO_REPLY_LH)
 
@@ -134,6 +165,8 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
             ("DestAddress", IPAddr),
             ("SrcAddress", IPAddr)
         ]
+        DestAddress: int
+        SrcAddress: int
     ARP_SEND_REPLY = arp_send_reply
     PARP_SEND_REPLY = POINTER(arp_send_reply)
 
@@ -142,6 +175,8 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
             ("UpperRange", USHORT),
             ("LowerRange", USHORT)
         ]
+        UpperRange: int
+        LowerRange: int
     TCP_RESERVE_PORT_RANGE = tcp_reserve_port_range
     PTCP_RESERVE_PORT_RANGE = POINTER(TCP_RESERVE_PORT_RANGE)
 
@@ -152,6 +187,8 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
             ("Index", ULONG),
             ("Name", WCHAR * MAX_ADAPTER_NAME)
         ]
+        Index: int
+        Name: IWideCharArray
     PIP_ADAPTER_INDEX_MAP = POINTER(IP_ADAPTER_INDEX_MAP)
 
     class IP_INTERFACE_INFO(CStructure):
@@ -159,6 +196,8 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
             ("NumAdapters", LONG),
             ("Adapter", PIP_ADAPTER_INDEX_MAP)
         ]
+        NumAdapters: int
+        Adapter: IPointer[IP_ADAPTER_INDEX_MAP]
     PIP_INTERFACE_INFO = POINTER(IP_INTERFACE_INFO)
 
     class IP_UNIDIRECTIONAL_ADAPTER_ADDRESS(CStructure):
@@ -166,6 +205,8 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
             ("NumAdapters", ULONG),
             ("Address", PIN_ADDR)
         ]
+        NumAdapters: int
+        Address: IPointer[IN_ADDR]
     PIP_UNIDIRECTIONAL_ADAPTER_ADDRESS = POINTER(IP_UNIDIRECTIONAL_ADAPTER_ADDRESS)
 
     class IP_ADAPTER_ORDER_MAP(CStructure):
@@ -173,6 +214,8 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
             ("NumAdapters", ULONG),
             ("AdapterOrder", ULONG)
         ]
+        NumAdapters: int
+        AdapterOrder: int
     PIP_ADAPTER_ORDER_MAP = POINTER(IP_ADAPTER_ORDER_MAP)
 
     class IP_MCAST_COUNTER_INFO(CStructure):
@@ -182,6 +225,10 @@ if cpreproc.ifndef("IP_EXPORT_INCLUDED"):
             ("InMcastPkts", ULONG64),
             ("OutMcastPkts", ULONG64)
         ]
+        InMcastOctets: int
+        OutMcastOctets: int
+        InMcastPkts: int
+        OutMcastPkts: int
     PIP_MCAST_COUNTER_INFO = POINTER(IP_MCAST_COUNTER_INFO)
 
     #

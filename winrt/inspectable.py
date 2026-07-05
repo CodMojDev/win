@@ -16,7 +16,7 @@ class IInspectable(IUnknown):
     _iid_ = IID('{AF86E2E0-B12D-4c6a-9C5A-D7AA65101E90}')
     
     @virtual_table.com_function(PULONG, PTR(LPIID))
-    def GetIids(self, iidCount: PULONG, iids: IDoublePtr[IID]) -> int:
+    def GetIids(self, iidCount: IPointer[ULONG], iids: IDoublePtr[IID]) -> int:
         """
         Gets the interfaces that are implemented by the current Windows Runtime class.
         """

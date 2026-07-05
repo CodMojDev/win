@@ -82,6 +82,11 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("SecondValue", LONGLONG),
             ("MultiCount", DWORD)
         ]
+        CStatus: int
+        TimeStamp: FILETIME
+        FirstValue: int
+        SecondValue: int
+        MultiCount: int
     PPDH_RAW_COUNTER = POINTER(PDH_RAW_COUNTER)
 
     class PDH_RAW_COUNTER_ITEM_A(CStructure):
@@ -89,6 +94,8 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("szName", LPSTR),
             ("RawValue", PDH_RAW_COUNTER)
         ]
+        szName: LPSTR
+        RawValue: PDH_RAW_COUNTER
     PPDH_RAW_COUNTER_ITEM_A = POINTER(PDH_RAW_COUNTER_ITEM_A)
 
     class PDH_RAW_COUNTER_ITEM_W(CStructure):
@@ -96,6 +103,8 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("szName", LPWSTR),
             ("RawValue", PDH_RAW_COUNTER)
         ]
+        szName: LPWSTR
+        RawValue: PDH_RAW_COUNTER
     PPDH_RAW_COUNTER_ITEM_W = POINTER(PDH_RAW_COUNTER_ITEM_W)
 
     class PDH_FMT_COUNTERVALUE(CStructure):
@@ -111,6 +120,13 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("CStatus", DWORD),
             ("u", _DUMMYUNIONNAME)
         ]
+        _anonymous_ = ['u']
+        CStatus: int
+        longValue: int
+        doubleValue: float
+        largeValue: int
+        AnsiStringValue: LPCSTR
+        WideStringValue: LPCWSTR
     PPDH_FMT_COUNTERVALUE = POINTER(PDH_FMT_COUNTERVALUE)
 
     class PDH_FMT_COUNTERVALUE_ITEM_A(CStructure):
@@ -118,6 +134,8 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("szName", LPSTR),
             ("FmtValue", PDH_FMT_COUNTERVALUE)
         ]
+        szName: LPSTR
+        FmtValue: PDH_FMT_COUNTERVALUE
     PPDH_FMT_COUNTERVALUE_ITEM_A = POINTER(PDH_FMT_COUNTERVALUE_ITEM_A)
 
     class PDH_FMT_COUNTERVALUE_ITEM_W(CStructure):
@@ -125,6 +143,8 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("szName", LPWSTR),
             ("FmtValue", PDH_FMT_COUNTERVALUE)
         ]
+        szName: LPWSTR
+        FmtValue: PDH_FMT_COUNTERVALUE
     PPDH_FMT_COUNTERVALUE_ITEM_W = POINTER(PDH_FMT_COUNTERVALUE_ITEM_W)
 
     class PDH_STATISTICS(CStructure):
@@ -135,6 +155,11 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("max", PDH_FMT_COUNTERVALUE),
             ("mean", PDH_FMT_COUNTERVALUE)
         ]
+        dwFormat: int
+        count: int
+        min: PDH_FMT_COUNTERVALUE
+        max: PDH_FMT_COUNTERVALUE
+        mean: PDH_FMT_COUNTERVALUE
     PPDH_STATISTICS = POINTER(PDH_STATISTICS)
 
     class PDH_COUNTER_PATH_ELEMENTS_A(CStructure):
@@ -146,6 +171,12 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("dwInstanceIndex", DWORD),
             ("szCounterName", LPSTR)
         ]
+        szMachineName: LPSTR
+        szObjectName: LPSTR
+        szInstanceName: LPSTR
+        szParentInstance: LPSTR
+        dwInstanceIndex: int
+        szCounterName: LPSTR
     PPDH_COUNTER_PATH_ELEMENTS_A = POINTER(PDH_COUNTER_PATH_ELEMENTS_A)
 
     class PDH_COUNTER_PATH_ELEMENTS_W(CStructure):
@@ -157,6 +188,12 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("dwInstanceIndex", DWORD),
             ("szCounterName", LPWSTR)
         ]
+        szMachineName: LPWSTR
+        szObjectName: LPWSTR
+        szInstanceName: LPWSTR
+        szParentInstance: LPWSTR
+        dwInstanceIndex: int
+        szCounterName: LPWSTR
     PPDH_COUNTER_PATH_ELEMENTS_W = POINTER(PDH_COUNTER_PATH_ELEMENTS_W)
 
     class PDH_DATA_ITEM_PATH_ELEMENTS_A(CStructure):
@@ -166,6 +203,10 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("dwItemId", DWORD),
             ("szInstanceName", LPSTR)
         ]
+        szMachineName: LPSTR
+        ObjectGUID: GUID
+        dwItemId: int
+        szInstanceName: LPSTR
     PPDH_DATA_ITEM_PATH_ELEMENTS_A = POINTER(PDH_DATA_ITEM_PATH_ELEMENTS_A)
 
     class PDH_DATA_ITEM_PATH_ELEMENTS_W(CStructure):
@@ -175,6 +216,10 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("dwItemId", DWORD),
             ("szInstanceName", LPWSTR)
         ]
+        szMachineName: LPWSTR
+        ObjectGUID: GUID
+        dwItemId: int
+        szInstanceName: LPWSTR
     PPDH_DATA_ITEM_PATH_ELEMENTS_W = POINTER(PDH_DATA_ITEM_PATH_ELEMENTS_W)
 
     class PDH_COUNTER_INFO_A(CStructure):
@@ -194,10 +239,23 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("dwQueryUserData", DWORD_PTR),
             ("szFullPath", LPSTR),
             ("u", _DUMMYUNIONNAME),
-            ("szExplainText", LPSTR),
-            ("DataBuffer", DWORD * 1)
+            ("szExplainText", LPSTR)
         ]
+        _anonymous_ = ['u']
+        dwLength: int
+        dwType: int
+        CVersion: int
+        CStatus: int
+        lScale: int
+        lDefaultScale: int
+        dwUserData: int
+        dwQueryUserData: int
+        szFullPath: LPSTR
+        DataItemPath: PDH_DATA_ITEM_PATH_ELEMENTS_A
+        CounterPath: PDH_COUNTER_PATH_ELEMENTS_A
+        szExplainText: LPSTR
     PPDH_COUNTER_INFO_A = POINTER(PDH_COUNTER_INFO_A)
+    array_after_structure(PDH_COUNTER_INFO_A, 'DataBuffer', DWORD)
 
     class PDH_COUNTER_INFO_W(CStructure):
         class _DUMMYUNIONNAME(Union):
@@ -219,7 +277,21 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("szExplainText", LPWSTR),
             ("DataBuffer", DWORD * 1)
         ]
+        _anonymous_ = ['u']
+        dwLength: int
+        dwType: int
+        CVersion: int
+        CStatus: int
+        lScale: int
+        lDefaultScale: int
+        dwUserData: int
+        dwQueryUserData: int
+        szFullPath: LPWSTR
+        DataItemPath: PDH_DATA_ITEM_PATH_ELEMENTS_W
+        CounterPath: PDH_COUNTER_PATH_ELEMENTS_W
+        szExplainText: LPWSTR
     PPDH_COUNTER_INFO_W = POINTER(PDH_COUNTER_INFO_W)
+    array_after_structure(PDH_COUNTER_INFO_W, 'DataBuffer', DWORD)
 
     class PDH_TIME_INFO(CStructure):
         _fields_ = [
@@ -227,6 +299,9 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("EndTime", LONGLONG),
             ("SampleCount", DWORD)
         ]
+        StartTime: int
+        EndTime: int
+        SampleCount: int
     PPDH_TIME_INFO = POINTER(PDH_TIME_INFO)
 
     class PDH_RAW_LOG_RECORD(CStructure):
@@ -236,6 +311,10 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("dwItems", DWORD),
             ("RawBytes", UCHAR * 1)
         ]
+        dwStructureSize: int
+        dwRecordType: int
+        dwItems: int
+        RawBytes: IPointer[UCHAR]
     PPDH_RAW_LOG_RECORD = POINTER(PDH_RAW_LOG_RECORD)
 
     class PDH_LOG_SERVICE_QUERY_INFO_A(CStructure):

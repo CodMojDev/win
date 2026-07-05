@@ -181,7 +181,9 @@ __all__ = [
     "WTC", "WTCT", "WTCT_S", "WTCT_V", "WTCT2",
     "defb_ty",
     "is_CData", "is_CFuncPtr",
-    "CData", "SimpleCData"
+    "CData", "SimpleCData",
+    "PTRD",
+    "is_float_like", "is_int_like"
 ]
 
 def pcall(f, *args, **kwargs) -> tuple[Any, BaseException]:
@@ -248,6 +250,7 @@ def format_hex(value: int, zeros: int = -1) -> str:
         return '0x' + '0'.zfill(zeros)
     if zeros == -1:
         return hex(value)
+    value &= ((1 << (zeros << 3)) - 1)
     return '0x' + (hex(value)[2:].zfill(zeros))
 
 if TYPE_CHECKING:
@@ -832,8 +835,6 @@ _defbase_ctypinit.Init()
 if _WT_UNSTABLE_API:  
     from _ctypes import _SimpleCData as SimpleCData
 
-    CData = SimpleCData.__base__
-
     class ICData(IInterface):
         _b_base_: int
         _b_needsfree_: bool
@@ -953,6 +954,12 @@ def PTR(typ: Type[WT]) -> Type[IPointer[WT]]:
     if issubclass(typ, c_char):
         return c_char_p
     
+    return _POINTER(typ)
+
+def PTRD(typ: Type[WT]) -> Type[IPointer[WT]]:
+    """
+    Directly make the pointer to type.
+    """
     return _POINTER(typ)
 
 def DOUBLE_PTR(typ: Type[WT]) -> Type[IDoublePtr[WT]]:
@@ -1230,6 +1237,8 @@ from _ctypes import (FUNCFLAG_STDCALL, FUNCFLAG_CDECL, FUNCFLAG_PYTHONAPI)
 from ctypes import cast, CDLL
 from typing import Optional
 
+LI = TypeVar('LI', bound=CDLL)
+
 class W_CDLL(CDLL):
     """An instance of this class represents a loaded dll/shared
     library, exporting functions using the standard C calling
@@ -1242,6 +1251,27 @@ class W_CDLL(CDLL):
     
     **_Extended version._**
     """
+    
+    class Collection(Generic[LI]):
+        cdll: type[LI]
+        
+        def __init__(self, cdll: type[LI]):
+            self.cdll = cdll
+        
+        def __getitem__(self, name: str) -> LI:
+            return get_library(name, self.cdll)
+        
+        def __getattr__(self, name: str) -> LI:
+            library = self[name]
+            setattr(self, name, library)
+            return library
+    
+    def __init_subclass__(cls):
+        cls.collection = cls.Collection(cls)
+        return cls
+    
+    collection: ClassVar[Collection[Self]]
+    
     def __getitem__(self, name_or_ordinal):
         try:
             func = self._FuncPtr((name_or_ordinal, self))
@@ -1294,6 +1324,8 @@ class W_CDLL(CDLL):
         """
         return self._FuncPtr
 
+W_CDLL.collection = W_CDLL.Collection(W_CDLL)
+
 class W_WinDLL(W_CDLL):
     """
     This class represents a dll exporting functions using the
@@ -1326,6 +1358,10 @@ class W_PyDLL(W_CDLL):
     **_Extended version._**
     """
     _func_flags_ = FUNCFLAG_CDECL | FUNCFLAG_PYTHONAPI
+    
+    current: ClassVar['W_PyDLL']
+    
+W_PyDLL.current = W_PyDLL("python dll", None, sys.dllhandle)
 
 # Address-like typing interface (void*, T*, Python int).
 WT_ADDRLIKE: TypeAlias = TUnion[int, IVoidPtr, IPointer[WT]]
@@ -1595,59 +1631,85 @@ def get_template() -> Template:
 from ctypes import sizeof, c_char_p, c_wchar_p
 
 class PtrUtil:
+    @staticmethod
     def get_address(ptr: IPointer[WT]) -> int:
         if ptr is None:
             return 0
         return i_cast(ptr, c_void_p).value or 0
     
+    @staticmethod
     def get_type(ptr: IPointer[WT]) -> WT:
         """
         Get pointer type.
         """
         return _ptr_to_type(ptr)
     
+    @staticmethod
     def is_pointer(ptr: TUnion[IPointer[WT], Any]) -> bool:
         """
         Check object is pointer.
         """
         return _is_ptr(ptr)
     
+    @staticmethod
     def to_char_p(ptr: IPointer[WT]) -> c_char_p:
         """
         Convert pointer to char* pointer.
         """
         return i_cast(ptr, c_char_p)
     
+    @staticmethod
     def to_str(ptr: IPointer[WT]) -> bytes:
         """
         Convert pointer to char* pointer and dereference its .value property.
         """
         return i_cast(ptr, c_char_p).value
     
+    @staticmethod
     def to_wchar_p(ptr: IPointer[WT]) -> c_char_p:
         """
         Convert pointer to wchar_t* pointer.
         """
         return i_cast(ptr, c_wchar_p)
     
+    @staticmethod
     def to_wstr(ptr: IPointer[WT]) -> str:
         """
         Convert pointer to wchar_t* pointer and dereference its .value property.
         """
         return i_cast(ptr, c_wchar_p).value
     
+    @staticmethod
     def is_pointer_type(ptr_type: type[IPointer[WT]] | Any) -> bool:
         """
         Check object is pointer type.
         """
         return _is_ptr_type(ptr_type)
     
+    @staticmethod
     def to_python(ptr: IPointer[WT]) -> object:
         """
         Convert pointer to python object.
         """
         return i_cast(ptr, py_object).value
     
+    @staticmethod
+    def dereference(ptr: TUnion[IPointer[WT], Any]) -> WT | Any:
+        if isinstance(ptr, CArgObject):
+            return ptr._obj
+        return ptr.contents
+        
+    @staticmethod
+    def get_byref_object(byref: CArgObject) -> Any:
+        return getattr(byref, '_obj')
+
+    @staticmethod
+    def is_byref(byreflike: Any) -> bool:
+        """
+        Check value is reference (CArgObject).
+        """
+        return isinstance(byreflike, CArgObject)
+
 class PtrArithmetic:
     @staticmethod
     def add(ptr: IPointer[WT], *offsets: int) -> IPointer[WT]:
@@ -1693,7 +1755,7 @@ class PtrArithmetic:
     def size(typ: type, count: int = 1) -> int:
         return sizeof(typ) * count
 
-from ctypes import Union, c_wchar_p, c_int
+from ctypes import Union, c_wchar_p, c_int, addressof
 from .cpreproc import _CPreprocState
 
 ucrtbase = W_WinDLL('ucrtbase.dll')
@@ -2027,7 +2089,7 @@ class CStructure(Structure):
         return None
     
     @classmethod
-    def offset(cls, field: str) -> int:
+    def Offset(cls, field: str) -> int:
         """
         Get the offset of field.
         """
@@ -2086,6 +2148,40 @@ class CStructure(Structure):
                 _defb_state._local_allocator = allocator = CLocalAllocator()
         return i_cast(allocator.allocate(size), cls.PTR()).contents
 
+    def address(self) -> int:
+        """
+        Get the address of structure.
+        """
+        return addressof(self)
+
+    def addressof(self) -> int:
+        """
+        Get the address of structure.
+        """
+        return addressof(self)
+    
+    def copy(self) -> Self:
+        """
+        Copy the structure.
+        """
+        s = self.__class__()
+        memmove(s.ref(), self.ref(), self.size())
+        return s
+    
+    def allocate_copy(self, allocator: 'IAllocator' = None) -> Self:
+        """
+        Allocate and copy the structure.
+        """
+        if allocator is None:
+            allocator = getattr(_defb_state, '_local_allocator')
+            if allocator is None:
+                from .defbase_allocator import CLocalAllocator
+                _defb_state._local_allocator = allocator = CLocalAllocator()
+        size = self.size()
+        allocated = allocator.allocate(size)
+        allocator.copy(allocated, self.addressof(), size)
+        return self.__class__.from_address(allocated)
+
 def resolve_genericalias(generic_alias: IGenericAlias) -> type:
     """
     Resolve the Type System generic alias to
@@ -2115,10 +2211,10 @@ from ctypes import (py_object, c_short, c_ushort,
                     c_long, c_ulong, c_uint, c_float, 
                     c_double, c_longdouble, c_longlong,
                     c_ulonglong, c_ubyte, c_byte, c_char,
-                    c_bool, c_wchar_p, c_wchar, c_char_p)
+                    c_bool, c_wchar_p, c_wchar, c_char_p, memmove)
 
 # Typing interfaces to describe LPSTR/LPWSTR in-python type representations.
-WT_LPSTR: TypeAlias = TUnion[bytes, c_char_p, c_wchar]
+WT_LPSTR: TypeAlias = TUnion[bytes, c_char_p, c_char]
 WT_LPWSTR: TypeAlias = TUnion[str, c_wchar_p, c_wchar]
 
 class IAliasable(IInterface): 
@@ -2682,7 +2778,7 @@ def i_getattr(obj: object, attr: str) -> object:
 
 def i_setattr(obj: object, attr: str, value: object) -> object:
     """
-    Set attribute of object bypassing all `__getattribute__` interceptors.
+    Set attribute of object bypassing all `__setattr__` interceptors.
     """
     return object.__setattr__(obj, attr, value)
 
@@ -2802,13 +2898,13 @@ def _ptr_to_type(ptr) -> type:
         return _ctypes_types[ptr_type]
     return ptr_type
         
-def _is_int_like(typ: type) -> bool:
+def is_int_like(typ: type) -> bool:
     return typ in (int, c_int, c_short, c_ushort, c_long, c_longlong, c_ulong, c_ulonglong)
 
 def _is_ctypes_type(typ: type) -> bool:
     return typ in _ctypes_types.values()
 
-def _is_float_like(typ: type) -> bool:
+def is_float_like(typ: type) -> bool:
     return typ in (float, c_float, c_double, c_longdouble)
         
 class reinterpret_cast(metaclass=_CastMeta):
@@ -2851,12 +2947,12 @@ class static_cast(metaclass=_CastMeta):
                 raise TypeError(f'Cannot static_cast from {typ} to {self.typ}.')
             return static_cast_value
         
-        if typ is int and _is_int_like(self.typ):
+        if typ is int and is_int_like(self.typ):
             if _is_ctypes_type(self.typ):
                 return self.typ(obj).value
             return int(obj)
         
-        if typ is float and _is_float_like(self.typ):
+        if typ is float and is_float_like(self.typ):
             if _is_ctypes_type(self.typ):
                 return self.typ(obj).value
             return float(obj)
@@ -3051,8 +3147,6 @@ def unicode(wide: WT, ansi: WT) -> WT:
     if _CPreprocState._internal_cached_UNICODE: # internal optimization
         return wide
     return ansi
-
-LI = TypeVar('LI', bound=CDLL)
 
 def link_library(library: str, library_type: Type[LI] = W_CDLL):
     """

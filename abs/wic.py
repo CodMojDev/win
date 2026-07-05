@@ -140,17 +140,9 @@ class BitmapEx(Bitmap):
         converter = FormatConverter()
         converter.initialize(frame, GUID_WICPixelFormat32bppBGR)
         width, height = frame.size
-        
-        bmi = BITMAPINFO()
-        bmi.bmiHeader.biSize = BITMAPINFOHEADER.size()
-        bmi.bmiHeader.biWidth = width
-        bmi.bmiHeader.biHeight = -height
-        bmi.bmiHeader.biPlanes = 1
-        bmi.bmiHeader.biBitCount = 32
-        bmi.bmiHeader.biCompression = BI_RGB
-        
+        info = BitmapInfo(width, height, 32)
         pvBits = PVOID()
-        hBitmap = CreateDIBSection(NULL, bmi.ref(), DIB_RGB_COLORS, byref(pvBits), NULL, 0)
+        hBitmap = CreateDIBSection(NULL, info.ref(), DIB_RGB_COLORS, byref(pvBits), NULL, 0)
         if not hBitmap: raise WinException()
         bitmap = BitmapEx(hBitmap)
         stride = width * 4

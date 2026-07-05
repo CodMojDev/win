@@ -13,7 +13,7 @@ class IEnumWETProvider(IUnknown):
     
     @virtual_table.com_function(ULONG, POINTER(PWET_PROVIDER), PULONG)
     def Next(self, celt: int, rgelt: IDoublePtr[WET_PROVIDER],
-             pceltFetched: PULONG) -> int: 
+             pceltFetched: IPointer[ULONG]) -> int: 
         """
         Return the next `celt` elements
         """
@@ -268,7 +268,7 @@ class EnumWETProvider(CComClass, IEnumWETProvider):
         self._index = 0
         
     def Next_Impl(self, celt: int, rgelt: IDoublePtr[WET_PROVIDER],
-             pceltFetched: PULONG) -> int: 
+             pceltFetched: IPointer[ULONG]) -> int: 
         if celt == 0: # celt == 0, set the pceltFetched to 0 and return S_OK
             self.dbg_trace(provider, 'celt == 0')
             

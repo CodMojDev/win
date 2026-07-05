@@ -20,7 +20,7 @@ class ValueEnumerator(CComObject, _TL_ENUMERATOR):
         self._index = 0
         
     def Next_Impl(self, celt: int, rgelt: IDoublePtr,
-             pceltFetched: PULONG) -> int: 
+             pceltFetched: IPointer[ULONG]) -> int: 
         if celt == 0: # celt == 0, set the pceltFetched to 0 and return S_OK
             self.dbg_trace(provider, 'celt == 0')
             
@@ -110,7 +110,7 @@ class StructurePtrEnumerator(CComObject, _TL_ENUMERATOR):
         self._index = 0
         
     def Next_Impl(self, celt: int, rgelt: IDoublePtr,
-             pceltFetched: PULONG) -> int: 
+             pceltFetched: IPointer[ULONG]) -> int: 
         if celt == 0: # celt == 0, set the pceltFetched to 0 and return S_OK
             self.dbg_trace(provider, 'celt == 0')
             
