@@ -349,50 +349,47 @@ if cpreproc.pragma_once("_WINNT_"):
             ("HighPart", INT64)
         ]
 
-    if cpreproc.pragma_once("_SYSTEMTIME_"):
-        class SYSTEMTIME(CStructure):
-            _fields_ = [
-                ("wYear", WORD),
-                ("wMonth", WORD),
-                ("wDayOfWeek", WORD),
-                ("wDay", WORD),
-                ("wHour", WORD),
-                ("wMinute", WORD),
-                ("wSecond", WORD),
-                ("wMilliseconds", WORD)
-            ]
-            
-            wYear: int
-            wMonth: int
-            wDayOfWeek: int
-            wDay: int
-            wHour: int
-            wMinute: int
-            wSecond: int
-            wMilliseconds: int
-            
-        PSYSTEMTIME = POINTER(SYSTEMTIME)
-        LPSYSTEMTIME = PSYSTEMTIME
-    if cpreproc.pragma_once("_SECURITY_ATTRIBUTES_"):
-        class _SECURITY_ATTRIBUTES(CStructure):
-            _fields_ = [
-                ("nLength", DWORD),
-                ("lpSecurityDescriptor", LPVOID),
-                ("bInheritHandle", BOOL)
-            ]
-            nLength: int
-            lpSecurityDescriptor: int
-            bInheritHandle: int
-            
-        SECURITY_ATTRIBUTES = _SECURITY_ATTRIBUTES
-        PSECURITY_ATTRIBUTES = POINTER(SECURITY_ATTRIBUTES)
-        LPSECURITY_ATTRIBUTES = PSECURITY_ATTRIBUTES
-    if cpreproc.ifndef("SECURITY_DESCRIPTOR_REVISIO"):
-        SECURITY_DESCRIPTOR_CONTROL = USHORT
+    class SYSTEMTIME(CStructure):
+        _fields_ = [
+            ("wYear", WORD),
+            ("wMonth", WORD),
+            ("wDayOfWeek", WORD),
+            ("wDay", WORD),
+            ("wHour", WORD),
+            ("wMinute", WORD),
+            ("wSecond", WORD),
+            ("wMilliseconds", WORD)
+        ]
+        
+        wYear: int
+        wMonth: int
+        wDayOfWeek: int
+        wDay: int
+        wHour: int
+        wMinute: int
+        wSecond: int
+        wMilliseconds: int
+        
+    PSYSTEMTIME = POINTER(SYSTEMTIME)
+    LPSYSTEMTIME = PSYSTEMTIME
+    class _SECURITY_ATTRIBUTES(CStructure):
+        _fields_ = [
+            ("nLength", DWORD),
+            ("lpSecurityDescriptor", LPVOID),
+            ("bInheritHandle", BOOL)
+        ]
+        nLength: int
+        lpSecurityDescriptor: int
+        bInheritHandle: int
+        
+    SECURITY_ATTRIBUTES = _SECURITY_ATTRIBUTES
+    PSECURITY_ATTRIBUTES = POINTER(SECURITY_ATTRIBUTES)
+    LPSECURITY_ATTRIBUTES = PSECURITY_ATTRIBUTES
+    SECURITY_DESCRIPTOR_CONTROL = USHORT
 
-        PSECURITY_DESCRIPTOR_CONTROL = PUSHORT
+    PSECURITY_DESCRIPTOR_CONTROL = PUSHORT
 
-        PSID = PVOID
+    PSID = PVOID
         
     FLOAT128 = _FLOAT128
     PFLOAT128 = POINTER(FLOAT128)

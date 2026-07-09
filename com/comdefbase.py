@@ -167,11 +167,12 @@ def CoInitialize(pvReserved: LPVOID, **kwargs) -> int:
 
     New applications should call CoInitializeEx instead of CoInitialize.
     """
+    if not com_state.initialized:
+        register_error_info_provider(_StdErrorInfoProvider())
     
     hr = delegate(pvReserved)
-    if SUCCEEDED(hr):
+    if SUCCEEDED(hr) or hr == RPC_E_CHANGED_MODE:
         com_state.initialized = True
-        register_error_info_provider(_StdErrorInfoProvider())
     return hr
     
 @ole_foreign(LPVOID, DWORD, intermediate_method=True)
@@ -179,9 +180,29 @@ def CoInitializeEx(pvReserved: LPVOID, dwCoInit: int, **kwargs) -> int:
     """
     Initializes the COM library for use by the calling thread, sets the thread's concurrency model, and creates a new apartment for the thread if one is required.
     """
+    if not com_state.initialized:
+        register_error_info_provider(_StdErrorInfoProvider())
     
     hr = delegate(pvReserved, dwCoInit)
-    if SUCCEEDED(hr):
+    if SUCCEEDED(hr) or hr == RPC_E_CHANGED_MODE:
+        com_state.initialized = True
+    return hr
+    
+@ole32.foreign(VOID, PVOID, intermediate_method=True)
+def OleInitialize(pvReserved: LPVOID, **kwargs) -> int:
+    """
+    Initializes the COM library on the current apartment,
+    identifies the concurrency model as single-thread apartment (STA), 
+    and enables additional functionality described in the 
+    Remarks section below. Applications must initialize the 
+    COM library before they can call COM library functions other than 
+    CoGetMalloc and memory allocation functions.
+    """
+    if not com_state.initialized:
+        register_error_info_provider(_StdErrorInfoProvider())
+    
+    hr = delegate(pvReserved)
+    if SUCCEEDED(hr) or hr == RPC_E_CHANGED_MODE:
         com_state.initialized = True
     return hr
 
@@ -190,7 +211,18 @@ def CoUninitialize(**kwargs):
     """
     Closes the COM library on the current thread, unloads all DLLs loaded by the thread, frees any other resources that the thread maintains, and forces all RPC connections on the thread to close.
     """
-    object.__setattr__(com_state, 'initialized', False)
+    com_state.initialized = False
+    delegate()
+    
+@ole32.foreign(VOID, intermediate_method=True)
+def OleUninitialize(**kwargs): 
+    """
+    Closes the COM library on the apartment, releases any class factories, 
+    other COM objects, or servers held by the apartment, 
+    disables RPC on the apartment, and frees any resources 
+    the apartment maintains.
+    """
+    com_state.initialized = False
     delegate()
     
 # Memory management

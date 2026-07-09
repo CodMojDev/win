@@ -1,6 +1,7 @@
 from .imagelist import *
 from .window import *
 from .edit import *
+from win.defbase_allocator import *
 
 class TreeItem(HTREEITEM):
     """
@@ -45,11 +46,13 @@ class TreeItem(HTREEITEM):
             self.end()
     
     tree_view: 'TreeView'
+    allocator: IAllocator
     
     def __init__(self, tree_view: 'TreeView', value: int):
         self.edit_label = TreeItem.EditLabel(self)
         self.tree_view = tree_view
         self.value = value
+        self.allocator = CLocalAllocator()
         
     def select(self, action: int = TVGN_CARET):
         """
@@ -122,28 +125,61 @@ class TreeItem(HTREEITEM):
         return self.tree_view.send(TVM_GETITEMSTATE, self, mask)
     
     def insert(self, after: int | HANDLE = TVI_LAST, text: str = '',
-               image_index: int = 0, selected_image_index: int = 0,
-               value: int = 0, children_count: int = 0) -> 'TreeItem':
+               image_index: int | None = None, selected_image_index: int | None = None,
+               value: int | None = None, children_count: int = 0) -> 'TreeItem':
         """
         Insert another item into tree item.
         """
         
-        value = PtrUtil.get_address(value)
         tviex = TVITEMEXW()
-        tviex.iImage = image_index
-        tviex.iSelectedImage = selected_image_index
-        buffer = create_unicode_buffer(text)
-        tviex.pszText = buffer
+        tviex.mask = TVIF_TEXT
+        if image_index is not None:
+            tviex.mask |= TVIF_IMAGE
+            tviex.iImage = image_index
+        if selected_image_index is not None:
+            tviex.mask |= TVIF_SELECTEDIMAGE
+            tviex.iSelectedImage = selected_image_index
+        if value is not None:
+            value = PtrUtil.get_address(value)
+            tviex.mask |= TVIF_PARAM
+            tviex.lParam = value
+        if children_count:
+            tviex.mask |= TVIF_CHILDREN
+        if isinstance(text, str): buffer = create_unicode_buffer(text)
+        else: buffer = text
+        tviex.pszText = i_cast(buffer, LPWSTR)
         tviex.cchTextMax = len(text)
-        tviex.lParam = value
         tviex.cChildren = children_count
         tvis = TVINSERTSTRUCTW()
         tvis.hInsertAfter = after
         tvis.hParent = self
         tvis.itemex = tviex
-        hItem = self.tree_view.send(TVM_INSERTITEMW, lParam=tvis.ref())
-        if not hItem: return None
+        hItem = self.tree_view.send(TVM_INSERTITEMW, lParam=tvis.addressof())
+        if not hItem:
+            return None
         return TreeItem(self.tree_view, hItem)
+    
+    def information(self, mask: int | None = None) -> TVITEMEXW:
+        """
+        Get information of a tree item.
+        """
+        
+        tviex = TVITEMEXW()
+        if mask is None:
+            mask = (
+                TVIF_TEXT | TVIF_CHILDREN | 
+                TVIF_SELECTED_IMAGE | 
+                TVIF_IMAGE | TVIF_PARAM | 
+                TVIF_INTEGRAL | TVIF_STATE | 
+                TVIF_STATEEX)
+        tviex.mask = mask
+        tviex.hItem = self.value
+        if mask & TVIF_TEXT:
+            text = self.allocator.allocate(512)
+            tviex.pszText = i_cast(text, LPWSTR)
+            tviex.cchTextMax = 256
+        self.tree_view.send(TVM_GETITEMW, lParam=tviex.addressof())
+        return tviex
 
 class TreeView(Control):
     """

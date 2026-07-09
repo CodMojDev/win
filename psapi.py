@@ -74,12 +74,18 @@ if cpreproc.pragma_once("_PSAPI_H_"):
             ("Flags", ULONG_PTR),
             ("s", _DUMMYSTRUCTNAME)
         ]
+        _anonymous_ = ['s']
         
         VirtualPage: int
         Protection: int
         ShareCount: int
         Shared: int
         Flags: int
+        Protection: int
+        ShareCount: int
+        Shared: int
+        Reserved: int
+        VirtualPage: int
         
     PPSAPI_WORKING_SET_BLOCK = POINTER(PSAPI_WORKING_SET_BLOCK)
 
@@ -126,14 +132,35 @@ if cpreproc.pragma_once("_PSAPI_H_"):
                     _prefields_.append(("ReservedUlong", ULONG_PTR, 32))
                 _fields_ = _prefields_
                 del _prefields_
+                Reserved0: int
+                Reserved1: int
+                Valid: int
+                Shared: int
+                Bad: int
             _fields_ = [
                 ("s", _DUMMYSTRUCTNAME),
                 ("Invalid", _DUMMYSTRUCTNAME2)
             ]
+            _anonymous_ = ['s']
         _fields_ = [
             ("Flags", ULONG_PTR),
             ("u", _DUMMYUNIONNAME)
         ]
+        _anonymous_ = ['u']
+        Flags: int
+        Invalid: _DUMMYUNIONNAME._DUMMYSTRUCTNAME2
+        ReservedUlong: int
+        Valid: int
+        Shared: int
+        Bad: int
+        ShareCount: int
+        Win32Protection: int
+        Shared: int
+        Node: int
+        Locked: int
+        LargePage: int
+        Reserved: int
+        Bad: int
         
     PPSAPI_WORKING_SET_EX_BLOCK = POINTER(PSAPI_WORKING_SET_EX_BLOCK)
 

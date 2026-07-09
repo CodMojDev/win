@@ -52,9 +52,11 @@ if cpreproc.ifndef("__shtypes_h__"):
     class SHITEMID(CStructure):
         _pack_ = 1
         _fields_ = [
-            ("cb", USHORT),
-            ("abID", BYTE * 1)
+            ("cb", USHORT)
         ]
+        cb: int
+        abID: IPointer[BYTE]
+    array_after_structure(SHITEMID, 'abID', BYTE)
 
     LPSHITEMID = POINTER(SHITEMID)
     LPCSHITEMID = LPSHITEMID
@@ -67,6 +69,7 @@ if cpreproc.ifndef("__shtypes_h__"):
         _fields_ = [
             ("mkid", SHITEMID)
         ]
+        mkid: int
 
     ITEMIDLIST_RELATIVE = ITEMIDLIST
     ITEMID_CHILD = ITEMIDLIST
@@ -132,7 +135,7 @@ if cpreproc.ifndef("__shtypes_h__"):
         ]
         _anonymous_ = ['u']
         
-        cStr: IWideCharArrayFixedSize[260]
+        cStr: ICharArray
         pOleStr: LPOLESTR
         uOffset: int
         uType: int
@@ -199,6 +202,8 @@ if cpreproc.ifndef("__shtypes_h__"):
             ("pszName", LPCWSTR),
             ("pszSpec", LPCWSTR)
         ]
+        pszName: LPCWSTR
+        pszSpec: LPCWSTR
 
     KNOWNFOLDERID = GUID
 

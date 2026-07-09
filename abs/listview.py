@@ -187,10 +187,23 @@ class ListView(Control):
                 group_id: int = None, indent: int = None, state: tuple[int, int] = None, 
                 columns: Iterable['ListView.Columns.Column'] = None, sub_item: int = None):
             item = self.make_item(index, text, param, group_id, indent, state, columns, sub_item)
-            self.list_view.post(LVM_SETITEMW, lParam=item.ref())
+            if text is None:
+                self.list_view.send(LVM_SETITEMW, lParam=item.ref())
+                
+        def set_text(self, index: int, text: str, sub_item: int | None = None):
+            lvi = LVITEMW()
+            lvi.mask = LVIF_TEXT
+            if sub_item is not None:
+                lvi.iSubItem = sub_item
+            buffer = create_unicode_buffer(text)
+            lvi.pszText = i_cast(buffer, LPWSTR)
+            self.list_view.send(LVM_SETITEMTEXTW, index, lvi.ref())
             
         def delete(self, index: int):
             self.list_view.post(LVM_DELETEITEM, index)
+            
+        def clear(self):
+            self.list_view.send(LVM_DELETEALLITEMS)
     
     def __init__(self, width: int, height: int, parent: int | HWND, identifier: int | HWND):
         super().__init__(parent, identifier)

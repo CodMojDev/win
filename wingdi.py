@@ -204,14 +204,17 @@ if cpreproc.pragma_once("_WINGDI_"):
 
             # REGION *** Desktop Family ***
 
-            class _DRAWPATRECT(CStructure):
+            class DRAWPATRECT(CStructure):
                 _fields_ = [
                     ("ptPosition", POINT),
                     ("ptSize", POINT),
                     ("wStyle", WORD),
                     ("wPattern", WORD)
                 ]
-            DRAWPATRECT = _DRAWPATRECT
+                ptPosition: POINT
+                ptSize: POINT
+                wStyle: int
+                wPattern: int
             PDRAWPATRECT = POINTER(DRAWPATRECT)
 
             # REGION ***
@@ -330,16 +333,18 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         """
 
-        class _PSINJECTDATA(CStructure):
+        class PSINJECTDATA(CStructure):
             _fields_ = [
                 ("DataBytes", DWORD), # number of raw data bytes (NOT including this header)
                 ("InjectionPoint", WORD), # injection point
                 ("PageNumber", WORD) # page number to apply the injection
             ]
+            DataBytes: int
+            InjectionPoint: int
+            PageNumber: int
 
             # Followed by raw data to be injected
 
-        PSINJECTDATA = _PSINJECTDATA
         PPSINJECTDATA = POINTER(PSINJECTDATA)
 
         """
@@ -418,19 +423,20 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         """
 
-        class _PSFEATURE_OUTPUT(CStructure):
+        class PSFEATURE_OUTPUT(CStructure):
             _fields_ = [
                 ("bPageIndependent", BOOL),
                 ("bSetPageDevice", BOOL)
             ]
-        PSFEATURE_OUTPUT = _PSFEATURE_OUTPUT
+            bPageIndependen: int
+            bSetPageDevice: int
         PPSFEATURE_OUTPUT = POINTER(PSFEATURE_OUTPUT)
 
         """
         * Information about custom paper size
         """
 
-        class _PSFEATURE_CUSTPAPER(CStructure):
+        class PSFEATURE_CUSTPAPER(CStructure):
             _fields_ = [
                 ("lOrientation", LONG),
                 ("lWidth", LONG),
@@ -438,7 +444,11 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("lWidthOffset", LONG),
                 ("lHeightOffset", LONG)
             ]
-        PSFEATURE_CUSTPAPER = _PSFEATURE_CUSTPAPER
+            lOrientation: int
+            lWidth: int
+            lHeight: int
+            lWidthOffset: int
+            lHeightOffset: int
         PPSFEATURE_CUSTPAPER = POINTER(PSFEATURE_CUSTPAPER)
 
         # REGION ***
@@ -486,7 +496,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family ***
 
-        class tagXFORM(CStructure):
+        class XFORM(CStructure):
             _fields_ = [
                 ("eM11", FLOAT),
                 ("eM12", FLOAT),
@@ -495,12 +505,17 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("eDx", FLOAT),
                 ("eDy", FLOAT)
             ]
-        XFORM = tagXFORM
+            eM11: float
+            eM12: float
+            eM21: float
+            eM22: float
+            eDx: float
+            eDy: float
         PXFORM = POINTER(XFORM)
         LPXFORM = PXFORM
 
         # Bitmap Header Definition
-        class tagBITMAP(CStructure):
+        class BITMAP(CStructure):
             _fields_ = [
                 ("bmType", LONG),
                 ("bmWidth", LONG),
@@ -519,7 +534,6 @@ if cpreproc.pragma_once("_WINGDI_"):
             bmBitsPixel: int
             bmBits: int
             
-        BITMAP = tagBITMAP
         PBITMAP = POINTER(BITMAP)
         NPBITMAP = PBITMAP
         LPBITMAP = PBITMAP
@@ -528,14 +542,16 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family ***
 
-        class tagRGBTRIPLE(CStructure):
+        class RGBTRIPLE(CStructure):
             _pack_ = 1
             _fields_ = [
                 ("rgbtBlue", BYTE),
                 ("rgbtGreen", BYTE),
                 ("rgbtRed", BYTE)
             ]
-        RGBTRIPLE = tagRGBTRIPLE
+            rgbtBlue: int
+            rgbtGreen: int
+            rgbtRed: int
         PRGBTRIPLE = POINTER(RGBTRIPLE)
         NPRGBTRIPLE = PRGBTRIPLE
         LPRGBTRIPLE = PRGBTRIPLE
@@ -544,14 +560,17 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family ***
 
-        class tagRGBQUAD(CStructure):
+        class RGBQUAD(CStructure):
             _fields_ = [
                 ("rgbBlue", BYTE),
                 ("rgbGreen", BYTE),
                 ("rgbRed", BYTE),
                 ("rgbReserved", BYTE)
             ]
-        RGBQUAD = tagRGBQUAD
+            rgbBlue: int
+            rgbGreen: int
+            rgbRed: int
+            rgbReserved: int
 
         # REGION ***
 
@@ -610,37 +629,41 @@ if cpreproc.pragma_once("_WINGDI_"):
         # ICM Color Definitions
         # The following two structures are used for defining RGB's in terms of CIEXYZ.
 
-        class tagCIEXYZ(CStructure):
+        class CIEXYZ(CStructure):
             _fields_ = [
                 ("ciexyzX", FXPT2DOT30),
                 ("ciexyzY", FXPT2DOT30),
                 ("ciexyzZ", FXPT2DOT30)
             ]
-        CIEXYZ = tagCIEXYZ
+            ciexyzX: int
+            ciexyzY: int
+            ciexyzZ: int
 
         # REGION ***
 
         # REGION *** Desktop Family ***
 
-        LPCIEXYZ = POINTER(tagCIEXYZ)
+        LPCIEXYZ = POINTER(CIEXYZ)
 
         # REGION ***
 
         # REGION *** Application Family ***
 
-        class tagICEXYZTRIPLE(CStructure):
+        class CIEXYZTRIPLE(CStructure):
             _fields_ = [
                 ("ciexyzRed", CIEXYZ),
                 ("ciexyzGreen", CIEXYZ),
                 ("ciexyzBlue", CIEXYZ)
             ]
-        CIEXYZTRIPLE = tagICEXYZTRIPLE
+            ciexyzRed: int
+            ciexyzGreen: int
+            ciexyzBlue: int
 
         # REGION ***
 
         # REGION *** Application Family ***
 
-        class tagLOGCOLORSPACEA(CStructure):
+        class LOGCOLORSPACEA(CStructure):
             _fields_ = [
                 ("lcsSignature", DWORD),
                 ("lcsVersion", DWORD),
@@ -653,10 +676,19 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("lcsGammaBlue", DWORD),
                 ("lcsFilename", CHAR * MAX_PATH)
             ]
-        LOGCOLORSPACEA = tagLOGCOLORSPACEA
+            lcsSignature: int
+            lcsVersion: int
+            lcsSize: int
+            lcsCSType: int
+            lcsIntent: int
+            lcsEndpoints: CIEXYZTRIPLE
+            lcsGammaRed: int
+            lcsGammaGreen: int
+            lcsGammaBlue: int
+            lcsFilename: ICharArray
         LPLOGCOLORSPACEA = POINTER(LOGCOLORSPACEA)
 
-        class tagLOGCOLORSPACEW(CStructure):
+        class LOGCOLORSPACEW(CStructure):
             _fields_ = [
                 ("lcsSignature", DWORD),
                 ("lcsVersion", DWORD),
@@ -669,7 +701,16 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("lcsGammaBlue", DWORD),
                 ("lcsFilename", WCHAR * MAX_PATH)
             ]
-        LOGCOLORSPACEW = tagLOGCOLORSPACEW
+            lcsSignature: int
+            lcsVersion: int
+            lcsSize: int
+            lcsCSType: int
+            lcsIntent: int
+            lcsEndpoints: CIEXYZTRIPLE
+            lcsGammaRed: int
+            lcsGammaGreen: int
+            lcsGammaBlue: int
+            lcsFilename: IWideCharArray
         LPLOGCOLORSPACEW = POINTER(LOGCOLORSPACEW)
 
         # REGION ***
@@ -683,7 +724,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         # REGION *** Desktop Family ***
 
         # structures for defining DIBs
-        class tagBITMAPCOREHEADER(CStructure):
+        class BITMAPCOREHEADER(CStructure):
             _fields_ = [
                 ("bcSize", DWORD), # used to get to color table
                 ("bcWidth", WORD),
@@ -691,7 +732,11 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("bcPlanes", WORD),
                 ("bcBitCount", WORD)
             ]
-        BITMAPCOREHEADER = tagBITMAPCOREHEADER
+            bcSize: int
+            bcWidth: int
+            bcHeight: int
+            bcPlanes: int
+            bcBitCount: int
         LPBITMAPCOREHEADER = POINTER(BITMAPCOREHEADER)
         PBITMAPCOREHEADER = LPBITMAPCOREHEADER
 
@@ -699,7 +744,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family or OneCore Family or Games Family ***
 
-        class tagBITMAPINFOHEADER(CStructure):
+        class BITMAPINFOHEADER(CStructure):
             _fields_ = [
                 ("biSize", DWORD),
                 ("biWidth", LONG),
@@ -726,7 +771,6 @@ if cpreproc.pragma_once("_WINGDI_"):
             biClrUsed: int
             biClrImportant: int
             
-        BITMAPINFOHEADER = tagBITMAPINFOHEADER
         LPBITMAPINFOHEADER = POINTER(BITMAPINFOHEADER)
         PBITMAPINFOHEADER = LPBITMAPINFOHEADER
 
@@ -758,6 +802,26 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("bV4GammaGreen", DWORD),
                 ("bV4GammaBlue", DWORD)
             ]
+            bV4Size: int
+            bV4Width: int
+            bV4Height: int
+            bV4Planes: int
+            bV4BitCount: int
+            bV4Compression: int
+            bV4SizeImage: int
+            bV4XPelsPerMeter: int
+            bV4YPelsPerMeter: int
+            bV4ClrUsed: int
+            bV4ClrImportant: int
+            bV4RedMask: int
+            bV4GreenMask: int
+            bV4BlueMask: int
+            bV4AlphaMask: int
+            bV4CSType: int
+            bV4Endpoints: CIEXYZTRIPLE
+            bV4GammaRed: int
+            bV4GammaGreen: int
+            bV4GammaBlue: int
         LPBITMAPV4HEADER = POINTER(BITMAPV4HEADER)
         PBITMAPV4HEADER = LPBITMAPV4HEADER
 
@@ -788,6 +852,30 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("bV5ProfileSize", DWORD),
                 ("bV5Reserved", DWORD)
             ]
+            bV5Size: int
+            bV5Width: int
+            bV5Height: int
+            bV5Planes: int
+            bV5BitCount: int
+            bV5Compression: int
+            bV5SizeImage: int
+            bV5XPelsPerMeter: int
+            bV5YPelsPerMeter: int
+            bV5ClrUsed: int
+            bV5ClrImportant: int
+            bV5RedMask: int
+            bV5GreenMask: int
+            bV5BlueMask: int
+            bV5AlphaMask: int
+            bV5CSType: int
+            bV5Endpoints: CIEXYZTRIPLE
+            bV5GammaRed: int
+            bV5GammaGreen: int
+            bV5GammaBlue: int
+            bV5Intent: int
+            bV5ProfileData:int
+            bV5ProfileSize: int
+            bV5Reserved: int
         LPBITMAPV5HEADER = POINTER(BITMAPV5HEADER)
         PBITMAPV5HEADER = LPBITMAPV5HEADER
 
@@ -806,14 +894,13 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family ***
 
-        class tagBITMAPINFO(CStructure):
+        class BITMAPINFO(CStructure):
             _fields_ = [
                 ("bmiHeader", BITMAPINFOHEADER)
             ]
             
             bmiHeader: BITMAPINFOHEADER
-            
-        BITMAPINFO = tagBITMAPINFO
+        
         LPBITMAPINFO = POINTER(BITMAPINFO)
         PBITMAPINFO = LPBITMAPINFO
 
@@ -821,18 +908,17 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Desktop Family ***
 
-        class tagBITMAPCOREINFO(CStructure):
+        class BITMAPCOREINFO(CStructure):
             _fields_ = [
                 ("bmciHeader", BITMAPCOREHEADER)
             ]
             
             bmciHeader: BITMAPCOREHEADER
-            
-        BITMAPCOREINFO = tagBITMAPCOREINFO
+        
         LPBITMAPCOREINFO = POINTER(BITMAPCOREINFO)
         PBITMAPCOREINFO = LPBITMAPCOREINFO
 
-        class tagBITMAPFILEHEADER(CStructure):
+        class BITMAPFILEHEADER(CStructure):
             _pack_ = 2
             _fields_ = [
                 ("bfType", WORD),
@@ -847,8 +933,7 @@ if cpreproc.pragma_once("_WINGDI_"):
             bfReserved1: int
             bfReserved2: int
             bfOffBits: int
-            
-        BITMAPFILEHEADER = tagBITMAPFILEHEADER
+        
         LPBITMAPFILEHEADER = POINTER(BITMAPFILEHEADER)
         PBITMAPFILEHEADER = LPBITMAPFILEHEADER
 
@@ -858,12 +943,13 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family ***
 
-        class tagFONTSIGNATURE(CStructure):
+        class FONTSIGNATURE(CStructure):
             _fields_ = [
                 ("fsUsb", DWORD * 4),
                 ("fsCsb", DWORD * 2)
             ]
-        FONTSIGNATURE = tagFONTSIGNATURE
+            fsUsb: IArray[int]
+            fsCsb: IArray[int]
         PFONTSIGNATURE = POINTER(FONTSIGNATURE)
         LPFONTSIGNATURE = PFONTSIGNATURE
 
@@ -871,13 +957,15 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Desktop Family ***
 
-        class tagCHARSETINFO(CStructure):
+        class CHARSETINFO(CStructure):
             _fields_  = [
                 ("ciCharset", UINT),
                 ("ciACP", UINT),
                 ("fs", FONTSIGNATURE)
             ]
-        CHARSETINFO = tagCHARSETINFO
+            ciCharset: int
+            ciACP: int
+            fs: FONTSIGNATURE
         NPCHARSETINFO = POINTER(CHARSETINFO)
         LPCHARSETINFO = NPCHARSETINFO
 
@@ -889,13 +977,15 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family ***
 
-        class tagLOCALESIGNATURE(CStructure):
+        class LOCALESIGNATURE(CStructure):
             _fields_ = [
                 ("lsUsb", DWORD * 4),
                 ("lsCsbDefault", DWORD * 2),
                 ("lsCsbSupported", DWORD * 2)
             ]
-        LOCALESIGNATURE = tagLOCALESIGNATURE
+            lsUsb: IArray[int]
+            lsCsbDefault: IArray[int]
+            lsCsbSupported: IArray[int]
         PLOCALESIGNATURE = POINTER(LOCALESIGNATURE)
         LPLOCALESIGNATURE = PLOCALESIGNATURE
 
@@ -907,21 +997,22 @@ if cpreproc.pragma_once("_WINGDI_"):
 
             # Clipboard Metafile Picture Structure
 
-            class tagHANDLETABLE(CStructure):
-                _fields_ = [
-                    ("objectHandle", HGDIOBJ * 1)
-                ]
-            HANDLETABLE = tagHANDLETABLE
+            class HANDLETABLE(CStructure):
+                _fields_ = []
+                objectHandle: IPointer[HGDIOBJ]
+            array_after_structure(HANDLETABLE, 'objectHandle', HGDIOBJ)
             PHANDLETABLE = POINTER(HANDLETABLE)
             LPHANDLETABLE = PHANDLETABLE
 
-            class tagMETARECORD(CStructure):
+            class METARECORD(CStructure):
                 _fields_ = [
                     ("rdSize", DWORD),
-                    ("rdFunction", WORD),
-                    ("rdParm", WORD * 1)
+                    ("rdFunction", WORD)
                 ]
-            METARECORD = tagMETARECORD
+                rdSize: int
+                rdFunction: int
+                rdParm: IPointer[WORD]
+            array_after_structure(METARECORD, 'rdParm', WORD)
 
             # REGION ***
 
@@ -935,14 +1026,17 @@ if cpreproc.pragma_once("_WINGDI_"):
 
             LPMETARECORD = PMETARECORD
 
-            class tagMETAFILEPICT(CStructure):
+            class METAFILEPICT(CStructure):
                 _fields_ = [
                     ("mm", LONG),
                     ("xExt", LONG),
                     ("yExt", LONG),
                     ("hMF", HMETAFILE)
                 ]
-            METAFILEPICT = tagMETAFILEPICT
+                mm: int
+                xExt: int
+                yExt: int
+                hMF: int
             PMETAFILEPICT = POINTER(METAFILEPICT)
             LPMETAFILEPICT = PMETAFILEPICT
 
@@ -950,7 +1044,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
             # REGION *** Desktop Family ***
 
-            class tagMETAHEADER(CStructure):
+            class METAHEADER(CStructure):
                 _fields_ = [
                     ("mtType", WORD),
                     ("mtHeaderSize", WORD),
@@ -959,7 +1053,12 @@ if cpreproc.pragma_once("_WINGDI_"):
                     ("mtMaxRecord", DWORD),
                     ("mtNoParameters", WORD)
                 ]
-            METAHEADER = tagMETAHEADER
+                mtType: int
+                mtHeaderSize: int
+                mtVersion: int
+                mtNoObjects: int
+                mtMaxRecord: int
+                mtNoParameters: int
             PMETAHEADER = POINTER(METAHEADER)
             LPMETAHEADER = PMETAHEADER
 
@@ -968,17 +1067,19 @@ if cpreproc.pragma_once("_WINGDI_"):
             # REGION *** Application Family ***
 
             # Enhanced Metafile structures 
-            class tagENHMETARECORD(CStructure):
+            class ENHMETARECORD(CStructure):
                 _fields_ = [
                     ("iType", DWORD), # Record type EMR_XXX
-                    ("nSize", DWORD), # Record size in bytes
-                    ("dParm", DWORD * 1) # Parameters
+                    ("nSize", DWORD) # Record size in bytes
                 ]
-            ENHMETARECORD = tagENHMETARECORD
+                iType: int
+                nSize: int
+                dParm: IPointer[DWORD] # Parameters
+            array_after_structure(ENHMETARECORD, 'dParm', DWORD)
             PENHMETARECORD = POINTER(ENHMETARECORD)
             LPENHMETARECORD = PENHMETARECORD
 
-            class tagENHMETAHEADER(CStructure):
+            class ENHMETAHEADER(CStructure):
                 _fields_ = [
                     ("iType", DWORD),          # Record typeEMR_HEADER
                     ("nSize", DWORD),          # Record size in bytes.  This may be greater
@@ -1007,7 +1108,25 @@ if cpreproc.pragma_once("_WINGDI_"):
                                                # the metafile, otherwise FALSE
                     ("szlMicrometers", SIZEL), # Size of the reference device in micrometers
                 ]
-            ENHMETAHEADER = tagENHMETAHEADER
+                iType: int
+                nSize: int
+                rclBounds: RECTL
+                rclFrame: RECTL
+                dSignature: int
+                nVersion: int
+                nBytes: int
+                nRecords: int
+                nHandles: int
+                sReserved: int
+                nDescription: int
+                offDescription: int
+                nPalEntries: int
+                szlDevice: SIZEL
+                szlMillimeters: SIZEL
+                cbPixelFormat: int
+                offPixelFormat: int
+                bOpenGL: int
+                szlMicrometers: SIZEL
             PENHMETAHEADER = POINTER(ENHMETAHEADER)
             LPENHMETAHEADER = PENHMETAHEADER
 
@@ -1029,70 +1148,108 @@ if cpreproc.pragma_once("_WINGDI_"):
             BCHAR = unicode(WCHAR, CHAR)
 
             # REGION ***
-            if cpreproc.pragma_once("_TEXTMETRIC_DEFINED"):
-                # REGION *** Application Family ***
+            # REGION *** Application Family ***
 
-                class tagTEXTMETRICA(CStructure):
-                    _fields_ = [
-                        ("tmHeight", LONG),
-                        ("tmAscent", LONG),
-                        ("tmDescent", LONG),
-                        ("tmInternalLeading", LONG),
-                        ("tmExternalLeading", LONG),
-                        ("tmAveCharWidth", LONG),
-                        ("tmMaxCharWidth", LONG),
-                        ("tmWeight", LONG),
-                        ("tmOverhang", LONG),
-                        ("tmDigitizedAspectX", LONG),
-                        ("tmDigitizedAspectY", LONG),
-                        ("tmFirstChar", CHAR),
-                        ("tmLastChar", CHAR),
-                        ("tmDefaultChar", CHAR),
-                        ("tmBreakChar", CHAR),
-                        ("tmItalic", BYTE),
-                        ("tmUnderlined", BYTE),
-                        ("tmStruckOut", BYTE),
-                        ("tmPitchAndFamily", BYTE),
-                        ("tmCharSet", BYTE)
-                    ]
-                TEXTMETRICA = tagTEXTMETRICA
-                PTEXTMETRICA = TEXTMETRICA
-                NPTEXTMETRICA = PTEXTMETRICA
-                LPTEXTMETRICA = PTEXTMETRICA
+            class TEXTMETRICA(CStructure):
+                _fields_ = [
+                    ("tmHeight", LONG),
+                    ("tmAscent", LONG),
+                    ("tmDescent", LONG),
+                    ("tmInternalLeading", LONG),
+                    ("tmExternalLeading", LONG),
+                    ("tmAveCharWidth", LONG),
+                    ("tmMaxCharWidth", LONG),
+                    ("tmWeight", LONG),
+                    ("tmOverhang", LONG),
+                    ("tmDigitizedAspectX", LONG),
+                    ("tmDigitizedAspectY", LONG),
+                    ("tmFirstChar", CHAR),
+                    ("tmLastChar", CHAR),
+                    ("tmDefaultChar", CHAR),
+                    ("tmBreakChar", CHAR),
+                    ("tmItalic", BYTE),
+                    ("tmUnderlined", BYTE),
+                    ("tmStruckOut", BYTE),
+                    ("tmPitchAndFamily", BYTE),
+                    ("tmCharSet", BYTE)
+                ]
+                tmHeight: int
+                tmAscent: int
+                tmDescent: int
+                tmInternalLeading: int
+                tmExternalLeading: int
+                tmAveCharWidth: int
+                tmMaxCharWidth: int
+                tmWeight: int
+                tmOverhang: int
+                tmDigitizedAspectX: int
+                tmDigitizedAspectY: int
+                tmFirstChar: bytes
+                tmLastChar: bytes
+                tmDefaultChar: bytes
+                tmBreakChar: bytes
+                tmItalic: int
+                tmUnderlined: int
+                tmStruckOut: int
+                tmPitchAndFamily: int
+                tmCharSet: int
+            PTEXTMETRICA = TEXTMETRICA
+            NPTEXTMETRICA = PTEXTMETRICA
+            LPTEXTMETRICA = PTEXTMETRICA
 
-                class tagTEXTMETRICW(CStructure):
-                    _pack_ = 4
-                    _fields_ = [
-                        ("tmHeight", LONG),
-                        ("tmAscent", LONG),
-                        ("tmDescent", LONG),
-                        ("tmInternalLeading", LONG),
-                        ("tmExternalLeading", LONG),
-                        ("tmAveCharWidth", LONG),
-                        ("tmMaxCharWidth", LONG),
-                        ("tmWeight", LONG),
-                        ("tmOverhang", LONG),
-                        ("tmDigitizedAspectX", LONG),
-                        ("tmDigitizedAspectY", LONG),
-                        ("tmFirstChar", WCHAR),
-                        ("tmLastChar", WCHAR),
-                        ("tmDefaultChar", WCHAR),
-                        ("tmBreakChar", WCHAR),
-                        ("tmItalic", BYTE),
-                        ("tmUnderlined", BYTE),
-                        ("tmStruckOut", BYTE),
-                        ("tmPitchAndFamily", BYTE),
-                        ("tmCharSet", BYTE)
-                    ]
-                TEXTMETRICW = tagTEXTMETRICW
-                PTEXTMETRICW = TEXTMETRICW
-                NPTEXTMETRICW = PTEXTMETRICW
-                LPTEXTMETRICW = PTEXTMETRICW
+            class TEXTMETRICW(CStructure):
+                _pack_ = 4
+                _fields_ = [
+                    ("tmHeight", LONG),
+                    ("tmAscent", LONG),
+                    ("tmDescent", LONG),
+                    ("tmInternalLeading", LONG),
+                    ("tmExternalLeading", LONG),
+                    ("tmAveCharWidth", LONG),
+                    ("tmMaxCharWidth", LONG),
+                    ("tmWeight", LONG),
+                    ("tmOverhang", LONG),
+                    ("tmDigitizedAspectX", LONG),
+                    ("tmDigitizedAspectY", LONG),
+                    ("tmFirstChar", WCHAR),
+                    ("tmLastChar", WCHAR),
+                    ("tmDefaultChar", WCHAR),
+                    ("tmBreakChar", WCHAR),
+                    ("tmItalic", BYTE),
+                    ("tmUnderlined", BYTE),
+                    ("tmStruckOut", BYTE),
+                    ("tmPitchAndFamily", BYTE),
+                    ("tmCharSet", BYTE)
+                ]
+                tmHeight: int
+                tmAscent: int
+                tmDescent: int
+                tmInternalLeading: int
+                tmExternalLeading: int
+                tmAveCharWidth: int
+                tmMaxCharWidth: int
+                tmWeight: int
+                tmOverhang: int
+                tmDigitizedAspectX: int
+                tmDigitizedAspectY: int
+                tmFirstChar: str
+                tmLastChar: str
+                tmDefaultChar: str
+                tmBreakChar: str
+                tmItalic: int
+                tmUnderlined: int
+                tmStruckOut: int
+                tmPitchAndFamily: int
+                tmCharSet: int
+                
+            PTEXTMETRICW = TEXTMETRICW
+            NPTEXTMETRICW = PTEXTMETRICW
+            LPTEXTMETRICW = PTEXTMETRICW
 
-                TEXTMETRIC = unicode(TEXTMETRICW, TEXTMETRICA)
-                PTEXTMETRIC = unicode(PTEXTMETRICW, PTEXTMETRICA)
-                NPTEXTMETRIC = unicode(NPTEXTMETRICW, NPTEXTMETRICA)
-                LPTEXTMETRIC = unicode(LPTEXTMETRICW, LPTEXTMETRICA)
+            TEXTMETRIC = unicode(TEXTMETRICW, TEXTMETRICA)
+            PTEXTMETRIC = unicode(PTEXTMETRICW, PTEXTMETRICA)
+            NPTEXTMETRIC = unicode(NPTEXTMETRICW, NPTEXTMETRICA)
+            LPTEXTMETRIC = unicode(LPTEXTMETRICW, LPTEXTMETRICA)
             # !_TEXTMETRIC_DEFINED
             # ntmFlags field flags
             NTM_REGULAR = 0x00000040
@@ -1108,7 +1265,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
             # REGION *** Desktop Family ***
 
-            class tagNEWTEXTMETRICA(CStructure):
+            class NEWTEXTMETRICA(CStructure):
                 _fields_ = [
                     ("tmHeight", LONG),
                     ("tmAscent", LONG),
@@ -1135,12 +1292,35 @@ if cpreproc.pragma_once("_WINGDI_"):
                     ("ntmCellHeight", UINT),
                     ("ntmAvgWidth", UINT)
                 ]
-            NEWTEXTMETRICA = tagNEWTEXTMETRICA
+                tmHeight: int
+                tmAscent: int
+                tmDescent: int
+                tmInternalLeading: int
+                tmExternalLeading: int
+                tmAveCharWidth: int
+                tmMaxCharWidth: int
+                tmWeight: int
+                tmOverhang: int
+                tmDigitizedAspectX: int
+                tmDigitizedAspectY: int
+                tmFirstChar: bytes
+                tmLastChar: bytes
+                tmDefaultChar: bytes
+                tmBreakChar: bytes
+                tmItalic: int
+                tmUnderlined: int
+                tmStruckOut: int
+                tmPitchAndFamily: int
+                tmCharSet: int
+                ntmFlags: int
+                ntmSizeEM: int
+                ntmCellHeight: int
+                ntmAvgWidth: int
             PNEWTEXTMETRICA = NEWTEXTMETRICA
             NPNEWTEXTMETRICA = PNEWTEXTMETRICA
             LPNEWTEXTMETRICA = PNEWTEXTMETRICA
 
-            class tagNEWTEXTMETRICW(CStructure):
+            class NEWTEXTMETRICW(CStructure):
                 _pack_ = 4
                 _fields_ = [
                     ("tmHeight", LONG),
@@ -1168,7 +1348,30 @@ if cpreproc.pragma_once("_WINGDI_"):
                     ("ntmCellHeight", UINT),
                     ("ntmAvgWidth", UINT)
                 ]
-            NEWTEXTMETRICW = tagNEWTEXTMETRICW
+                tmHeight: int
+                tmAscent: int
+                tmDescent: int
+                tmInternalLeading: int
+                tmExternalLeading: int
+                tmAveCharWidth: int
+                tmMaxCharWidth: int
+                tmWeight: int
+                tmOverhang: int
+                tmDigitizedAspectX: int
+                tmDigitizedAspectY: int
+                tmFirstChar: str
+                tmLastChar: str
+                tmDefaultChar: str
+                tmBreakChar: str
+                tmItalic: int
+                tmUnderlined: int
+                tmStruckOut: int
+                tmPitchAndFamily: int
+                tmCharSet: int
+                ntmFlags: int
+                ntmSizeEM: int
+                ntmCellHeight: int
+                ntmAvgWidth: int
             PNEWTEXTMETRICW = NEWTEXTMETRICW
             NPNEWTEXTMETRICW = PNEWTEXTMETRICW
             LPNEWTEXTMETRICW = PNEWTEXTMETRICW
@@ -1182,19 +1385,21 @@ if cpreproc.pragma_once("_WINGDI_"):
 
             # REGION *** Desktop Family ***
 
-            class tagNEWTEXTMETRICEXA(CStructure):
+            class NEWTEXTMETRICEXA(CStructure):
                 _fields_ = [
                     ("ntmTm", NEWTEXTMETRICA),
                     ("ntmFontSig", FONTSIGNATURE)
                 ]
-            NEWTEXTMETRICEXA = tagNEWTEXTMETRICEXA
+                ntmTm: NEWTEXTMETRICA
+                ntmFontSig: FONTSIGNATURE
 
-            class tagNEWTEXTMETRICEXW(CStructure):
+            class NEWTEXTMETRICEXW(CStructure):
                 _fields_ = [
                     ("ntmTm", NEWTEXTMETRICW),
                     ("ntmFontSig", FONTSIGNATURE)
                 ]
-            NEWTEXTMETRICEXW = tagNEWTEXTMETRICEXW
+                ntmTm: NEWTEXTMETRICW
+                ntmFontSig: FONTSIGNATURE
 
             # REGION ***
         # !NOTEXTMETRIC
@@ -1204,7 +1409,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         # Pel Array
         # REGION *** Desktop Family ***
 
-        class tagPELARRAY(CStructure):
+        class PELARRAY(CStructure):
             _fields_ = [
                 ("paXCount", LONG),
                 ("paYCount", LONG),
@@ -1212,7 +1417,11 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("paYExt", LONG),
                 ("paRGBs", BYTE)
             ]
-        PELARRAY = tagPELARRAY
+            paXCount: int
+            paYCount: int
+            paXExt: int
+            paYExt: int
+            paRGBs: int
         PPELARRAY = POINTER(PELARRAY)
         NPPELARRAY = PPELARRAY
         LPPELARRAY = PPELARRAY
@@ -1222,24 +1431,28 @@ if cpreproc.pragma_once("_WINGDI_"):
         # REGION *** Application Family ***
 
         # Logical Brush (or Pattern)
-        class tagLOGBRUSH(CStructure):
+        class LOGBRUSH(CStructure):
             _fields_ = [
                 ("lbStyle", UINT),
                 ("lbColor", COLORREF),
                 ("lbHatch", ULONG_PTR)
             ]
-        LOGBRUSH = tagLOGBRUSH
+            lbStyle: int
+            lbColor: int
+            lbHatch: int
         PLOGBRUSH = POINTER(LOGBRUSH)
         NPLOGBRUSH = PLOGBRUSH
         LPLOGBRUSH = PLOGBRUSH
 
-        class tagLOGBRUSH32(CStructure):
+        class LOGBRUSH32(CStructure):
             _fields_ = [
                 ("lbStyle", UINT),
                 ("lbColor", COLORREF),
                 ("lbHatch", ULONG)
             ]
-        LOGBRUSH32 = tagLOGBRUSH32
+            lbStyle: int
+            lbColor: int
+            lbHatch: int
         PLOGBRUSH32 = POINTER(LOGBRUSH32)
         NPLOGBRUSH32 = PLOGBRUSH32
 
@@ -1257,13 +1470,15 @@ if cpreproc.pragma_once("_WINGDI_"):
         # REGION *** Application Family ***
 
         # Logical Pen
-        class tagLOGPEN(CStructure):
+        class LOGPEN(CStructure):
             _fields_ = [
                 ("lopnStyle", UINT),
                 ("lopnWidth", POINT),
                 ("lopnColor", COLORREF)
             ]
-        LOGPEN = tagLOGPEN
+            lopnStyle: int
+            lopnWidth: int
+            lopnColor: int
         PLOGPEN = POINTER(LOGPEN)
         NPLOGPEN = PLOGPEN
         LPLOGPEN = PLOGPEN
@@ -1272,17 +1487,23 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Desktop Family ***
 
-        class tagEXTLOGPEN(CStructure):
+        class EXTLOGPEN(CStructure):
             _fields_ = [
                 ("elpPenStyle", DWORD),
                 ("elpWidth", DWORD),
                 ("elpBrushStyle", UINT),
                 ("elpColor", COLORREF),
                 ("elpHatch", ULONG_PTR),
-                ("elpNumEntries", DWORD),
-                ("elpStyleEntry", DWORD * 1)
+                ("elpNumEntries", DWORD)
             ]
-        EXTLOGPEN = tagEXTLOGPEN
+            elpPenStyle: int
+            elpWidth: int
+            elpBrushStyle: int
+            elpColor: int
+            elpHatch: int
+            elpNumEntries: int
+            elpStyleEntry: IPointer[DWORD]
+        array_after_structure(EXTLOGPEN, 'elpStyleEntry', DWORD)
         PEXTLOGPEN = POINTER(EXTLOGPEN)
         NPEXTLOGPEN = PEXTLOGPEN
         LPEXTLOGPEN = PEXTLOGPEN
@@ -1291,7 +1512,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family ***
 
-        class tagEXTLOGPEN32(CStructure):
+        class EXTLOGPEN32(CStructure):
             _fields_ = [
                 ("elpPenStyle", DWORD),
                 ("elpWidth", DWORD),
@@ -1301,12 +1522,19 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("elpNumEntries", DWORD),
                 ("elpStyleEntry", DWORD * 1)
             ]
-        EXTLOGPEN32 = tagEXTLOGPEN32
+            elpPenStyle: int
+            elpWidth: int
+            elpBrushStyle: int
+            elpColor: int
+            elpHatch: int
+            elpNumEntries: int
+            elpStyleEntry: IPointer[DWORD]
+        array_after_structure(EXTLOGPEN, 'elpStyleEntry', DWORD)
         PEXTLOGPEN32 = POINTER(EXTLOGPEN32)
         NPEXTLOGPEN32 = PEXTLOGPEN32
         LPEXTLOGPEN32 = PEXTLOGPEN32
 
-        class tagPALETTEENTRY(CStructure):
+        class PALETTEENTRY(CStructure):
             _fields_ = [
                 ("peRed", BYTE),
                 ("peGreen", BYTE),
@@ -1317,21 +1545,19 @@ if cpreproc.pragma_once("_WINGDI_"):
             peGreen: int
             peBlue: int
             peFlags: int
-        PALETTEENTRY = tagPALETTEENTRY
         PPALETTEENTRY = POINTER(PALETTEENTRY)
         LPPALETTEENTRY = PPALETTEENTRY
 
         # Logical Palette
-        class tagLOGPALETTE(CStructure):
+        class LOGPALETTE(CStructure):
             _fields_ = [
                 ("palVersion", WORD),
                 ("palNumEntries", WORD)
             ]
             palVersion: int
             palNumEntries: int
-            palPalEntry: IPointer[tagPALETTEENTRY]
-        array_after_structure(tagLOGPALETTE, 'palPalEntry', tagPALETTEENTRY)
-        LOGPALETTE = tagLOGPALETTE
+            palPalEntry: IPointer[PALETTEENTRY]
+        array_after_structure(LOGPALETTE, 'palPalEntry', PALETTEENTRY)
         PLOGPALETTE = POINTER(LOGPALETTE)
         NPLOGPALETTE = PLOGPALETTE
         LPLOGPALETTE = PLOGPALETTE
@@ -1339,7 +1565,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         # Logical Font
         LF_FACESIZE = 32
 
-        class tagLOGFONTA(CStructure):
+        class LOGFONTA(CStructure):
             _fields_ = [
                 ("lfHeight", LONG),
                 ("lfWidth", LONG),
@@ -1370,12 +1596,11 @@ if cpreproc.pragma_once("_WINGDI_"):
             lfQuality: int
             lfPitchAndFamily: int
             lfFaceName: ICharArray
-        LOGFONTA = tagLOGFONTA
         PLOGFONTA = POINTER(LOGFONTA)
         NPLOGFONTA = PLOGFONTA
         LPLOGFONTA = PLOGFONTA
 
-        class tagLOGFONTW(CStructure):
+        class LOGFONTW(CStructure):
             _fields_ = [
                 ("lfHeight", LONG),
                 ("lfWidth", LONG),
@@ -1406,7 +1631,6 @@ if cpreproc.pragma_once("_WINGDI_"):
             lfQuality: int
             lfPitchAndFamily: int
             lfFaceName: IWideCharArray
-        LOGFONTW = tagLOGFONTW
         PLOGFONTW = POINTER(LOGFONTW)
         NPLOGFONTW = PLOGFONTW
         LPLOGFONTW = PLOGFONTW
@@ -1423,7 +1647,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         # REGION *** Desktop Family ***
 
         # Structure passed to FONTENUMPROC
-        class tagENUMLOGFONTA(CStructure):
+        class ENUMLOGFONTA(CStructure):
             _fields_ = [
                 ("elfLogFont", LOGFONTA),
                 ("elfFullName", CHAR * LF_FULLFACESIZE),
@@ -1432,11 +1656,10 @@ if cpreproc.pragma_once("_WINGDI_"):
             elfLogFont: LOGFONTA
             elfFullName: ICharArray
             elfStyle: ICharArray
-        ENUMLOGFONTA = tagENUMLOGFONTA
         LPENUMLOGFONTA = POINTER(ENUMLOGFONTA)
 
         # Structure passed to FONTENUMPROC
-        class tagENUMLOGFONTW(CStructure):
+        class ENUMLOGFONTW(CStructure):
             _fields_ = [
                 ("elfLogFont", LOGFONTW),
                 ("elfFullName", WCHAR * LF_FULLFACESIZE),
@@ -1445,13 +1668,12 @@ if cpreproc.pragma_once("_WINGDI_"):
             elfLogFont: LOGFONTA
             elfFullName: IWideCharArray
             elfStyle: IWideCharArray
-        ENUMLOGFONTW = tagENUMLOGFONTW
         LPENUMLOGFONTW = POINTER(ENUMLOGFONTW)
 
         ENUMLOGFONT = unicode(ENUMLOGFONTW, ENUMLOGFONTA)
         LPENUMLOGFONT = unicode(LPENUMLOGFONTW, LPENUMLOGFONTA)
 
-        class tagENUMLOGFONTEXA(CStructure):
+        class ENUMLOGFONTEXA(CStructure):
             _fields_ = [
                 ("elfLogFont", LOGFONTA),
                 ("elfFullName", CHAR * LF_FULLFACESIZE),
@@ -1462,10 +1684,9 @@ if cpreproc.pragma_once("_WINGDI_"):
             elfFullName: ICharArray
             elfStyle: ICharArray
             elfScript: ICharArray
-        ENUMLOGFONTEXA = tagENUMLOGFONTEXA
         LPENUMLOGFONTEXA = POINTER(ENUMLOGFONTEXA)
 
-        class tagENUMLOGFONTEXW(CStructure):
+        class ENUMLOGFONTEXW(CStructure):
             _fields_ = [
                 ("elfLogFont", LOGFONTW),
                 ("elfFullName", WCHAR * LF_FULLFACESIZE),
@@ -1476,7 +1697,6 @@ if cpreproc.pragma_once("_WINGDI_"):
             elfFullName: ICharArray
             elfStyle: ICharArray
             elfScript: IWideCharArray
-        ENUMLOGFONTEXW = tagENUMLOGFONTEXW
         LPENUMLOGFONTEXW = POINTER(ENUMLOGFONTEXW)
 
         ENUMLOGFONTEX = unicode(ENUMLOGFONTEXW, ENUMLOGFONTEXA)
@@ -1591,7 +1811,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family ***
 
-        class tagPANOSE(CStructure):
+        class PANOSE(CStructure):
             _fields_ = [
                 ("bFamilyType", BYTE),
                 ("bSerifStyle", BYTE),
@@ -1604,7 +1824,16 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("bMidline", BYTE),
                 ("bXHeight", BYTE)
             ]
-        PANOSE = tagPANOSE
+            bFamilyType: int
+            bSerifStyle: int
+            bWeight: int
+            bProportion: int
+            bContrast: int
+            bStrokeVariation: int
+            bArmStyle: int
+            bLetterForm: int
+            bMidline: int
+            bXHeight: int
         LPPANOSE = POINTER(PANOSE)
 
         PAN_ANY = 0 # Any
@@ -1706,7 +1935,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         # The extended logical font
         # An extension of the ENUMLOGFONT
 
-        class tagEXTLOGFONTA(CStructure):
+        class EXTLOGFONTA(CStructure):
             _fields_ = [
                 ("elfLogFont", LOGFONTA),
                 ("elfFullName", CHAR * LF_FULLFACESIZE),
@@ -1719,12 +1948,21 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("elfCulture", DWORD), # 0 for Latin                   
                 ("elfPanose", PANOSE)
             ]
-        EXTLOGFONTA = tagEXTLOGFONTA
+            elfLogFont: LOGFONTW
+            elfFullName: ICharArray
+            elfStyle: ICharArray
+            elfVersion: int
+            elfStyleSize: int
+            elfMatch: int
+            elfReserved: int
+            elfVendored: ICharArray
+            elfCulture: int
+            elfPanose: int
         PEXTLOGFONTA = POINTER(EXTLOGFONTA)
         NPEXTLOGFONTA = PEXTLOGFONTA
         LPEXTLOGFONTA = PEXTLOGFONTA
 
-        class tagEXTLOGFONTW(CStructure):
+        class EXTLOGFONTW(CStructure):
             _fields_ = [
                 ("elfLogFont", LOGFONTW),
                 ("elfFullName", WCHAR * LF_FULLFACESIZE),
@@ -1737,7 +1975,16 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("elfCulture", DWORD), # 0 for Latin                   
                 ("elfPanose", PANOSE)
             ]
-        EXTLOGFONTW = tagEXTLOGFONTW
+            elfLogFont: LOGFONTW
+            elfFullName: IWideCharArray
+            elfStyle: IWideCharArray
+            elfVersion: int
+            elfStyleSize: int
+            elfMatch: int
+            elfReserved: int
+            elfVendored: IWideCharArray
+            elfCulture: int
+            elfPanose: int
         PEXTLOGFONTW = POINTER(EXTLOGFONTW)
         NPEXTLOGFONTW = PEXTLOGFONTW
         LPEXTLOGFONTW = PEXTLOGFONTW
@@ -2048,6 +2295,7 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("s", _S_DODPSDPLDPWDSDCDDDPQ),
                 ("s2", _S2_DPDDDD)
             ]
+            _anonymous_ = ['s', 's2']
 
         class _U2_DDFDN(Union):
             _fields_ = [
@@ -2055,7 +2303,7 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("dmNup", DWORD)
             ]
 
-        class _devicemodeA(CStructure):
+        class DEVMODEA(CStructure):
             _fields_ = [
                 ("dmDeviceName", CHAR * CCHDEVICENAME),
                 ("dmSpecVersion", WORD),
@@ -2084,13 +2332,50 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("dmPanningWidth", DWORD),
                 ("dmPanningHeight", DWORD)
             ]
+            _anonymous_ = ['u', 'u2']
+            dmDeviceName: ICharArray
+            dmSpecVersion: int
+            dmDriverVersion: int
+            dmSize: int
+            dmDriverExtra: int
+            dmFields: int
+            dmOrientation: int
+            dmPaperSize: int
+            dmPaperLength: int
+            dmPaperWidth: int
+            dmScale: int
+            dmCopies: int
+            dmDefaultSource: int
+            dmPrintQuality: int
+            dmPosition: POINTL
+            dmDisplayOrientation: int
+            dmDisplayFixedOutput: int
+            dmColor: int
+            dmDuplex: int
+            dmYResolution: int
+            dmTTOption: int
+            dmCollate: int
+            dmFormName: ICharArray
+            dmLogPixels: int
+            dmBitsPerPel: int
+            dmPelsWidth: int
+            dmPelsHeight: int
+            dmDisplayFlags: int
+            dmNup: int
+            dmICMMethod: int
+            dmICMIntent: int
+            dmMediaType: int
+            dmDitherType: int
+            dmReserved1: int
+            dmReserved2: int
+            dmPanningWidth: int
+            dmPanningHeight: int
 
-        DEVMODEA = _devicemodeA
         PDEVMODEA = POINTER(DEVMODEA)
         NPDEVMODEA = PDEVMODEA
         LPDEVMODEA = PDEVMODEA
 
-        class _devicemodeW(CStructure):
+        class DEVMODEW(CStructure):
             _fields_ = [
                 ("dmDeviceName", WCHAR * CCHDEVICENAME),
                 ("dmSpecVersion", WORD),
@@ -2119,8 +2404,45 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("dmPanningWidth", DWORD),
                 ("dmPanningHeight", DWORD)
             ]
+            _anonymous_ = ['u', 'u2']
+            dmDeviceName: IWideCharArray
+            dmSpecVersion: int
+            dmDriverVersion: int
+            dmSize: int
+            dmDriverExtra: int
+            dmFields: int
+            dmOrientation: int
+            dmPaperSize: int
+            dmPaperLength: int
+            dmPaperWidth: int
+            dmScale: int
+            dmCopies: int
+            dmDefaultSource: int
+            dmPrintQuality: int
+            dmPosition: POINTL
+            dmDisplayOrientation: int
+            dmDisplayFixedOutput: int
+            dmColor: int
+            dmDuplex: int
+            dmYResolution: int
+            dmTTOption: int
+            dmCollate: int
+            dmFormName: IWideCharArray
+            dmLogPixels: int
+            dmBitsPerPel: int
+            dmPelsWidth: int
+            dmPelsHeight: int
+            dmDisplayFlags: int
+            dmNup: int
+            dmICMMethod: int
+            dmICMIntent: int
+            dmMediaType: int
+            dmDitherType: int
+            dmReserved1: int
+            dmReserved2: int
+            dmPanningWidth: int
+            dmPanningHeight: int
 
-        DEVMODEW = _devicemodeW
         PDEVMODEW = POINTER(DEVMODEW)
         NPDEVMODEW = PDEVMODEW
         LPDEVMODEW = PDEVMODEW
@@ -2380,7 +2702,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family ***
 
-        class _DISPLAY_DEVICEA(CStructure):
+        class DISPLAY_DEVICEA(CStructure):
             _fields_ = [
                 ("cb", DWORD),
                 ("DeviceName", CHAR * 32),
@@ -2389,11 +2711,16 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("DeviceID", CHAR * 128),
                 ("DeviceKey", CHAR * 128)
             ]
-        DISPLAY_DEVICEA = _DISPLAY_DEVICEA
+            cb: int
+            DeviceName: ICharArray
+            DeviceString: ICharArray
+            StateFlags: int
+            DeviceID: ICharArray
+            DeviceKey: ICharArray
         PDISPLAY_DEVICEA = POINTER(DISPLAY_DEVICEA)
         LPDISPLAY_DEVICEA = PDISPLAY_DEVICEA
 
-        class _DISPLAY_DEVICEW(CStructure):
+        class DISPLAY_DEVICEW(CStructure):
             _fields_ = [
                 ("cb", DWORD),
                 ("DeviceName", WCHAR * 32),
@@ -2402,7 +2729,12 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("DeviceID", WCHAR * 128),
                 ("DeviceKey", WCHAR * 128)
             ]
-        DISPLAY_DEVICEW = _DISPLAY_DEVICEW
+            cb: int
+            DeviceName: IWideCharArray
+            DeviceString: IWideCharArray
+            StateFlags: int
+            DeviceID: IWideCharArray
+            DeviceKey: IWideCharArray
         PDISPLAY_DEVICEW = POINTER(DISPLAY_DEVICEW)
         LPDISPLAY_DEVICEW = PDISPLAY_DEVICEW
 
@@ -2438,6 +2770,8 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("Numerator", UINT32),
                 ("Denominator", UINT32)
             ]
+            Numerator: int
+            Denominator: int
 
         DISPLAYCONFIG_VIDEO_OUTPUT_TECHNOLOGY = INT
         if True:
@@ -2476,6 +2810,8 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("cx", UINT32),
                 ("cy", UINT32)
             ]
+            cx: int
+            cy: int
 
         class _S_VSVSFDR(CStructure):
             _fields_ = [
@@ -2505,6 +2841,16 @@ if cpreproc.pragma_once("_WINGDI_"):
                 # Scan line ordering (e.g. progressive, interlaced).
                 ("scanLineOrdering", DISPLAYCONFIG_SCANLINE_ORDERING)
             ]
+            pixelRate: int
+            hSyncFreq: DISPLAYCONFIG_RATIONAL
+            vSyncFreq: DISPLAYCONFIG_RATIONAL
+            activeSize: DISPLAYCONFIG_2DREGION
+            totalSize: DISPLAYCONFIG_2DREGION
+            _anonymous_ = ['u']
+            videoStandard: int
+            vSyncFreqDivider: int
+            reserved: int
+            scanLineOrdering: int
 
         DISPLAYCONFIG_SCALING = INT
         if True:
@@ -2547,11 +2893,16 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("pixelFormat", DISPLAYCONFIG_PIXELFORMAT),
                 ("position", POINTL)
             ]
+            width: int
+            height: int
+            pixelFormat: int
+            position: POINTL
 
         class DISPLAYCONFIG_TARGET_MODE(CStructure):
             _fields_ = [
                 ("targetVideoSignalInfo", DISPLAYCONFIG_VIDEO_SIGNAL_INFO)
             ]
+            targetVideoSignalInfo: DISPLAYCONFIG_VIDEO_SIGNAL_INFO
 
         class DISPLAYCONFIG_DESKTOP_IMAGE_INFO(CStructure):
             _fields_ = [
@@ -2559,6 +2910,9 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("DesktopImageRegion", RECTL),
                 ("DesktopImageClip", RECTL)
             ]
+            PathSourceSize: POINTL
+            DesktopImageRegion: RECTL
+            DesktopImageClip: RECTL
 
         class _U_TMSMDII(Union):
             _fields_ = [
@@ -2574,6 +2928,13 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("adapterId", LUID),
                 ("u", _U_TMSMDII)
             ]
+            infoType: int
+            id: int
+            adapterId: int
+            _anonymous_ = ['u']
+            targetMode: DISPLAYCONFIG_TARGET_MODE
+            sourceMode: DISPLAYCONFIG_SOURCE_MODE
+            desktopImageInfo: DISPLAYCONFIG_DESKTOP_IMAGE_INFO
 
         DISPLAYCONFIG_PATH_MODE_IDX_INVALID = 0xffffffff
         DISPLAYCONFIG_PATH_TARGET_MODE_IDX_INVALID = 0xffff
@@ -2592,6 +2953,7 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("modeInfoIdx", UINT32),
                 ("s", _S_CGISMII)
             ]
+            _anonymous_ = ['s']
 
         class DISPLAYCONFIG_PATH_SOURCE_INFO(CStructure):
             _fields_ = [
@@ -2600,6 +2962,13 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("u", _U_MIIS),
                 ("statusFlags", UINT32)
             ]
+            adapterId: int
+            id: int
+            _anonymous_ = ['u']
+            modeInfoIdx: int
+            cloneGroupId: int
+            sourceModeInfoIdx: int
+            statusFlags: int
 
         #
         # Flags for source info structure (from OS to application through QDC)
@@ -2618,6 +2987,7 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("modeInfoIdx", UINT32),
                 ("s", _S_DMIITMII)
             ]
+            _anonymous_ = ['s']
 
         class DISPLAYCONFIG_PATH_TARGET_INFO(CStructure):
             _fields_ = [
@@ -2631,6 +3001,15 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("targetAvailable", BOOL),
                 ("statusFlags", UINT32)
             ]
+            adapterId: int
+            id: int
+            outputTechnology: int
+            rotation: int
+            scaling: int
+            refreshRate: DISPLAYCONFIG_RATIONAL
+            scanLineOrdering: int
+            targetAvailable: int
+            statusFlags: int
 
         #
         # Status flags for target info structure (from OS to application through QDC)
@@ -2647,6 +3026,8 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("sourceInfo", DISPLAYCONFIG_PATH_SOURCE_INFO),
                 ("flags", UINT32)
             ]
+            sourceInfo: DISPLAYCONFIG_PATH_SOURCE_INFO
+            flags: int
 
         #
         # Flags for path info structure (from OS to application through QDC)
@@ -2694,6 +3075,10 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("adapterId", LUID),
                 ("id", UINT32)
             ]
+            type: int
+            size: int
+            adapterId: int
+            id: int
 
         # REGION ***
 
@@ -2704,6 +3089,8 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("header", DISPLAYCONFIG_DEVICE_INFO_HEADER),
                 ("viewGdiDeviceName", WCHAR * CCHDEVICENAME)
             ]
+            header: DISPLAYCONFIG_DEVICE_INFO_HEADER
+            viewGdiDeviceName: IWideCharArray
 
         class _S_FNFEFNFEIVR(CStructure):
             _fields_ = [
@@ -2718,11 +3105,18 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("s", _S_FNFEFNFEIVR),
                 ("value", UINT32)
             ]
+            _anonymous_ = ['s']
 
         class DISPLAYCONFIG_TARGET_DEVICE_NAME_FLAGS(CStructure):
             _fields_ = [
                 ("u", _U_SV)
             ]
+            _anonymous_ = ['u']
+            value: int
+            friendlyNameFromEdid: int
+            friendlyNameForced: int
+            edidIdsValid: int
+            reserved: int
 
         class DISPLAYCONFIG_TARGET_DEVICE_NAME(CStructure):
             _fields_ = [
@@ -2735,6 +3129,14 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("monitorFriendlyDeviceName", WCHAR * 64),
                 ("monitorDevicePath", WCHAR * 128)
             ]
+            header: DISPLAYCONFIG_DEVICE_INFO_HEADER
+            flags: int
+            outputTechnology: int
+            edidManufactureId: int
+            edidProductCodeId: int
+            connectorInstance: int
+            monitorFriendlyDeviceName: IWideCharArray
+            monitorDevicePath: IWideCharArray
 
         class DISPLAYCONFIG_TARGET_PREFERRED_MODE(CStructure):
             _fields_ = [
@@ -2743,18 +3145,26 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("height", UINT32),
                 ("targetMode", DISPLAYCONFIG_TARGET_MODE)
             ]
+            header: DISPLAYCONFIG_DEVICE_INFO_HEADER
+            width: int
+            height: int
+            targetMode: DISPLAYCONFIG_TARGET_MODE
 
         class DISPLAYCONFIG_ADAPTER_NAME(CStructure):
             _fields_ = [
                 ("header", DISPLAYCONFIG_DEVICE_INFO_HEADER),
                 ("adapterDevicePath", WCHAR * 128)
             ]
+            header: DISPLAYCONFIG_DEVICE_INFO_HEADER
+            adapterDevicePath: IWideCharArray
 
         class DISPLAYCONFIG_TARGET_BASE_TYPE(CStructure):
             _fields_ = [
                 ("header", DISPLAYCONFIG_DEVICE_INFO_HEADER),
                 ("baseOutputTechnology", DISPLAYCONFIG_VIDEO_OUTPUT_TECHNOLOGY)
             ]
+            header: DISPLAYCONFIG_DEVICE_INFO_HEADER
+            baseOutputTechnology: int
 
         class _S_BPOR(CStructure):
             _fields_ = [
@@ -2767,12 +3177,18 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("s", _S_BPOR),
                 ("value", UINT32)
             ]
+            _anonymous_ = ['s']
 
         class DISPLAYCONFIG_SET_TARGET_PERSISTENCE(CStructure):
             _fields_ = [
                 ("header", DISPLAYCONFIG_DEVICE_INFO_HEADER),
                 ("u", _U_SV2)
             ]
+            header: DISPLAYCONFIG_DEVICE_INFO_HEADER
+            _anonymous_ = ['u']
+            value: int
+            bootPersistenceOn: int
+            reserved: int
 
         class _S_DMVRR(CStructure):
             _fields_ = [
@@ -2785,12 +3201,18 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("s", _S_DMVRR),
                 ("value", UINT32)
             ]
+            _anonymous_ = ['s']
 
         class DISPLAYCONFIG_SUPPORT_VIRTUAL_RESOLUTION(CStructure):
             _fields_ = [
                 ("header", DISPLAYCONFIG_DEVICE_INFO_HEADER),
                 ("u", _U_SV3)
             ]
+            _anonymous_ = ['u']
+            header: DISPLAYCONFIG_DEVICE_INFO_HEADER
+            value: int
+            disableMonitorVirtualResolution: int
+            reserved: int
 
         _DISPLAYCONFIG_COLOR_ENCODING = INT
         if True:
@@ -2816,15 +3238,25 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("s", _S_ACSACEWCEACFER),
                 ("value", UINT32)
             ]
+            _anonymous_ = ['s']
 
-        class _DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO(CStructure):
+        class DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO(CStructure):
             _fields_ = [
                 ("header", DISPLAYCONFIG_DEVICE_INFO_HEADER),
                 ("u", _U_SV4),
                 ("colorEncoding", DISPLAYCONFIG_COLOR_ENCODING),
                 ("bitsPerColorChannel", UINT32)
             ]
-        DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO = _DISPLAYCONFIG_GET_ADVANCED_COLOR_INFO
+            header: DISPLAYCONFIG_DEVICE_INFO_HEADER
+            _anonymous_ = ['u']
+            value: int
+            advancedColorSupported: int
+            advancedColorEnabled: int
+            wideColorEnforced: int
+            advancedColorForceDisabled: int
+            reserved: int
+            colorEncpding: int
+            bitsPerColorChannel: int
 
         class _S_EACR(CStructure):
             _fields_ = [
@@ -2837,15 +3269,20 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("s", _S_EACR),
                 ("value", UINT32)
             ]
+            _anonymous_ = ['s']
 
-        class _DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE(CStructure):
+        class DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE(CStructure):
             _fields_ = [
                 ("header", DISPLAYCONFIG_DEVICE_INFO_HEADER),
                 ("u", _U_SV5)
             ]
-        DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE = _DISPLAYCONFIG_SET_ADVANCED_COLOR_STATE
+            header: DISPLAYCONFIG_DEVICE_INFO_HEADER
+            _anonymous_ = ['u']
+            value: int
+            enableAdvancedColor: int
+            reserved: int
 
-        class _DISPLAYCONFIG_SDR_WHITE_LEVEL(CStructure):
+        class DISPLAYCONFIG_SDR_WHITE_LEVEL(CStructure):
             _fields_ = [
                 ("header", DISPLAYCONFIG_DEVICE_INFO_HEADER),
 
@@ -2855,7 +3292,8 @@ if cpreproc.pragma_once("_WINGDI_"):
                 # SDRWhiteLevel in nits = (SDRWhiteLevel / 1000 ) * 80
                 ("SDRWhiteLevel", ULONG)
             ]
-        DISPLAYCONFIG_SDR_WHITE_LEVEL = _DISPLAYCONFIG_SDR_WHITE_LEVEL
+            header: DISPLAYCONFIG_DEVICE_INFO_HEADER
+            SDRWhiteLevel: int
 
         # REGION ***
 
@@ -2899,7 +3337,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         #pragma region Application Family
         #if WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_SYSTEM)
 
-        class _RGNDATAHEADER(CStructure):
+        class RGNDATAHEADER(CStructure):
             _fields_ = [
                 ("dwSize", DWORD),
                 ("iType", DWORD),
@@ -2907,15 +3345,20 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("nRgnSize", DWORD),
                 ("rcBound", RECT)
             ]
-        RGNDATAHEADER = _RGNDATAHEADER
+            dwSize: int
+            iType: int
+            nCount: int
+            nRgnSize: int
+            rcBound: RECT
         PRGNDATAHEADER = POINTER(RGNDATAHEADER)
 
-        class _RGNDATA(CStructure):
+        class RGNDATA(CStructure):
             _fields_ = [
-                ("rdh", RGNDATAHEADER),
-                ("Buffer", CHAR * 1)
+                ("rdh", RGNDATAHEADER)
             ]
-        RGNDATA = _RGNDATA
+            rdh: RGNDATAHEADER
+            Buffer: ICharArray
+        array_after_structure(RGNDATA, 'Buffer', CHAR)
         PRGNDATA = POINTER(RGNDATA)
         NPRGNDATA = PRGNDATA
         LPRGNDATA = PRGNDATA
@@ -2928,24 +3371,28 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Desktop Family ***
 
-        class _ABC(CStructure):
+        class ABC(CStructure):
             _fields_ = [
                 ("abcA", INT),
                 ("abcB", UINT),
                 ("abcC", INT)
             ]
-        ABC = _ABC
+            abcA: int
+            abcB: int
+            abcC: int
         PABC = POINTER(ABC)
         NPABC = PABC
         LPABC = PABC
 
-        class _ABCFLOAT(CStructure):
+        class ABCFLOAT(CStructure):
             _fields_ = [
                 ("abcfA", FLOAT),
                 ("abcfB", FLOAT),
                 ("abcfC", FLOAT)
             ]
-        ABCFLOAT = _ABCFLOAT
+            abcfA: float
+            abcfB: float
+            abcfC: float
         PABCFLOAT = POINTER(ABCFLOAT)
         NPABCFLOAT = PABCFLOAT
         LPABCFLOAT = PABCFLOAT
@@ -2956,7 +3403,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
             # REGION *** Desktop Family ***
 
-            class _OUTLINETEXTMETRICA(CStructure):
+            class OUTLINETEXTMETRICA(CStructure):
                 _fields_ = [
                     ("otmSize", UINT),
                     ("otmTextMetrics", TEXTMETRICA),
@@ -2991,13 +3438,42 @@ if cpreproc.pragma_once("_WINGDI_"):
                     ("otmpStyleName", PSTR),
                     ("otmpFullName", PSTR)
                 ]
-            OUTLINETEXTMETRICA = _OUTLINETEXTMETRICA
+                otmSize: int
+                otmTextMetrics: TEXTMETRICA
+                otmFiller: int
+                otmPanoseNumber: PANOSE
+                otmfsSelection: int
+                ofmfsType: int
+                otmsCharSlopeRise: int
+                ormsCharSlopeRun: int
+                otmItalicAngle: int
+                otmEMSquare: int
+                otmAscent: int
+                otmDescent: int
+                otmLineGap: int
+                otmsCapEmHeight: int
+                otmsXHeight: int
+                otmrcFontBox: RECT
+                otmMacAscent: int
+                otmMacDescent: int
+                otmusMinimumPPEM: int
+                otmptSubscriptSize: POINT
+                otmptSubscriptOffset: POINT
+                otmptSuperscriptSize: POINT
+                otmptSuperscriptOffset: POINT
+                otmsStrikeoutSize: int
+                otmsStrikeoutPosition: int
+                otmsUnderscoreSize: int
+                otmsUnderscorePosition: int
+                otmpFamilyName: PSTR
+                otmpFaceName: PSTR
+                otmpStyleName: PSTR
+                otmpFullName: PSTR
             POUTLINETEXTMETRICA = POINTER(OUTLINETEXTMETRICA)
             NPOUTLINETEXTMETRICA = POUTLINETEXTMETRICA
             LPOUTLINETEXTMETRICA = POUTLINETEXTMETRICA
 
-
-            class _OUTLINETEXTMETRICW(CStructure):
+            class OUTLINETEXTMETRICW(CStructure):
                 _fields_ = [
                     ("otmSize", UINT),
                     ("otmTextMetrics", TEXTMETRICW),
@@ -3032,7 +3508,37 @@ if cpreproc.pragma_once("_WINGDI_"):
                     ("otmpStyleName", PSTR),
                     ("otmpFullName", PSTR)
                 ]
-            OUTLINETEXTMETRICW = _OUTLINETEXTMETRICW
+                otmSize: int
+                otmTextMetrics: TEXTMETRICW
+                otmFiller: int
+                otmPanoseNumber: PANOSE
+                otmfsSelection: int
+                ofmfsType: int
+                otmsCharSlopeRise: int
+                ormsCharSlopeRun: int
+                otmItalicAngle: int
+                otmEMSquare: int
+                otmAscent: int
+                otmDescent: int
+                otmLineGap: int
+                otmsCapEmHeight: int
+                otmsXHeight: int
+                otmrcFontBox: RECT
+                otmMacAscent: int
+                otmMacDescent: int
+                otmusMinimumPPEM: int
+                otmptSubscriptSize: POINT
+                otmptSubscriptOffset: POINT
+                otmptSuperscriptSize: POINT
+                otmptSuperscriptOffset: POINT
+                otmsStrikeoutSize: int
+                otmsStrikeoutPosition: int
+                otmsUnderscoreSize: int
+                otmsUnderscorePosition: int
+                otmpFamilyName: PSTR
+                otmpFaceName: PSTR
+                otmpStyleName: PSTR
+                otmpFullName: PSTR
             POUTLINETEXTMETRICW = POINTER(OUTLINETEXTMETRICW)
             NPOUTLINETEXTMETRICW = POUTLINETEXTMETRICW
             LPOUTLINETEXTMETRICW = POUTLINETEXTMETRICW
@@ -3047,7 +3553,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family ***
 
-        class tagPOLYTEXTA(CStructure):
+        class POLYTEXTA(CStructure):
             _fields_ = [
                 ("x", INT),
                 ("y", INT),
@@ -3057,12 +3563,18 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("rcl", RECT),
                 ("pdx", PINT)
             ]
-        POLYTEXTA = tagPOLYTEXTA
+            x: int
+            y: int
+            n: int
+            lpstr: LPWSTR
+            uiFlags: int
+            rcl: RECT
+            pdx: IPointer[INT]
         PPOLYTEXTA = POINTER(POLYTEXTA)
         NPPOLYTEXTA = PPOLYTEXTA
         LPPOLYTEXTA = PPOLYTEXTA
 
-        class tagPOLYTEXTW(CStructure):
+        class POLYTEXTW(CStructure):
             _fields_ = [
                 ("x", INT),
                 ("y", INT),
@@ -3072,7 +3584,13 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("rcl", RECT),
                 ("pdx", PINT)
             ]
-        POLYTEXTW = tagPOLYTEXTW
+            x: int
+            y: int
+            n: int
+            lpstr: LPCWSTR
+            uiFlags: int
+            rcl: RECT
+            pdx: IPointer[INT]
         PPOLYTEXTW = POINTER(POLYTEXTW)
         NPPOLYTEXTW = PPOLYTEXTW
         LPPOLYTEXTW = PPOLYTEXTW
@@ -3086,25 +3604,29 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Desktop Family ***
 
-        class _FIXED(CStructure):
+        class FIXED(CStructure):
             _fields_ = [
                 ("value", SHORT),
                 ("fract", WORD)
             ]
-        FIXED = _FIXED
+            value: int
+            fract: int
 
-        class _MAT2(CStructure):
+        class MAT2(CStructure):
             _fields_ = [
                 ("eM11", FIXED),
                 ("eM12", FIXED),
                 ("eM21", FIXED),
                 ("eM22", FIXED)
             ]
-        MAT2 = _MAT2
+            eM11: FIXED
+            eM12: FIXED
+            eM21: FIXED
+            eM22: FIXED
         LPMAT2 = POINTER(MAT2)
         PMAT2 = LPMAT2
 
-        class _GLYPHMETRICS(CStructure):
+        class GLYPHMETRICS(CStructure):
             _fields_ = [
                 ("gmBlackBoxX", UINT),
                 ("gmBlackBoxY", UINT),
@@ -3112,7 +3634,11 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("gmCellIncX", SHORT),
                 ("gmCellIncY", SHORT)
             ]
-        GLYPHMETRICS = _GLYPHMETRICS
+            gmBlackBoxX: int
+            gmBlackBoxY: int
+            gmptGlyphOrigin: POINT
+            gmCellIncX: int
+            gmCellIncY: int
         LPGLYPHMETRICS = POINTER(GLYPHMETRICS)
 
         # REGION ***
@@ -3134,30 +3660,35 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Desktop Family ***
 
-        class tagPOINTFX(CStructure):
+        class POINTFX(CStructure):
             _fields_ = [
                 ("x", FIXED),
                 ("y", FIXED)
             ]
-        POINTFX = tagPOINTFX
+            x: FIXED
+            y: FIXED
         LPPOINTFX = POINTER(POINTFX)
 
-        class tagTTPOLYCURVE(CStructure):
+        class TTPOLYCURVE(CStructure):
             _fields_ = [
                 ("wType", WORD),
-                ("cpfx", WORD),
-                ("apfx", POINTFX * 1)
+                ("cpfx", WORD)
             ]
-        TTPOLYCURVE = tagTTPOLYCURVE
+            wType: int
+            cpfx: int
+            apfx: IPointer[POINTFX]
+        array_after_structure(TTPOLYCURVE, 'apfx', POINTFX)
         LPTTPOLYCURVE = POINTER(TTPOLYCURVE)
 
-        class tagTTPOLYGONHEADER(CStructure):
+        class TTPOLYGONHEADER(CStructure):
             _fields_ = [
                 ("cb", DWORD),
                 ("dwType", DWORD),
                 ("pfxStart", POINTFX)
             ]
-        TTPOLYGONHEADER = tagTTPOLYGONHEADER
+            cb: int
+            dwType: int
+            pfxStart: POINTFX
         LPTTPOLYGONHEADER = POINTER(TTPOLYGONHEADER)
 
         # REGION ***
@@ -3202,7 +3733,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Desktop Family ***
 
-        class tagGCP_RESULTSA(CStructure):
+        class GCP_RESULTSA(CStructure):
             _fields_ = [
                 ("lStructSize", DWORD),
                 ("lpOutString", LPSTR),
@@ -3214,10 +3745,18 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("nGlyphs", UINT),
                 ("nMaxFit", INT)
             ]
-        GCP_RESULTSA = tagGCP_RESULTSA
+            lStructSize: int
+            lpOutString: LPSTR
+            lpOrder: IPointer[UINT]
+            lpDx: IPointer[INT]
+            lpCaretPos: IPointer[INT]
+            lpClass: LPSTR
+            lpGlyphs: LPWSTR
+            nGlyphs: int
+            nMaxFit: int
         LPGCP_RESULTSA = POINTER(GCP_RESULTSA)
 
-        class tagGCP_RESULTSW(CStructure):
+        class GCP_RESULTSW(CStructure):
             _fields_ = [
                 ("lStructSize", DWORD),
                 ("lpOutString", LPWSTR),
@@ -3229,7 +3768,15 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("nGlyphs", UINT),
                 ("nMaxFit", INT)
             ]
-        GCP_RESULTSW = tagGCP_RESULTSW
+            lStructSize: int
+            lpOutString: LPWSTR
+            lpOrder: IPointer[UINT]
+            lpDx: IPointer[INT]
+            lpCaretPos: IPointer[INT]
+            lpClass: LPSTR
+            lpGlyphs: LPWSTR
+            nGlyphs: int
+            nMaxFit: int
         LPGCP_RESULTSW = POINTER(GCP_RESULTSW)
 
         GCP_RESULTS = unicode(GCP_RESULTSW, GCP_RESULTSA)
@@ -3239,13 +3786,15 @@ if cpreproc.pragma_once("_WINGDI_"):
                                
         # REGION *** Desktop Family ***
 
-        class _RASTERIZER_STATUS(CStructure):
+        class RASTERIZER_STATUS(CStructure):
             _fields_ = [
                 ("nSize", SHORT),
                 ("wFlags", SHORT),
                 ("nLanguageID", SHORT)
             ]
-        RASTERIZER_STATUS = _RASTERIZER_STATUS
+            nSize: int
+            wFlags: int
+            nLanguageID: int
         LPRASTERIZER_STATUS = POINTER(RASTERIZER_STATUS)
 
         # REGION ***
@@ -3257,7 +3806,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         # REGION *** Application Family ***
 
         # Pixel format descriptor
-        class tagPIXELFORMATDESCRIPTOR(CStructure):
+        class PIXELFORMATDESCRIPTOR(CStructure):
             _fields_ = [
                 ("nSize", WORD),
                 ("nVersion", WORD),
@@ -3314,7 +3863,6 @@ if cpreproc.pragma_once("_WINGDI_"):
             dwFlags: int
             nSize: int
             
-        PIXELFORMATDESCRIPTOR = tagPIXELFORMATDESCRIPTOR
         PPIXELFORMATDESCRIPTOR = POINTER(PIXELFORMATDESCRIPTOR)
         LPPIXELFORMATDESCRIPTOR = PPIXELFORMATDESCRIPTOR
 
@@ -3633,25 +4181,29 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Desktop Family ***
 
-        class tagWCRANGE(CStructure):
+        class WCRANGE(CStructure):
             _fields_ = [
                 ("wcLow", WCHAR),
                 ("cGlyphs", USHORT)
             ]
-        WCRANGE = tagWCRANGE
+            wcLow: str
+            cGlyphs: int
         PWCRANGE = POINTER(WCRANGE)
         LPWCRANGE = PWCRANGE
 
 
-        class tagGLYPHSET(CStructure):
+        class GLYPHSET(CStructure):
             _fields_ = [
                 ("cbThis", DWORD),
                 ("flAccel", DWORD),
                 ("cGlyphsSupported", DWORD),
                 ("cRanges", DWORD),
-                ("ranges", WCRANGE * 1)
             ]
-        GLYPHSET = tagGLYPHSET
+            cbThis: int
+            flAccel: int
+            cGlyphsSupported: int
+            cRanges: int
+        array_after_structure(GLYPHSET, 'ranges', WCRANGE)
         PGLYPHSET = POINTER(GLYPHSET)
         LPGLYPHSET = PGLYPHSET
 
@@ -3679,13 +4231,15 @@ if cpreproc.pragma_once("_WINGDI_"):
         STAMP_CFF2 = (0x8000000 + ord('c') + (ord('v') << 8))
         MM_MAX_NUMAXES = 16
 
-        class tagDESIGNVECTOR(CStructure):
+        class DESIGNVECTOR(CStructure):
             _fields_ = [
                 ("dvReserved", DWORD),
                 ("dvNumAxes", DWORD),
                 ("dvValues", LONG * MM_MAX_NUMAXES)
             ]
-        DESIGNVECTOR = tagDESIGNVECTOR
+            dvReserved: int
+            dvNumAxes: int
+            dvValues: IArray[int]
         PDESIGNVECTOR = POINTER(DESIGNVECTOR)
         LPDESIGNVECTOR = PDESIGNVECTOR
 
@@ -3706,23 +4260,27 @@ if cpreproc.pragma_once("_WINGDI_"):
         # MM_MAX_NUMAXES only detemines the maximal size allowed
         MM_MAX_AXES_NAMELEN = 16
 
-        class tagAXISINFOA(CStructure):
+        class AXISINFOA(CStructure):
             _fields_ = [
                 ("axMinValue", LONG),
                 ("axMaxValue", LONG),
                 ("axAxisName", CHAR * MM_MAX_AXES_NAMELEN)
             ]
-        AXISINFOA = tagAXISINFOA
+            axMinValue: int
+            axMaxValue: int
+            axAxisName: ICharArray
         PAXISINFOA = POINTER(AXISINFOA)
         LPAXISINFOA = PAXISINFOA
 
-        class tagAXISINFOW(CStructure):
+        class AXISINFOW(CStructure):
             _fields_ = [
                 ("axMinValue", LONG),
                 ("axMaxValue", LONG),
                 ("axAxisName", WCHAR * MM_MAX_AXES_NAMELEN)
             ]
-        AXISINFOW = tagAXISINFOW
+            axMinValue: int
+            axMaxValue: int
+            axAxisName: IWideCharArray
         PAXISINFOW = POINTER(AXISINFOW)
         LPAXISINFOW = PAXISINFOW
 
@@ -3730,23 +4288,27 @@ if cpreproc.pragma_once("_WINGDI_"):
         PAXISINFO = unicode(PAXISINFOW, PAXISINFOA)
         LPAXISINFO = unicode(LPAXISINFOW, LPAXISINFOA)
 
-        class tagAXESLISTA(CStructure):
+        class AXESLISTA(CStructure):
             _fields_ = [
                 ("axlReserved", DWORD),
                 ("axlNumAxes", DWORD),
                 ("axlAxisInfo", AXISINFOA * MM_MAX_NUMAXES)
             ]
-        AXESLISTA = tagAXESLISTA
+            axlReserved: int
+            axlNumAxes: int
+            axlAxisInfo: IArray[AXISINFOA]
         PAXESLISTA = POINTER(AXESLISTA)
         LPAXESLISTA = PAXESLISTA
 
-        class tagAXESLISTW(CStructure):
+        class AXESLISTW(CStructure):
             _fields_ = [
                 ("axlReserved", DWORD),
                 ("axlNumAxes", DWORD),
                 ("axlAxisInfo", AXISINFOW * MM_MAX_NUMAXES)
             ]
-        AXESLISTW = tagAXESLISTW
+            axlReserved: int
+            axlNumAxes: int
+            axlAxisInfo: IArray[AXISINFOW]
         PAXESLISTW = POINTER(AXESLISTW)
         LPAXESLISTW = PAXESLISTW
 
@@ -3758,21 +4320,23 @@ if cpreproc.pragma_once("_WINGDI_"):
         # determined by axlNumAxes,
         # MM_MAX_NUMAXES only detemines the maximal size allowed
 
-        class tagENUMLOGFONTEXDVA(CStructure):
+        class ENUMLOGFONTEXDVA(CStructure):
             _fields_ = [
                 ("elfEnumLogfontEx", ENUMLOGFONTEXA),
                 ("elfDesignVector", DESIGNVECTOR)
             ]
-        ENUMLOGFONTEXDVA = tagENUMLOGFONTEXDVA
+            elfEnumLogfontEx: ENUMLOGFONTEXA
+            elfDesignVector: DESIGNVECTOR
         PENUMLOGFONTEXDVA = POINTER(ENUMLOGFONTEXDVA)
         LPENUMLOGFONTEXDVA = PENUMLOGFONTEXDVA
 
-        class tagENUMLOGFONTEXDVW(CStructure):
+        class ENUMLOGFONTEXDVW(CStructure):
             _fields_ = [
                 ("elfEnumLogfontEx", ENUMLOGFONTEXW),
                 ("elfDesignVector", DESIGNVECTOR)
             ]
-        ENUMLOGFONTEXDVW = tagENUMLOGFONTEXDVW
+            elfEnumLogfontEx: ENUMLOGFONTEXW
+            elfDesignVector: DESIGNVECTOR
         PENUMLOGFONTEXDVW = POINTER(ENUMLOGFONTEXDVW)
         LPENUMLOGFONTEXDVW = PENUMLOGFONTEXDVW
 
@@ -3784,21 +4348,23 @@ if cpreproc.pragma_once("_WINGDI_"):
         CreateFontIndirectExW = declare(gdi32.CreateFontIndirectExW, HFONT, PENUMLOGFONTEXDVW)
 
         if cpreproc.ifndef("NOTEXTMETRIC"):
-            class tagENUMTEXTMETRICA(CStructure):
+            class ENUMTEXTMETRICA(CStructure):
                 _fields_ = [
                     ("etmNewTextMetricEx", NEWTEXTMETRICEXA),
                     ("etmAxesList", AXESLISTA)
                 ]
-            ENUMTEXTMETRICA = tagENUMTEXTMETRICA
+                etmNewTextMetricEx: NEWTEXTMETRICEXA
+                etmAxesList: AXESLISTA
             PENUMTEXTMETRICA = POINTER(ENUMTEXTMETRICA)
             LPENUMTEXTMETRICA = PENUMTEXTMETRICA
 
-            class tagENUMTEXTMETRICW(CStructure):
+            class ENUMTEXTMETRICW(CStructure):
                 _fields_ = [
                     ("etmNewTextMetricEx", NEWTEXTMETRICEXW),
                     ("etmAxesList", AXESLISTW)
                 ]
-            ENUMTEXTMETRICW = tagENUMTEXTMETRICW
+                etmNewTextMetricEx: NEWTEXTMETRICEXW
+                etmAxesList: AXESLISTW
             PENUMTEXTMETRICW = POINTER(ENUMTEXTMETRICW)
             LPENUMTEXTMETRICW = PENUMTEXTMETRICW
 
@@ -3920,7 +4486,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         COLOR16 = USHORT
 
-        class _TRIVERTEX(CStructure):
+        class TRIVERTEX(CStructure):
             _fields_ = [
                 ("x", LONG),
                 ("y", LONG),
@@ -3936,8 +4502,7 @@ if cpreproc.pragma_once("_WINGDI_"):
             Green: int
             Blue: int
             Alpha: int
-            
-        TRIVERTEX = _TRIVERTEX
+        
         PTRIVERTEX = POINTER(TRIVERTEX)
         LPTRIVERTEX = PTRIVERTEX
 
@@ -3945,7 +4510,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Desktop Family ***
 
-        class _GRADIENT_TRIANGLE(CStructure):
+        class GRADIENT_TRIANGLE(CStructure):
             _fields_ = [
                 ("Vertex1", ULONG),
                 ("Vertex2", ULONG),
@@ -3956,18 +4521,16 @@ if cpreproc.pragma_once("_WINGDI_"):
             Vertex2: int
             Vertex3: int
             
-        GRADIENT_TRIANGLE = _GRADIENT_TRIANGLE
         PGRADIENT_TRIANGLE = POINTER(GRADIENT_TRIANGLE)
         LPGRADIENT_TRIANGLE = PGRADIENT_TRIANGLE
 
-        class _GRADIENT_RECT(CStructure):
+        class GRADIENT_RECT(CStructure):
             _fields_ = [
                 ("UpperLeft", ULONG),
                 ("LowerRight", ULONG)
             ]
             UpperLeft: int
             LowerRight: int
-        GRADIENT_RECT = _GRADIENT_RECT
         PGRADIENT_RECT = POINTER(GRADIENT_RECT)
         LPGRADIENT_RECT = PGRADIENT_RECT
 
@@ -3975,7 +4538,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         # REGION *** Application Family ***
 
-        class _BLENDFUNCTION(CStructure):
+        class BLENDFUNCTION(CStructure):
             _fields_ = [
                 ("BlendOp", BYTE),
                 ("BlendFlags", BYTE),
@@ -3986,7 +4549,6 @@ if cpreproc.pragma_once("_WINGDI_"):
             BlendFlags: int
             SourceConstantAlpha: int
             AlphaFormat: int
-        BLENDFUNCTION = _BLENDFUNCTION
         PBLENDFUNCTION = POINTER(BLENDFUNCTION)
 
         # REGION ***
@@ -4063,7 +4625,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         GetTextMetrics = unicode(GetTextMetricsW, GetTextMetricsA)
         # !UNICODE
         # new GDI
-        class tagDIBSECTION(CStructure):
+        class DIBSECTION(CStructure):
             _fields_ = [
                 ("dsBm", BITMAP),
                 ("dsBmih", BITMAPINFOHEADER),
@@ -4072,9 +4634,8 @@ if cpreproc.pragma_once("_WINGDI_"):
             ]
             dsBm: BITMAP
             dsBmih: BITMAPINFOHEADER
-            dsBitFields: IArrayFixedSize[DWORD, 3]
+            dsBitFields: IArray[int]
             dsOffset: int
-        DIBSECTION = tagDIBSECTION
         LPDIBSECTION = POINTER(DIBSECTION)
         PDIBSECTION = LPDIBSECTION
 
@@ -4116,7 +4677,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         COLOR_ADJ_MIN = -100
         COLOR_ADJ_MAX = 100
 
-        class  tagCOLORADJUSTMENT(CStructure):
+        class COLORADJUSTMENT(CStructure):
             _fields_ = [
                 ("caSize", WORD),
                 ("caFlags", WORD),
@@ -4143,7 +4704,6 @@ if cpreproc.pragma_once("_WINGDI_"):
             caContrast: int
             caFlags: int
             caSize: int
-        COLORADJUSTMENT = tagCOLORADJUSTMENT
         PCOLORADJUSTMENT = POINTER(COLORADJUSTMENT)
         LPCOLORADJUSTMENT = PCOLORADJUSTMENT
 
@@ -4153,7 +4713,7 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         ABORTPROC = CALLBACK(BOOL, HDC, INT)
 
-        class _DOCINFOA(CStructure):
+        class DOCINFOA(CStructure):
             _fields_ = [
                 ("cbSize", INT),
                 ("lpszDocName", LPCSTR),
@@ -4166,11 +4726,10 @@ if cpreproc.pragma_once("_WINGDI_"):
             lpszOutput: LPSTR
             cbSize: int
             fwType: int
-        DOCINFOA = _DOCINFOA
         PDOCINFOA = POINTER(DOCINFOA)
         LPDOCINFOA = PDOCINFOA
 
-        class _DOCINFOW(CStructure):
+        class DOCINFOW(CStructure):
             _fields_ = [
                 ("cbSize", INT),
                 ("lpszDocName", LPCWSTR),
@@ -4183,7 +4742,6 @@ if cpreproc.pragma_once("_WINGDI_"):
             lpszOutput: LPWSTR
             cbSize: int
             fwType: int
-        DOCINFOW = _DOCINFOW
         PDOCINFOW = POINTER(DOCINFOW)
         LPDOCINFOW = PDOCINFOW
 
@@ -4262,7 +4820,7 @@ if cpreproc.pragma_once("_WINGDI_"):
         # !UNICODE
         FONTMAPPER_MAX = 10
 
-        class tagKERNINGPAIR(CStructure):
+        class KERNINGPAIR(CStructure):
             _fields_ = [
                 ("wFirst", WORD),
                 ("wSecond", WORD),
@@ -4271,7 +4829,6 @@ if cpreproc.pragma_once("_WINGDI_"):
             wFirst: int
             wSecond: int
             iKernAmount: int
-        KERNINGPAIR = tagKERNINGPAIR
         LPKERNINGPAIR = POINTER(KERNINGPAIR)
 
         GetKerningPairsA = declare(gdi32.GetKerningPairsA, DWORD, HDC, DWORD, LPKERNINGPAIR)
@@ -4462,7 +5019,7 @@ if cpreproc.pragma_once("_WINGDI_"):
             # Base record type for the enhanced metafile.
 
             # RECORD TYPES
-            # TODO: REALIZE STRUCTURES
+            # TODO: IMPLEMENT STRUCTURES
 
             # WINVER >= 0x0500
             GDICOMMENT_IDENTIFIER = 0x43494447

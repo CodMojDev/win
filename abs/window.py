@@ -127,13 +127,12 @@ class Menu(Handle):
         DestroyMenu(self)
         self._closed = True
     
-    def __init__(self, **kwargs):
-        if 'headless' not in kwargs:
-            super().__init__(CreateMenu())
-            if not self.value:
-                raise WinException()
-        else:
-            super().__init__()
+    @classmethod
+    def create(cls):
+        menu = cls(CreateMenu())
+        if not menu.value:
+            raise WinException()
+        return menu
     
     def append(self, item: int, lp, flags: int):
         """
@@ -155,16 +154,36 @@ class Menu(Handle):
         if not ModifyMenuW(self, position, flags, PtrUtil.get_address(item), i_cast(lp, LPWSTR)):
             raise WinException()
 
+    def get_state(self, identifier: int, flags: int = MF_BYCOMMAND) -> int:
+        """
+        Get state of the menu item.
+        """
+        state = GetMenuState(self, identifier, flags)
+        if state == -1: raise WinException()
+        return state
+    
+    def check(self, identifier: int, check: bool = False, flags: int = MF_BYCOMMAND) -> int:
+        """
+        Check or uncheck the menu item.
+        """
+        if check: extra = MF_CHECKED
+        else: extra = MF_UNCHECKED
+        result = CheckMenuItem(self, identifier, flags | extra)
+        if result == MAXDWORD:
+            raise WinException()
+        return result
+
 class PopupMenu(Menu):
     """
     Popup menu class.
     """
     
-    def __init__(self):
-        super().__init__()
-        self.value = CreatePopupMenu()
-        if not self.value:
+    @classmethod
+    def create(cls):
+        menu = cls(CreatePopupMenu())
+        if not menu.value:
             raise WinException()
+        return menu
         
     def track(self, x: int, y: int, hWnd: int | HANDLE, flags: int=0):
         """
@@ -405,15 +424,17 @@ class Window(HWND, Abs.Object):
         self.value = CreateWindowExW(self._extended_style, self.class_name, window_name, self._style, 
                                      x, y, width, height, parent, identifier, GetModuleHandle(NULL), NULL)
         if not self.value:
-            raise WinException()
+            error = GetLastError()
+            if error != 0: raise WinException(error)
+            else: return
         
         Window._foreign_cache[self.value] = self
     
-    def on_paint(self, dc: PaintDC):
-        pass
+    def on_paint(self, dc: PaintDC) -> bool:
+        return False
     
-    def on_size(self, flags: int, width: int, height: int):
-        pass
+    def on_size(self, flags: int, width: int, height: int) -> bool:
+        return False
     
     def on_erase_background(self, dc: DC) -> bool:
         return False
@@ -445,8 +466,8 @@ class Window(HWND, Abs.Object):
             return 0
         elif msg == WM_PAINT: # window paint request
             with PaintDC(self) as dc: # begin the paint and return dc into handler
-                self.on_paint(dc) # execute handler
-            return 0
+                if self.on_paint(dc): # execute handler
+                    return 0
         elif msg == WM_LBUTTONDOWN: # left mouse button down
             self.on_left_button_down.execute(wParam, LOWORD(lParam), HIWORD(lParam))
             return 0
@@ -476,8 +497,8 @@ class Window(HWND, Abs.Object):
             self.on_command.execute(LOWORD(wParam), HIWORD(wParam), lParam)
             return 0
         elif msg == WM_SIZE: # window sized
-            self.on_size(wParam, LOWORD(lParam), HIWORD(lParam))
-            return 0
+            if self.on_size(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0
         elif msg == WM_KEYDOWN: # key down
             wVK = LOWORD(wParam) # virtual key code
             fKeyFlags = HIWORD(lParam) # key flags
@@ -516,7 +537,7 @@ class Window(HWND, Abs.Object):
             dc = DC.foreign_owner(wParam) # pack the hDC into DC wrapper
             if self.on_erase_background(dc): # the background was erased
                 return TRUE
-            return FALSE # the background wasn't erased
+            return self.default_window_proc(hwnd, msg, wParam, lParam) # the background wasn't erased
         elif msg == WM_SETFONT: # set window font request
             self.on_set_font.execute(Font.foreign_owner(wParam), LOWORD(lParam) == TRUE)
             return 0
@@ -579,7 +600,7 @@ class Window(HWND, Abs.Object):
                 with DC.get(self) as dc:
                     result = self.on_nc_paint(dc, None)
             else:
-                with DC.get(self, region, DCX_WINDOW | DCX_INTERSECTRGN | DCX_CACHE) as dc: # call GetDCEx
+                with DC.get(self) as dc: # call GetDCEx
                     result = self.on_nc_paint(dc, region) # call handler
             # if sentinel value matches, we are falling back to default procedure
             if result is not self:

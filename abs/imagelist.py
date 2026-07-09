@@ -5,12 +5,13 @@ class ImageList(Handle):
     Class, representing Win32 Image list object (comctl32).
     """
     
-    def __init__(self, width: int, height: int, initial: int, 
-                 flags: int = ILC_COLOR32 | ILC_MASK, grow: int = 0):
-        super().__init__()
-        self.value = ImageList_Create(width, height, flags, initial, grow)
-        if not self.value:
+    @classmethod
+    def create(cls, width: int, height: int, initial: int, 
+               flags: int = ILC_COLOR32 | ILC_MASK, grow: int = 0):
+        image_list = cls(ImageList_Create(width, height, flags, initial, grow))
+        if not image_list.value:
             raise WinException()
+        return image_list
     
     def close(self):
         ImageList_Destroy(self)
@@ -23,7 +24,7 @@ class ImageList(Handle):
         """
     
     @overload
-    def add(self, hBitmap: int | HANDLE, hBmMask: int | HANDLE = NULL) -> int: ...
+    def add(self, hBitmap: int | HANDLE, hBmMask: int | HANDLE = NULL) -> int:
         """
         Add bitmap to image list.
         """
@@ -33,6 +34,11 @@ class ImageList(Handle):
             result = ImageList_AddIcon(self, var)
         else:
             result = ImageList_Add(self, var, hBmMask)
+        if result == -1: raise WinException()
+        return result
+    
+    def add_masked(self, bitmap: int | HANDLE, color: Color.IColor | int) -> int:
+        result = ImageList_AddMasked(self, bitmap, int(color))
         if result == -1: raise WinException()
         return result
     

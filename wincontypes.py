@@ -153,9 +153,9 @@ if cpreproc.pragma_once("_WINCONTYPES_"):
         _fields_ = [
             ("EventType", WORD),
             ("Event", _Event)
-            Event: _Event
-            EventType: int
         ]
+        Event: _Event
+        EventType: int
     PINPUT_RECORD = POINTER(INPUT_RECORD)
 
     #

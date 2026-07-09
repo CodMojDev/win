@@ -18,6 +18,9 @@ class FileStream(CComObject, IStream, ILockBytes):
     def __init__(self, file_path: str):
         super().__init__()
         
+        if not os.path.exists(file_path):
+            open(file_path, 'wb').close()
+        
         self.initialize_vtable(self.ILockBytes_virtual_table)
         self.implement_interface(ISequentialStream)
         self.implement_interface(IStream)

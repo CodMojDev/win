@@ -5,25 +5,17 @@ from win.com.comtl.baseface import *
 # COM OleIDL import
 from win.com.oleidl import *
 
+# COM OLE 2.0 import
+from win.com.ole2 import *
+
 # WinAbs imports
 from .window import *
 from .core.io import *
+from .dataexchange import *
 
 #
 # OLE & Drag/Drop functions
 #
-
-@ole32.foreign(HRESULT, HWND, LPDROPTARGET)
-def RegisterDragDrop(hwnd: int, pDropTarget: IPointer[IDropTarget]) -> int: ...
-
-@ole32.foreign(HRESULT, HWND)
-def RevokeDragDrop(hwnd: int) -> int: ...
-
-@ole32.foreign(HRESULT, PVOID)
-def OleInitialize(pvReserved: int) -> int: ...
-
-@ole32.foreign(HRESULT)
-def OleUninitialize() -> int: ...
 
 def _ole_Application_on_destroy():
     OleUninitialize()
@@ -36,142 +28,6 @@ def initialize_ole():
         app.on_destroy += _ole_Application_on_destroy
     elif FAILED(hr):
         raise COMError(hr)
-
-# Invalid TYMED HRESULT
-DV_E_TYMED = HRESULT(0x80040069).value
-
-class FormatEtc(FORMATETC):
-    # preinstalled formats dictionary
-    CF_FORMATS: dict[int, str] = {
-        CF_TEXT: 'Text',
-        CF_BITMAP: 'Bitmap',
-        CF_METAFILEPICT: 'Metafile',
-        CF_SYLK: 'Sylk',
-        CF_DIF: 'DIF',
-        CF_TIFF: 'TIFF',
-        CF_OEMTEXT: 'OEM Text',
-        CF_DIB: 'DIB',
-        CF_PALETTE: 'Palette',
-        CF_PENDATA: 'Pen data',
-        CF_RIFF: 'RIFF',
-        CF_WAVE: 'Wave audio',
-        CF_UNICODETEXT: 'Unicode text',
-        CF_ENHMETAFILE: 'EMF',
-        CF_HDROP: 'HDROP',
-        CF_LOCALE: 'Locale',
-        CF_DIBV5: 'DIB v5'
-    }
-    
-    def __init__(self, name: str = None):
-        # if name != None, then set cfFormat to RegisterClipboardFormat result to retrieve/register format ID from name
-        if name is not None:
-            name = create_string_buffer(name)
-            self.cfFormat = RegisterClipboardFormatW(name)
-        
-        # dwAspect = standard DVASPECT_CONTENT
-        self.dwAspect = DVASPECT_CONTENT
-        
-        # tymed = standard TYMED_HGLOBAL, can be changed
-        self.tymed = TYMED_HGLOBAL
-        
-        # lindex = standard -1
-        self.lindex = -1
-        
-    def __str__(self) -> str:
-        fmt = self.cfFormat
-        
-        # check preinstalled formats
-        string = FormatEtc.CF_FORMATS.get(fmt)
-        if string is not None:
-            return string
-        
-        # programmaticaly get the registered clipboard format and return retrieved name
-        buffer = create_unicode_buffer(256)
-        GetClipboardFormatNameW(fmt, buffer, len(buffer))
-        return buffer.value
-        
-    def __repr__(self) -> str:
-        return f'<FormatEtc "{self}">'
-
-class DataObject(IDataObject):
-    """
-    Class, representing wrapper around IDataObject.
-    """
-    
-    def get(self, format_etc: FORMATETC):
-        """
-        Get the GlobalIO/StreamIO/io.IOBase/Bitmap from FormatEtc.
-        """
-        
-        # save the previous TYMED, starting from TYMED_HGLOBAL
-        tymed = format_etc.tymed
-        format_etc.tymed = TYMED_HGLOBAL
-        
-        # optimization for holding pointer to FORMATETC
-        pformatetc = format_etc.ref()
-        
-        # test the FORMATETC
-        hr = self.QueryGetData(pformatetc)
-        
-        if FAILED(hr): # HRESULT is failed
-            if hr == DV_E_TYMED: # invalid TYMED
-                # now try TYMED_ISTREAM
-                format_etc.tymed = TYMED_ISTREAM
-                hr = self.QueryGetData(pformatetc)
-                
-                if FAILED(hr):
-                    if hr == DV_E_TYMED: # invalid TYMED
-                        # now try TYMED_FILE
-                        format_etc.tymed = TYMED_FILE
-                        hr = self.QueryGetData(pformatetc)
-                        
-                        if FAILED(hr):
-                            if hr == DV_E_TYMED: # invalid TYMED
-                                # now try TYMED_GDI
-                                format_etc.tymed = TYMED_GDI
-                                hr = self.QueryGetData(pformatetc)
-                                if FAILED(hr): raise COMError(hr) # last TYMED failed, throw COM exception
-                            else: # other HRESULT
-                                raise COMError(hr)
-                    else: # other HRESULT
-                        raise COMError(hr)
-            else: # other HRESULT
-                raise COMError(hr)
-        
-        # initialize STGMEDIUM by our TYMED
-        stg = STGMEDIUM()
-        stg.tymed = format_etc.tymed
-        
-        # get data to STGMEDIUM
-        hr = self.GetData(pformatetc, stg.ref())
-        if FAILED(hr): raise COMError(hr)
-        
-        # dispatcherize TYMED to various wrappers
-        if format_etc.tymed == TYMED_HGLOBAL:
-            # GlobalIO - wrapper around HGLOBAL handle
-            result = GlobalIO(stg.hGlobal).owning()
-        elif format_etc.tymed == TYMED_ISTREAM:
-            # StreamIO - wrapper around IStream interface
-            result = StreamIO(stg.pstm) # this calls pstm->AddRef
-            stg.pstm.contents.Release() # refcount 2 -> refcount 1
-        elif format_etc.tymed == TYMED_FILE:
-            # open the file name as standard file system file, in rb+ mode
-            result = open(stg.lpszFileName.value, 'rb+')
-            CoTaskMemFree(stg.lpszFileName) # free the file name manually
-        elif format_etc.tymed == TYMED_GDI:
-            # convert the HBITMAP to GDI Bitmap wrapper
-            result = Bitmap(stg.hBitmap)
-
-        # restore the saved TYMED
-        format_etc.tymed = tymed
-        return result
-    
-    @property
-    def formats(self) -> tuple[FormatEtc, ...]:
-        pEnumerator = IEnumFORMATETC.NULL()
-        hr = self.EnumFormatEtc(DATADIR_GET, byref(pEnumerator))
-        if FAILED(hr): raise COMError(hr)
-        return tuple(TL_ITERATOR[FormatEtc](pEnumerator))
 
 class DragDropWindow(Window):
     """

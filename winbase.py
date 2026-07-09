@@ -217,57 +217,63 @@ RTS_CONTROL_HANDSHAKE = 0x02
 RTS_CONTROL_TOGGLE = 0x03
 
 class _DCB(CStructure):
-    ("DCBlength", DWORD), #  sizeof(DCB)                     
-    ("BaudRate", DWORD), #  Baudrate at which running       
-    ("fBinary", DWORD, 1), #  Binary Mode (skip EOF check)    
-    ("fParity", DWORD, 1), #  Enable parity checking          
-    ("fOutxCtsFlow", DWORD, 1), #  CTS handshaking on output       
-    ("fOutxDsrFlow", DWORD, 1), #  DSR handshaking on output       
-    ("fDtrControl", DWORD, 2), #  DTR Flow control                
-    ("fDsrSensitivity", DWORD, 1), #  DSR Sensitivity              
-    ("fTXContinueOnXoff", DWORD, 1), #  Continue TX when Xoff sent 
-    ("fOutX", DWORD, 1), #  Enable output X-ON/X-OFF        
-    ("fInX", DWORD, 1), #  Enable input X-ON/X-OFF         
-    ("fErrorChar", DWORD, 1), #  Enable Err Replacement          
-    ("fNull", DWORD, 1), #  Enable Null stripping           
-    ("fRtsControl", DWORD, 2), #  Rts Flow control                
-    ("fAbortOnError", DWORD, 1), #  Abort all reads and writes on Error 
-    ("fDummy2", DWORD, 17), #  Reserved                        
-    ("wReserved", WORD), #  Not currently used              
-    ("XonLim", WORD), #  Transmit X-ON threshold         
-    ("XoffLim", WORD), #  Transmit X-OFF threshold        
-    ("ByteSize", BYTE), #  Number of bits/byte, 4-8        
-    ("Parity", BYTE), #  0-4=None,Odd,Even,Mark,Space    
-    ("StopBits", BYTE), #  0,1,2 = 1, 1.5, 2               
-    ("XonChar", CHAR), #  Tx and Rx X-ON character        
-    ("XoffChar", CHAR), #  Tx and Rx X-OFF character       
-    ("ErrorChar", CHAR), #  Error replacement char          
-    ("EofChar", CHAR), #  End of Input character          
-    ("EvtChar", CHAR), #  Received Event character        
-    ("wReserved1", WORD), #  Fill for now.     
+    _fields_ = [
+        ("DCBlength", DWORD), #  sizeof(DCB)                     
+        ("BaudRate", DWORD), #  Baudrate at which running       
+        ("fBinary", DWORD, 1), #  Binary Mode (skip EOF check)    
+        ("fParity", DWORD, 1), #  Enable parity checking          
+        ("fOutxCtsFlow", DWORD, 1), #  CTS handshaking on output       
+        ("fOutxDsrFlow", DWORD, 1), #  DSR handshaking on output       
+        ("fDtrControl", DWORD, 2), #  DTR Flow control                
+        ("fDsrSensitivity", DWORD, 1), #  DSR Sensitivity              
+        ("fTXContinueOnXoff", DWORD, 1), #  Continue TX when Xoff sent 
+        ("fOutX", DWORD, 1), #  Enable output X-ON/X-OFF        
+        ("fInX", DWORD, 1), #  Enable input X-ON/X-OFF         
+        ("fErrorChar", DWORD, 1), #  Enable Err Replacement          
+        ("fNull", DWORD, 1), #  Enable Null stripping           
+        ("fRtsControl", DWORD, 2), #  Rts Flow control                
+        ("fAbortOnError", DWORD, 1), #  Abort all reads and writes on Error 
+        ("fDummy2", DWORD, 17), #  Reserved                        
+        ("wReserved", WORD), #  Not currently used              
+        ("XonLim", WORD), #  Transmit X-ON threshold         
+        ("XoffLim", WORD), #  Transmit X-OFF threshold        
+        ("ByteSize", BYTE), #  Number of bits/byte, 4-8        
+        ("Parity", BYTE), #  0-4=None,Odd,Even,Mark,Space    
+        ("StopBits", BYTE), #  0,1,2 = 1, 1.5, 2               
+        ("XonChar", CHAR), #  Tx and Rx X-ON character        
+        ("XoffChar", CHAR), #  Tx and Rx X-OFF character       
+        ("ErrorChar", CHAR), #  Error replacement char          
+        ("EofChar", CHAR), #  End of Input character          
+        ("EvtChar", CHAR), #  Received Event character        
+        ("wReserved1", WORD) #  Fill for now.
+    ]
 DCB = _DCB
 LPDCB = POINTER(DCB)
 
 class _COMMTIMEOUTS(CStructure):
-    ("ReadIntervalTimeout", DWORD), #  Maximum time between read chars. 
-    ("ReadTotalTimeoutMultiplier", DWORD), #  Multiplier of characters.        
-    ("ReadTotalTimeoutConstant", DWORD), #  Constant in milliseconds.        
-    ("WriteTotalTimeoutMultiplier", DWORD), #  Multiplier of characters.        
-    ("WriteTotalTimeoutConstant", DWORD), #  Constant in milliseconds.        
+    _fields_ = [
+        ("ReadIntervalTimeout", DWORD), #  Maximum time between read chars. 
+        ("ReadTotalTimeoutMultiplier", DWORD), #  Multiplier of characters.        
+        ("ReadTotalTimeoutConstant", DWORD), #  Constant in milliseconds.        
+        ("WriteTotalTimeoutMultiplier", DWORD), #  Multiplier of characters.        
+        ("WriteTotalTimeoutConstant", DWORD), #  Constant in milliseconds.    
+    ]    
 COMMTIMEOUTS = _COMMTIMEOUTS
 LPCOMMTIMEOUTS = POINTER(COMMTIMEOUTS)
 
 class _COMMCONFIG(CStructure):
-    ("dwSize", DWORD), #  Size of the entire struct 
-    ("wVersion", WORD), #  version of the structure 
-    ("wReserved", WORD), #  alignment 
-    ("dcb", DCB), #  device control block 
-    ("dwProviderSubType", DWORD),    # ordinal value for identifying
-                                     # provider-defined data structure format
-    ("dwProviderOffset", DWORD),     # Specifies the offset of provider specific
-                                     #data field in bytes from the start */
-    ("dwProviderSize", DWORD), #  size of the provider-specific data field 
-    ("wcProviderData[1]", WCHAR) #  provider-specific data 
+    _fields_ = [
+        ("dwSize", DWORD), #  Size of the entire struct 
+        ("wVersion", WORD), #  version of the structure 
+        ("wReserved", WORD), #  alignment 
+        ("dcb", DCB), #  device control block 
+        ("dwProviderSubType", DWORD),    # ordinal value for identifying
+                                        # provider-defined data structure format
+        ("dwProviderOffset", DWORD),     # Specifies the offset of provider specific
+                                        #data field in bytes from the start */
+        ("dwProviderSize", DWORD), #  size of the provider-specific data field 
+        ("wcProviderData[1]", WCHAR) #  provider-specific data 
+    ]
 COMMCONFIG = _COMMCONFIG
 LPCOMMCONFIG = POINTER(COMMCONFIG)
 
@@ -294,8 +300,8 @@ GMEM_VALID_FLAGS = 0x7F72
 GMEM_INVALID_HANDLE = 0x8000
 GHND = (GMEM_MOVEABLE | GMEM_ZEROINIT)
 GPTR = (GMEM_FIXED | GMEM_ZEROINIT)
-GlobalLRUNewest = lambda h: (HANDLE(h))
-GlobalLRUOldest = lambda h: (HANDLE(h))
+GlobalLRUNewest = lambda h: (HANDLE(h)).value
+GlobalLRUOldest = lambda h: (HANDLE(h)).value
 #GlobalDiscard = lambda h: GlobalReAlloc((h), 0, GMEM_MOVEABLE)
 GMEM_DISCARDED = 0x4000
 GMEM_LOCKCOUNT = 0x00FF
@@ -315,6 +321,14 @@ class _MEMORYSTATUS(CStructure):
         ("dwTotalVirtual", SIZE_T),
         ("dwAvailVirtual", SIZE_T)
     ]
+    dwLength: int
+    dwMemoryLoad: int
+    dwTotalPhys: int
+    dwAvailPhys: int
+    dwTotalPageFile: int
+    dwAvailPageFile: int
+    dwTotalVirtual: int
+    dwAvailVirtual: int
 MEMORYSTATUS = _MEMORYSTATUS
 LPMEMORYSTATUS = POINTER(MEMORYSTATUS)
 
@@ -407,6 +421,14 @@ class JIT_DEBUG_INFO(CStructure):
         ("lpExceptionRecord", ULONG64),
         ("lpContextRecord", ULONG64)
     ]
+    dwSize: int
+    dwProcessorArchitecture: int
+    dwThreadID: int
+    dwReserved0: int
+    lpExceptionAddress: int
+    lpExceptionRecord: int
+    lpContextRecord: int
+    
 LPJIT_DEBUG_INFO = POINTER(JIT_DEBUG_INFO)
 
 JIT_DEBUG_INFO32 = JIT_DEBUG_INFO
@@ -460,6 +482,7 @@ class _U_SP(Union):
         ("s", _S_OO),
         ("Pointer", PVOID)
     ]
+    _anonymous_ = ['s']
 
 class _OVERLAPPED(CStructure):
     _fields_ = [
@@ -468,17 +491,27 @@ class _OVERLAPPED(CStructure):
         ("u", _U_SP),
         ("hEvent", HANDLE)
     ]
+    _anonymous_ = ['u']
+    Internal: int
+    InternalHigh: int
+    hEvent: int
+    Offset: int
+    OffsetHigh: int
+    Pointer: int
 OVERLAPPED = _OVERLAPPED
 LPOVERLAPPED = POINTER(OVERLAPPED)
 
-class _OVERLAPPED_ENTRY(CStructure):
+class OVERLAPPED_ENTRY(CStructure):
     _fields_ = [
         ("lpCompletionKey", ULONG_PTR),
         ("lpOverlapped", LPOVERLAPPED),
         ("Internal", ULONG_PTR),
         ("dwNumberOfBytesTransferred", DWORD)
     ]
-OVERLAPPED_ENTRY = _OVERLAPPED_ENTRY
+    lpCompletionKey: int
+    lpOverlapped: IPointer[OVERLAPPED]
+    Internal: int
+    dwNumberOfBytesTransferred: int
 LPOVERLAPPED_ENTRY = POINTER(OVERLAPPED_ENTRY)
 
 PTHREAD_START_ROUTINE = WINAPI(DWORD, LPVOID)
@@ -500,13 +533,22 @@ class REASON_CONTEXT(CStructure):
                 ("ReasonStringCount", ULONG),
                 ("ReasonStrings", POINTER(LPWSTR))
             ]
+            LocalizedReasonModule: int
+            LocalizedReasonId: int
+            ReasonStringCount: int
+            ReasonStrings: IPointer[LPWSTR]
         _fields_ = [
             ("Detailed", _Detailed),
             ("SimpleReasonString", LPWSTR)
         ]
+        Detailed: _Detailed
+        SimpleReasonString: LPWSTR
     _fields_ = [
         ("Version", ULONG),
         ("Flags", DWORD),
         ("Reason", _Reason)
     ]
+    Version: int
+    Flags: int
+    Reason: _Reason
 PREASON_CONTEXT = POINTER(REASON_CONTEXT)

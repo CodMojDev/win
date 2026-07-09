@@ -46,7 +46,7 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
     PPROCESS_INFORMATION = POINTER(PROCESS_INFORMATION)
     LPPROCESS_INFORMATION = PPROCESS_INFORMATION
 
-    class _STARTUPINFOA(CStructure):
+    class STARTUPINFOA(CStructure):
         _fields_ = [
             ("cb", DWORD),
             ("lpReserved", LPSTR),
@@ -83,10 +83,9 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
         hStdInput: int
         hStdOutput: int
         hStdError: int
-    STARTUPINFOA = _STARTUPINFOA
     LPSTARTUPINFOA = POINTER(STARTUPINFOA)
 
-    class _STARTUPINFOW(CStructure):
+    class STARTUPINFOW(CStructure):
         _fields_ = [
             ("cb", DWORD),
             ("lpReserved", LPWSTR),
@@ -124,7 +123,6 @@ if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
         hStdOutput: int
         hStdError: int
 
-    STARTUPINFOW = _STARTUPINFOW
     LPSTARTUPINFOW = POINTER(STARTUPINFOW)
 
     STARTUPINFO = unicode(STARTUPINFOW, STARTUPINFOA)

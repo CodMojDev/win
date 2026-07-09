@@ -30,8 +30,9 @@ class CComObject(CUnknownMTA):
     def __init__(self, *args):
         self.dbg_trace(provider, trace_id=CUnknown._trace_id_next_)
         super().__init__()
+        self.InitComObject()
         
-        # IUnknown
+    def InitComObject(self):
         self.implement(self.QueryInterface)
         
     def QueryInterface_Impl(self, piid: IPointer[IID], ppv: IVoidPtr) -> int:

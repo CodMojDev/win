@@ -39,6 +39,13 @@ if cpreproc.pragma_once("_TIMEZONEAPI_H_"):
             ("DaylightDate", SYSTEMTIME),
             ("DaylightBias", LONG)
         ]
+        Bias: int
+        StandardName: IWideCharArray
+        StandardDate: SYSTEMTIME
+        StandardBias: int
+        DaylightName: IWideCharArray
+        DaylightDate: SYSTEMTIME
+        DaylightBias: int
     TIME_ZONE_INFORMATION = _TIME_ZONE_INFORMATION
     LPTIME_ZONE_INFORMATION = PTIME_ZONE_INFORMATION = POINTER(TIME_ZONE_INFORMATION)
     
@@ -54,6 +61,15 @@ if cpreproc.pragma_once("_TIMEZONEAPI_H_"):
             ("TimeZoneKeyName", WCHAR * 128),
             ("DynamicDaylightTimeDisabled", BOOLEAN)
         ]
+        Bias: int
+        StandardName: IWideCharArray
+        StandardDate: SYSTEMTIME
+        StandardBias: int
+        DaylightName: IWideCharArray
+        DaylightDate: SYSTEMTIME
+        DaylightBias: int
+        TimeZoneKeyName: IWideCharArray
+        DynamicDaylightTimeDisabled: int
     DYNAMIC_TIME_ZONE_INFORMATION = _TIME_DYNAMIC_ZONE_INFORMATION
     PDYNAMIC_TIME_ZONE_INFORMATION = POINTER(DYNAMIC_TIME_ZONE_INFORMATION)
     

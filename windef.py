@@ -31,6 +31,7 @@ if cpreproc.pragma_once("_WINDEF_"):
         _fields_ = [
             ("value", CHAR * APP_LOCAL_DEVICE_ID_SIZE)
         ]
+        value: ICharArray
 
     # mode selections for the device mode function
     DM_UPDATE = 1

@@ -63,6 +63,10 @@ if cpreproc.pragma_once("_INC_TOOLHELP32"):
             ("th32HeapID", ULONG_PTR), # heap (in owning process's context!)
             ("dwFlags", DWORD)
         ]
+        dwSize: int
+        th32ProcessID: int
+        th32HeapID: int
+        dwFlags: int
     PHEAPLIST32 = LPHEAPLIST32 = POINTER(HEAPLIST32)
     #
     # dwFlags
@@ -86,6 +90,15 @@ if cpreproc.pragma_once("_INC_TOOLHELP32"):
             ("th32ProcessID", DWORD),   # owning process
             ("th32HeapID", ULONG_PTR)      # heap block is in
         ]
+        dwSize: int
+        hHandle: int
+        dwAddress: int
+        dwBlockSize: int
+        dwFlags: int
+        dwLockCount: int
+        dwResvd: int
+        th32ProcessID: int
+        th32HeapID: int
     PHEAPENTRY32 = LPHEAPENTRY32 = POINTER(HEAPENTRY32)
     #
     # dwFlags
@@ -116,6 +129,16 @@ if cpreproc.pragma_once("_INC_TOOLHELP32"):
             ("dwFlags", DWORD),
             ("szExeFile", WCHAR * MAX_PATH)    # Path
         ]
+        dwSize: int
+        cntUsage: int
+        th32ProcessID: int
+        th32DefaultHeapID: int
+        th32ModuleID: int
+        cntThreads: int
+        th32ParentProcessID: int
+        pcPriClassBase: int
+        dwFlags: int
+        szExeFile: IWideCharArray
     PPROCESSENTRY32W = LPPROCESSENTRY32W = POINTER(PROCESSENTRY32W)
 
     Process32FirstW = declare(kernel32.Process32FirstW, BOOL, HANDLE, LPPROCESSENTRY32W)
@@ -135,6 +158,16 @@ if cpreproc.pragma_once("_INC_TOOLHELP32"):
             ("dwFlags", DWORD),
             ("szExeFile", CHAR * MAX_PATH)     # Path
         ]
+        dwSize: int
+        cntUsage: int
+        th32ProcessID: int
+        th32DefaultHeapID: int
+        th32ModuleID: int
+        cntThreads: int
+        th32ParentProcessID: int
+        pcPriClassBase: int
+        dwFlags: int
+        szExeFile: ICharArray
     PPROCESSENTRY32 = LPPROCESSENTRY32 = POINTER(PROCESSENTRY32)
 
     Process32First = declare(kernel32.Process32First, BOOL, HANDLE, LPPROCESSENTRY32)
@@ -161,6 +194,13 @@ if cpreproc.pragma_once("_INC_TOOLHELP32"):
             ("tpDeltaPri", LONG),
             ("dwFlags", DWORD)
         ]
+        dwSize: int
+        cntUsage: int
+        th32ThreadID: int
+        th32OwnerProcessID: int
+        tpBasePri: int
+        tpDeltaPri: int
+        dwFlags: int
     PTHREADENTRY32 = LPTHREADENTRY32 = POINTER(THREADENTRY32)
 
     Thread32First = declare(kernel32.Thread32First, BOOL, HANDLE, LPTHREADENTRY32)
@@ -182,6 +222,16 @@ if cpreproc.pragma_once("_INC_TOOLHELP32"):
             ("szModule", WCHAR * (MAX_MODULE_NAME32 + 1)),
             ("szExePath", WCHAR * MAX_PATH)
         ]
+        dwSize: int
+        th32ModuleID: int
+        th32ProcessID: int
+        GlblcntUsage: int
+        ProccntUsage: int
+        modBaseAddr: int
+        modBaseSize: int
+        hModule: int
+        szModule: IWideCharArray
+        szExePath: IWideCharArray
     PMODULEENTRY32W = LPMODULEENTRY32W = POINTER(MODULEENTRY32W)
 
     Module32FirstW = declare(kernel32.Module32FirstW, BOOL, HANDLE, LPMODULEENTRY32W)
@@ -201,6 +251,16 @@ if cpreproc.pragma_once("_INC_TOOLHELP32"):
             ("szModule", CHAR * (MAX_MODULE_NAME32 + 1)),
             ("szExePath", CHAR * MAX_PATH)
         ]
+        dwSize: int
+        th32ModuleID: int
+        th32ProcessID: int
+        GlblcntUsage: int
+        ProccntUsage: int
+        modBaseAddr: int
+        modBaseSize: int
+        hModule: int
+        szModule: ICharArray
+        szExePath: ICharArray
     PMODULEENTRY32 = LPMODULEENTRY32 = POINTER(MODULEENTRY32)
 
     #

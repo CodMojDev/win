@@ -18,7 +18,7 @@ from .com.guid import IID, GUID, HRESULT
 
 from .winnt import (PZZSTR, PZZWSTR, PCZZSTR, 
                     PCZZWSTR, PCSTR, PCWSTR, 
-                    PWSTR, DWORDLONG)
+                    PWSTR, DWORDLONG, SECURITY_ATTRIBUTES)
 
 from .winuser import WM_USER, SendMessage
 
@@ -26,7 +26,7 @@ from .sdkddkver import *
 
 from .winbase import LPSECURITY_ATTRIBUTES
 
-from .processthreadsapi import LPSTARTUPINFOW, LPPROCESS_INFORMATION
+from .processthreadsapi import LPSTARTUPINFOW, LPPROCESS_INFORMATION, STARTUPINFOW, PROCESS_INFORMATION
 
 if cpreproc.pragma_once("_INC_SHELLAPI"):
     shell32 = W_WinDLL("shell32.dll")
@@ -67,7 +67,7 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
     ExtractIconW = declare(shell32.ExtractIconW, HICON, HINSTANCE, LPCWSTR, UINT)
     ExtractIcon = unicode(ExtractIconW, ExtractIconA)
 
-    class _DRAGINFOA(CStructure):
+    class DRAGINFOA(CStructure):
         _fields_ = [
             ("uSize", UINT), # init with sizeof(DRAGINFO) */
             ("pt", POINT),
@@ -75,10 +75,14 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("lpFileList", PZZSTR),
             ("grfKeyState", DWORD)
         ]
-    DRAGINFOA = _DRAGINFOA
+        uSize: int
+        pt: POINT
+        fNC: int
+        lpFileList: PZZSTR
+        grfKeyState: int
     LPDRAGINFOA = POINTER(DRAGINFOA)
 
-    class _DRAGINFOW(CStructure):
+    class DRAGINFOW(CStructure):
         _fields_ = [
             ("uSize", UINT), # init with sizeof(DRAGINFO) */
             ("pt", POINT),
@@ -86,7 +90,11 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("lpFileList", PZZWSTR),
             ("grfKeyState", DWORD)
         ]
-    DRAGINFOW = _DRAGINFOW
+        uSize: int
+        pt: POINT
+        fNC: int
+        lpFileList: PZZWSTR
+        grfKeyState: int
     LPDRAGINFOW = POINTER(DRAGINFOW)
 
     ##
@@ -120,7 +128,7 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
     ABE_RIGHT = 2
     ABE_BOTTOM = 3
 
-    class _AppBarData(CStructure):
+    class APPBARDATA(CStructure):
         _fields_ = [
             ("cbSize", DWORD),
             ("hWnd", HWND),
@@ -129,7 +137,12 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("rc", RECT),
             ("lParam", LPARAM) # message specific
         ]
-    APPBARDATA = _AppBarData
+        cbSize: int
+        hWnd: int
+        uCallbackMessage: int
+        uEdge: int
+        rc: RECT
+        lParam: int
     PAPPBARDATA = POINTER(APPBARDATA)
 
     SHAppBarMessage = declare(shell32.SHAppBarMessage, UINT_PTR, DWORD, PAPPBARDATA)
@@ -190,7 +203,7 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
     #      by Get/SetCurrentDrive/Directory
     #
     #      the global confirmation settings
-    class _SHFILEOPSTRUCTA(CStructure):
+    class SHFILEOPSTRUCTA(CStructure):
         _fields_ = [
             ("hwnd", HWND),
             ("wFunc", UINT),
@@ -201,10 +214,17 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("hNameMappings", LPVOID),
             ("lpszProgressTitle", PCSTR) # only used if FOF_SIMPLEPROGRESS
         ]
-    SHFILEOPSTRUCTA = _SHFILEOPSTRUCTA
+        hwnd: int
+        wFunc: int
+        pFrom: PCZZSTR
+        pTo: PCZZSTR
+        fFlags: int
+        fAnyOperationsAborted: int
+        hNameMappings: int
+        lpszProgressTitle: PCSTR
     LPSHFILEOPSTRUCTA = POINTER(SHFILEOPSTRUCTA)
 
-    class _SHFILEOPSTRUCTW(CStructure):
+    class SHFILEOPSTRUCTW(CStructure):
         _fields_ = [
             ("hwnd", HWND),
             ("wFunc", UINT),
@@ -215,7 +235,14 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("hNameMappings", LPVOID),
             ("lpszProgressTitle", PCWSTR) # only used if FOF_SIMPLEPROGRESS
         ]
-    SHFILEOPSTRUCTW = _SHFILEOPSTRUCTW
+        hwnd: int
+        wFunc: int
+        pFrom: PCZZWSTR
+        pTo: PCZZWSTR
+        fFlags: int
+        fAnyOperationsAborted: int
+        hNameMappings: int
+        lpszProgressTitle: PCWSTR
     LPSHFILEOPSTRUCTW = POINTER(SHFILEOPSTRUCTW)
 
     SHFILEOPSTRUCT = unicode(SHFILEOPSTRUCTW, SHFILEOPSTRUCTA)
@@ -227,24 +254,30 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
     
     SHFreeNameMappings = declare(shell32.SHFreeNameMappings, VOID, HANDLE)
 
-    class _SHNAMEMAPPINGA(CStructure):
+    class SHNAMEMAPPINGA(CStructure):
         _fields_ = [
             ("pszOldPath", LPSTR),
             ("pszNewPath", LPSTR),
             ("cchOldPath", INT),
             ("cchNewPath", INT)
         ]
-    SHNAMEMAPPINGA = _SHNAMEMAPPINGA
+        pszOldPath: LPSTR
+        pszNewPath: LPSTR
+        cchOldPath: int
+        cchNewPath: int
     LPSHNAMEMAPPINGA = POINTER(SHNAMEMAPPINGA)
 
-    class _SHNAMEMAPPINGW(CStructure):
+    class SHNAMEMAPPINGW(CStructure):
         _fields_ = [
             ("pszOldPath", LPWSTR),
             ("pszNewPath", LPWSTR),
             ("cchOldPath", INT),
             ("cchNewPath", INT)
         ]
-    SHNAMEMAPPINGW = _SHNAMEMAPPINGW
+        pszOldPath: LPWSTR
+        pszNewPath: LPWSTR
+        cchOldPath: int
+        cchNewPath: int
     LPSHNAMEMAPPINGW = POINTER(SHNAMEMAPPINGW)
 
     SHNAMEMAPPING = unicode(SHNAMEMAPPINGW, SHNAMEMAPPINGA)
@@ -306,7 +339,7 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("hMonitor", HANDLE) # in, valid when SEE_MASK_HMONITOR specified
         ]
 
-    class _SHELLEXECUTEINFOA(CStructure):
+    class SHELLEXECUTEINFOA(CStructure):
         _fields_ = [
             ("cbSize", DWORD), # in, required, sizeof of this structure
             ("fMask", ULONG), # in, SEE_MASK_XXX values
@@ -324,11 +357,26 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("u", _U_HIHM), 
             ("hProcess", HANDLE) # out, valid when SEE_MASK_NOCLOSEPROCESS specified
         ]
-    SHELLEXECUTEINFOA = _SHELLEXECUTEINFOA
+        cbSize: int
+        fMask: int
+        hwnd: int
+        lpVerb: LPCSTR
+        lpFile: LPCSTR
+        lpParameters: LPCSTR
+        lpDirectory: LPCSTR
+        nShow: int
+        hInstApp: int
+        lpIDList: int
+        lpClass: LPCSTR
+        hkeyClass: int
+        dwHotKey: int
+        hProcess: int
+        hIcon: int
+        hMonitor: int
+        _anonymous_ = ['u']
     LPSHELLEXECUTEINFOA = POINTER(SHELLEXECUTEINFOA)
 
-
-    class _SHELLEXECUTEINFOW(CStructure):
+    class SHELLEXECUTEINFOW(CStructure):
         _fields_ = [
             ("cbSize", DWORD), # in, required, sizeof of this structure
             ("fMask", ULONG), # in, SEE_MASK_XXX values
@@ -346,7 +394,23 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("u", _U_HIHM), 
             ("hProcess", HANDLE) # out, valid when SEE_MASK_NOCLOSEPROCESS specified
         ]
-    SHELLEXECUTEINFOW = _SHELLEXECUTEINFOW
+        cbSize: int
+        fMask: int
+        hwnd: int
+        lpVerb: LPCWSTR
+        lpFile: LPCWSTR
+        lpParameters: LPCWSTR
+        lpDirectory: LPCWSTR
+        nShow: int
+        hInstApp: int
+        lpIDList: int
+        lpClass: LPCWSTR
+        hkeyClass: int
+        dwHotKey: int
+        hProcess: int
+        hIcon: int
+        hMonitor: int
+        _anonymous_ = ['u']
     LPSHELLEXECUTEINFOW = POINTER(SHELLEXECUTEINFOW)
 
     SHELLEXECUTEINFO = unicode(SHELLEXECUTEINFOW, SHELLEXECUTEINFOA)
@@ -357,7 +421,7 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
     ShellExecuteEx = unicode(ShellExecuteExW, ShellExecuteExA)
     
     # deprecated, no longer implemented
-    class _SHCREATEPROCESSINFOW(CStructure):
+    class SHCREATEPROCESSINFOW(CStructure):
         _fields_ = [
             ("cbSize", DWORD),
             ("fMask", ULONG),
@@ -373,7 +437,19 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("lpStartupInfo", LPSTARTUPINFOW),
             ("lpProcessInformation", LPPROCESS_INFORMATION)
         ]
-    SHCREATEPROCESSINFOW = _SHCREATEPROCESSINFOW
+        cbSize: int
+        fMask: int
+        hwnd: int
+        pszFile: LPCWSTR
+        pszParameters: LPCWSTR
+        pszCurrentDirectory: LPCWSTR
+        hUserToken: int
+        lpProcessAttributes: IPointer[SECURITY_ATTRIBUTES]
+        lpThreadAttributes: IPointer[SECURITY_ATTRIBUTES]
+        bInheritHandles: int
+        dwCreationFlags: int
+        lpStartupInfo: IPointer[STARTUPINFOW]
+        lpProcessInformation: IPointer[PROCESS_INFORMATION]
     PSHCREATEPROCESSINFOW = POINTER(SHCREATEPROCESSINFOW)
 
     SHCreateProcessAsUserW = declare(shell32.SHCreateProcessAsUserW, BOOL, PSHCREATEPROCESSINFOW)
@@ -740,6 +816,9 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("hkClass", HKEY), # may be NULL
             ("pszClass", PCWSTR) # may be NULL
         ]
+        ac: int
+        hkClass: int
+        pszClass: PCWSTR
 
     # the object returned from this API implements IQueryAssociations
 
@@ -786,13 +865,15 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
     # RecycleBin
     #
     # struct for query recycle bin info
-    class _SHQUERYRBINFO(CStructure):
+    class SHQUERYRBINFO(CStructure):
         _fields_ = [
             ("cbSize", DWORD),
             ("i64Size", DWORDLONG),
             ("i64NumItems", DWORDLONG)
         ]
-    SHQUERYRBINFO = _SHQUERYRBINFO
+        cbSize: int
+        i64Size: int
+        i64NumItems: int
     LPSHQUERYRBINFO = POINTER(SHQUERYRBINFO)
 
     # flags for SHEmptyRecycleBin
@@ -839,8 +920,9 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("uID", UINT),
             ("uFlags", UINT),
             ("uCallbackMessage", UINT),
-            ("hIcon", HICON),
+            ("hIcon", HICON)
         ]
+        _anonymous_ = []
 
         if cpreproc.getdef("_WINVER") < WIN32_WINNT_WIN2K:
             _fields_.append(("szTip", CHAR * 64))
@@ -857,6 +939,7 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
                         ("uVersion", UINT),
                     ]
                 _fields_.append(("u", _U_UTUV))
+                _anonymous_.append('u')
 
             _fields_.append(("szInfoTitle", CHAR * 64))
             _fields_.append(("dwInfoFlags", DWORD))
@@ -865,6 +948,23 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
                 _fields_.append(("guidItem", GUID))
             if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
                 _fields_.append(("hBalloonIcon", HICON))
+                
+        cbSize: int
+        hWnd: int
+        uID: int
+        uFlags: int
+        uCallbackMessage: int
+        hIcon: int
+        szTip: ICharArray
+        dwState: int
+        dwStateMask: int
+        szInfo: ICharArray
+        uTimeout: int
+        uVersion: int
+        szInfoTitle: ICharArray
+        dwInfoFlags: int
+        guidItem: GUID
+        hBalloonIcon: int
 
     PNOTIFYICONDATAA = POINTER(NOTIFYICONDATAA)
 
@@ -901,6 +1001,22 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
                 _fields_.append(("guidItem", GUID))
             if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
                 _fields_.append(("hBalloonIcon", HICON))
+        cbSize: int
+        hWnd: int
+        uID: int
+        uFlags: int
+        uCallbackMessage: int
+        hIcon: int
+        szTip: IWideCharArray
+        dwState: int
+        dwStateMask: int
+        szInfo: IWideCharArray
+        uTimeout: int
+        uVersion: int
+        szInfoTitle: IWideCharArray
+        dwInfoFlags: int
+        guidItem: GUID
+        hBalloonIcon: int
 
     PNOTIFYICONDATAW = POINTER(NOTIFYICONDATAW)
     NOTIFYICONDATA = unicode(NOTIFYICONDATAW, NOTIFYICONDATAA)
@@ -961,14 +1077,17 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
     NIIF_LARGE_ICON = 0x00000020
     NIIF_RESPECT_QUIET_TIME = 0x00000080
 
-    class _NOTIFYICONIDENTIFIER(CStructure):
+    class NOTIFYICONIDENTIFIER(CStructure):
         _fields_ = [
             ("cbSize", DWORD),
             ("hWnd", HWND),
             ("uID", UINT),
             ("guidItem", GUID)
         ]
-    NOTIFYICONIDENTIFIER = _NOTIFYICONIDENTIFIER
+        cbSize: int
+        hWnd: int
+        uID: int
+        guidItem: GUID
     PNOTIFYICONIDENTIFIER = POINTER(NOTIFYICONIDENTIFIER)
 
     Shell_NotifyIconA = declare(shell32.Shell_NotifyIconA, VOID, DWORD, PNOTIFYICONDATAA)
@@ -1003,7 +1122,7 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
 
         """
         
-        class _SHFILEINFOA(CStructure):
+        class SHFILEINFOA(CStructure):
             _fields_ = [
                 ("hIcon", HICON), #
                 ("iIcon", INT), #
@@ -1011,8 +1130,12 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
                 ("szDisplayName", CHAR * MAX_PATH), #
                 ("szTypeName", CHAR * 80) #
             ]
-        SHFILEINFOA = _SHFILEINFOA
-        class _SHFILEINFOW(CStructure):
+            hIcon: int
+            iIcon: int
+            dwAttributes: int
+            szDisplayName: ICharArray
+            szTypeName: ICharArray
+        class SHFILEINFOW(CStructure):
             _fields_ = [
                 ("hIcon", HICON), #
                 ("iIcon", INT), #
@@ -1020,7 +1143,11 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
                 ("szDisplayName", WCHAR * MAX_PATH), #
                 ("szTypeName", WCHAR * 80) #
             ]
-        SHFILEINFOW = _SHFILEINFOW
+            hIcon: int
+            iIcon: int
+            dwAttributes: int
+            szDisplayName: IWideCharArray
+            szTypeName: IWideCharArray
 
         SHFILEINFO = unicode(SHFILEINFOW, SHFILEINFOA)
 
@@ -1050,7 +1177,7 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
     SHGetFileInfoW = declare(shell32.SHGetFileInfoW, DWORD_PTR, LPCSTR, DWORD, POINTER(SHFILEINFOW), UINT, UINT)
     SHGetFileInfo = unicode(SHGetFileInfoW, SHGetFileInfoA)
 
-    class _SHSTOCKICONINFO(CStructure):
+    class SHSTOCKICONINFO(CStructure):
         _fields_ = [
             ("cbSize", DWORD),
             ("hIcon", HICON),
@@ -1058,7 +1185,11 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             ("iIcon", INT),
             ("szPath", WCHAR * MAX_PATH)
         ]
-    SHSTOCKICONINFO = _SHSTOCKICONINFO
+        cbSize: int
+        hIcon: int
+        iSysImageIndex: int
+        iIcon: int
+        szPath: IWideCharArray
 
     SHGSI_ICONLOCATION = 0 # you always get the icon location
     SHGSI_ICON = SHGFI_ICON
@@ -1206,7 +1337,7 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
         SHInvokePrinterCommand = unicode(SHInvokePrinterCommandW, SHInvokePrinterCommandA)
     # (NTDDI_VERSION >= NTDDI_WIN2K)
     if cpreproc.getdef("_WINVER") >= WIN32_WINNT_VISTA:
-        class _OPEN_PRINTER_PROPS_INFOA(CStructure):
+        class OPEN_PRINTER_PROPS_INFOA(CStructure):
             _fields_ = [
                 ("dwSize", DWORD),
                 ("pszSheetName", LPSTR),
@@ -1214,18 +1345,26 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
                 ("dwFlags", DWORD),
                 ("bModal", BOOL)
             ]
-        OPEN_PRINTER_PROPS_INFOA = _OPEN_PRINTER_PROPS_INFOA
+            dwSize: int
+            pszSheetName: LPSTR
+            uSheetIndex: int
+            dwFlags: int
+            bModal: int
         POPEN_PRINTER_PROPS_INFOA = POINTER(OPEN_PRINTER_PROPS_INFOA)
 
-        class _OPEN_PRINTER_PROPS_INFOW(CStructure):
+        class OPEN_PRINTER_PROPS_INFOW(CStructure):
             _fields_ = [
                 ("dwSize", DWORD),
-                ("pszSheetName", LPSTR),
+                ("pszSheetName", LPWSTR),
                 ("uSheetIndex", UINT),
                 ("dwFlags", DWORD),
                 ("bModal", BOOL)
             ]
-        OPEN_PRINTER_PROPS_INFOW = _OPEN_PRINTER_PROPS_INFOW
+            dwSize: int
+            pszSheetName: LPWSTR
+            uSheetIndex: int
+            dwFlags: int
+            bModal: int
         POPEN_PRINTER_PROPS_INFOW = POINTER(OPEN_PRINTER_PROPS_INFOW)
 
         OPEN_PRINTER_PROPS_INFO = unicode(OPEN_PRINTER_PROPS_INFOW, OPEN_PRINTER_PROPS_INFOA)
@@ -1368,13 +1507,15 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
             
             if cpreproc.ifdef("__IPHLPAPI_H__"):
                 from .iphlpapi import PNET_ADDRESS_INFO_
-                class tagNC_ADDRESS(CStructure):
+                class NC_ADDRESS(CStructure):
                     _fields_ = [
                         ("pAddrInfo", PNET_ADDRESS_INFO_), # defined in iphlpapi.h
                         ("PortNumber", USHORT),
                         ("PrefixLength", BYTE)
                     ]
-                NC_ADDRESS = tagNC_ADDRESS
+                    pAddrInfo: IPointer[NET_ADDRESS_INFO]
+                    PortNumber: int
+                    PrefixLength: int
                 PNC_ADDRESS = POINTER(NC_ADDRESS)
 
                 # NCM_SETALLOWTYPE sets the type of addresses that the control will allow.

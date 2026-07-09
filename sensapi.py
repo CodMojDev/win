@@ -40,7 +40,7 @@ if cpreproc.pragma_once("__SENSAPI_H__"):
     NETWORK_ALIVE_AOL = 0x00000004
     NETWORK_ALIVE_INTERNET = 0x00000008
 
-    class tagQOCINFO(CStructure):
+    class QOCINFO(CStructure):
         _fields_ = [
             ("dwSize", DWORD),
             ("dwFlags", DWORD),
@@ -51,7 +51,6 @@ if cpreproc.pragma_once("__SENSAPI_H__"):
         dwFlas: int
         dwInSpeed: int
         dwOutSpeed: int
-    QOCINFO = tagQOCINFO
     LPQOCINFO = POINTER(QOCINFO)
     IsDestinationReachableA = declare(sensapi.IsDestinationReachableA, BOOL, LPCSTR, LPQOCINFO)
     IsDestinationReachableW = declare(sensapi.IsDestinationReachableW, BOOL, LPCWSTR, LPQOCINFO)

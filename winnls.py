@@ -840,13 +840,15 @@ if cpreproc.ifndef("NONLS"):
     #          do not fit into the assumptions of these APIs.
     #
 
-    class _cpinfo(CStructure):
+    class CPINFO(CStructure):
         _fields_ = [
             ("MaxCharSize", UINT), # max length (in bytes) of a char
             ("DefaultChar", BYTE * MAX_DEFAULTCHAR), # default character
             ("LeadByte", BYTE * MAX_LEADBYTES) # lead byte ranges
         ]
-    CPINFO = _cpinfo
+        MaxCharSize: int
+        DefaultChar: IArray[int]
+        LeadByte: IArray[int]
     LPCPINFO = POINTER(CPINFO)
 
     #
@@ -875,7 +877,7 @@ if cpreproc.ifndef("NONLS"):
 
     # REGION *** Application Family or OneCore Family or Games Family ***
 
-    class _cpinfoexA(CStructure):
+    class CPINFOEXA(CStructure):
         _fields_ = [
             ("MaxCharSize", UINT), # max length (in bytes) of a char
             ("DefaultChar", BYTE * MAX_DEFAULTCHAR), # default character (MB)
@@ -884,10 +886,15 @@ if cpreproc.ifndef("NONLS"):
             ("CodePage", UINT), # code page id
             ("CodePageName", CHAR * MAX_PATH) # code page name (Unicode)
         ]
-    CPINFOEXA = _cpinfoexA
+        MaxCharSize: int
+        DefaultChar: IArray[int]
+        LeadByte: IArray[int]
+        UnicodeDefaultChar: str
+        CodePage: int
+        CodePageName: ICharArray
     LPCPINFOEXA = POINTER(CPINFOEXA)
 
-    class _cpinfoexW(CStructure):
+    class CPINFOEXW(CStructure):
         _fields_ = [
             ("MaxCharSize", UINT), # max length (in bytes) of a char
             ("DefaultChar", BYTE * MAX_DEFAULTCHAR), # default character (MB)
@@ -896,7 +903,12 @@ if cpreproc.ifndef("NONLS"):
             ("CodePage", UINT), # code page id
             ("CodePageName", WCHAR * MAX_PATH) # code page name (Unicode)
         ]
-    CPINFOEXW = _cpinfoexW
+        MaxCharSize: int
+        DefaultChar: IArray[int]
+        LeadByte: IArray[int]
+        UnicodeDefaultChar: str
+        CodePage: int
+        CodePageName: IWideCharArray
     LPCPINFOEXW = POINTER(CPINFOEXW)
 
     CPINFOEX = unicode(CPINFOEXW, CPINFOEXA)
@@ -910,7 +922,7 @@ if cpreproc.ifndef("NONLS"):
     #  Number format.
     #
 
-    class _numberfmtA(CStructure):
+    class NUMBERFMTA(CStructure):
         _fields_ = [
             ("NumDigits", UINT), # number of decimal digits
             ("LeadingZero", UINT), # if leading zero in decimal fields
@@ -919,11 +931,17 @@ if cpreproc.ifndef("NONLS"):
             ("lpThousandSep", LPSTR), # ptr to thousand separator string
             ("NegativeOrder", UINT) # negative number ordering
         ]
-    NUMBERFMTA = _numberfmtA
+        NumDigits: int
+        LeadingZero: int
+        Grouping: int
+        lpDecimalSep: LPSTR
+        lpThousandSep: LPSTR
+        NegativeOrder: int
+        
     PNUMBERFMTA = POINTER(NUMBERFMTA)
     LPNUMBERFMTA = PNUMBERFMTA
 
-    class _numberfmtW(CStructure):
+    class NUMBERFMTW(CStructure):
         _fields_ = [
             ("NumDigits", UINT), # number of decimal digits
             ("LeadingZero", UINT), # if leading zero in decimal fields
@@ -932,7 +950,12 @@ if cpreproc.ifndef("NONLS"):
             ("lpThousandSep", LPWSTR), # ptr to thousand separator string
             ("NegativeOrder", UINT) # negative number ordering
         ]
-    NUMBERFMTW = _numberfmtW
+        NumDigits: int
+        LeadingZero: int
+        Grouping: int
+        lpDecimalSep: LPWSTR
+        lpThousandSep: LPWSTR
+        NegativeOrder: int
     PNUMBERFMTW = POINTER(NUMBERFMTW)
     LPNUMBERFMTW = PNUMBERFMTW
 
@@ -944,7 +967,7 @@ if cpreproc.ifndef("NONLS"):
     #  Currency format.
     #
 
-    class _currencyfmtA(CStructure):
+    class CURRENCYFMTA(CStructure):
         _fields_ = [
             ("NumDigits", UINT), # number of decimal digits
             ("LeadingZero", UINT), # if leading zero in decimal fields
@@ -955,11 +978,18 @@ if cpreproc.ifndef("NONLS"):
             ("PositiveOrder", UINT), # positive currency ordering
             ("lpCurrencySymbol", LPSTR) # ptr to currency symbol string
         ]
-    CURRENCYFMTA = _currencyfmtA
+        NumDigits: int
+        LeadingZero: int
+        Grouping: int
+        lpDecimalSep: LPSTR
+        lpThousandSep: LPSTR
+        NegativeOrder: int
+        PositiveOrder: int
+        lpCurrencyModel: LPSTR
     PCURRENCYFMTA = POINTER(CURRENCYFMTA)
     LPCURRENCYFMTA = PCURRENCYFMTA
 
-    class _currencyfmtW(CStructure):
+    class CURRENCYFMTW(CStructure):
         _fields_ = [
             ("NumDigits", UINT), # number of decimal digits
             ("LeadingZero", UINT), # if leading zero in decimal fields
@@ -970,7 +1000,14 @@ if cpreproc.ifndef("NONLS"):
             ("PositiveOrder", UINT), # positive currency ordering
             ("lpCurrencySymbol", LPWSTR) # ptr to currency symbol string
         ]
-    CURRENCYFMTW = _currencyfmtW
+        NumDigits: int
+        LeadingZero: int
+        Grouping: int
+        lpDecimalSep: LPWSTR
+        lpThousandSep: LPWSTR
+        NegativeOrder: int
+        PositiveOrder: int
+        lpCurrencyModel: LPWSTR
     PCURRENCYFMTW = POINTER(CURRENCYFMTW)
     LPCURRENCYFMTW = PCURRENCYFMTW
 
@@ -988,7 +1025,7 @@ if cpreproc.ifndef("NONLS"):
 
     SYSNLS_FUNCTION = INT
     if True:
-        COMPARE_STRING    =  0x0001,
+        COMPARE_STRING    =  0x0001
     NLS_FUNCTION = DWORD
 
 
@@ -1008,7 +1045,7 @@ if cpreproc.ifndef("NONLS"):
         # The combination of dwNLSVersion, and guidCustomVersion
         # identify specific sort behavior, persist those to ensure identical
         # behavior in the future.
-        class _nlsversioninfo(CStructure):
+        class NLSVERSIONINFO(CStructure):
             _fields_ = [
                 ("dwNLSVersionInfoSize", DWORD), # sizeof(NLSVERSIONINFO) == 32 bytes
                 ("dwNLSVersion", DWORD), 
@@ -1016,7 +1053,11 @@ if cpreproc.ifndef("NONLS"):
                 ("dwEffectiveId", DWORD), # Deprecated, use guidCustomVerison instead
                 ("guidCustomVersion", GUID) # Explicit sort version
             ]
-        NLSVERSIONINFO = _nlsversioninfo
+            dwNLSVersionInfoSize: int
+            dwNLSVersion: int
+            dwDefinedVersion: int
+            dwEffectiveId: int
+            guidCustomVersion: GUID
         LPNLSVERSIONINFO = POINTER(NLSVERSIONINFO)
 
     else:
@@ -1027,13 +1068,15 @@ if cpreproc.ifndef("NONLS"):
         # This is to be deprecated, please use the NLSVERSIONINFOEX
         # structure below in the future.  The difference is that
         # guidCustomversion is required to uniquely identify a sort
-        class _nlsversioninfo(CStructure): # Use NLSVERSIONINFOEX instead
+        class NLSVERSIONINFO(CStructure): # Use NLSVERSIONINFOEX instead
             _fields_ = [
                 ("dwNLSVersionInfoSize", DWORD), # 12 bytes
                 ("dwNLSVersion", DWORD),
                 ("dwDefinedVersion", DWORD) # Deprecated, use dwNLSVersion instead
             ]
-        NLSVERSIONINFO = _nlsversioninfo
+            dwNLSVersionInfoSize: int
+            dwNLSVersion: int
+            dwDefinedVersion: int
         LPNLSVERSIONINFO = POINTER(NLSVERSIONINFO)
 
     # REGION ***
@@ -1043,7 +1086,7 @@ if cpreproc.ifndef("NONLS"):
     # The combination of dwNLSVersion, and guidCustomVersion
     # identify specific sort behavior, persist those to ensure identical
     # behavior in the future.
-    class _nlsversioninfoex(CStructure):
+    class NLSVERSIONINFOEX(CStructure):
         _fields_ = [
             ("dwNLSVersionInfoSize", DWORD), # sizeof(NLSVERSIONINFOEX) == 32 bytes
             ("dwNLSVersion", DWORD), 
@@ -1051,7 +1094,11 @@ if cpreproc.ifndef("NONLS"):
             ("dwEffectiveId", DWORD), # Deprecated, use guidCustomVerison instead
             ("guidCustomVersion", GUID) # Explicit sort version
         ]
-    NLSVERSIONINFOEX = _nlsversioninfoex
+        dwNLSVersionInfoSize: int
+        dwNLSVersion: int
+        dwDefinedVersion: int
+        dwEffectiveId: int
+        guidCustomVersion: GUID
     LPNLSVERSIONINFOEX = POINTER(NLSVERSIONINFOEX)
 
     GEO_NAME_USER_DEFAULT = NULL
@@ -1167,7 +1214,7 @@ if cpreproc.ifndef("NONLS"):
     # All offsets are relative to start of the structure. Offsets with value 0 mean empty field.
     #
 
-    class _FILEMUIINFO(CStructure):
+    class FILEMUIINFO(CStructure):
         _fields_ = [
             ("dwSize", DWORD), 
             ("dwVersion", DWORD), 
@@ -1183,7 +1230,19 @@ if cpreproc.ifndef("NONLS"):
             ("dwTypeNameMUIOffset", DWORD), 
             ("abBuffer", BYTE * 8)
         ]
-    FILEMUIINFO = _FILEMUIINFO
+        dwSize: int
+        dwVersion: int
+        deFileType: int
+        pChecksum: IArray[int]
+        pServiceChecksum: IArray[int]
+        dwLanguageNameOffset: int
+        dwTypeIDMainSize: int
+        dwTypeIDMainOffset: int
+        dwTypeNameMainOffset: int
+        dwTypeIDMUISize: int
+        dwTypeIDMUIOffset: int
+        dwTypeNameMUIOffse: int
+        abBuffer: IArray[int]
     PFILEMUIINFO = POINTER(FILEMUIINFO)
 
     ######################################

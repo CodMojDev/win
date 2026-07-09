@@ -1903,7 +1903,7 @@ class PatternBrush(GDIObjectHandle):
         Create the pattern brush.
         """
         brush = cls(CreatePatternBrush(hbm))
-        if not self.value:
+        if not brush.value:
             raise WinException()
         return brush
     
@@ -1930,6 +1930,7 @@ class Font(GDIObjectHandle):
                 quality, pitch_and_family, name)
             )
         if not font.value:
+            print('Sheize')
             raise WinException()
         return font
         
@@ -2397,7 +2398,7 @@ class Palette(GDIObjectHandle):
     """
     
     @classmethod
-    def create(cls, entries: Iterable[tagPALETTEENTRY]) -> 'Palette':
+    def create(cls, entries: Iterable[PALETTEENTRY]) -> 'Palette':
         """
         Create the palette.
         """
@@ -2459,6 +2460,16 @@ class Bitmap(GDIObjectHandle):
                 dc.draw_icon(0, 0, width, height, icon)
             
             return bitmap
+        
+    @classmethod
+    def load(self, path: str) -> 'Bitmap':
+        """
+        Load bitmap from path.
+        """
+        bitmap = Bitmap(LoadImage(NULL, path, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE))
+        if not bitmap.value:
+            raise WinException()
+        return bitmap
 
 class PaintDC(DC):
     """

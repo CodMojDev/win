@@ -7,9 +7,9 @@ import winreg
 import shutil
 import os
 
-def OpenHKCR(SubKey: str) -> winreg.HKEYType:
+def OpenHKCR(SubKey: str, access = winreg.KEY_WRITE) -> winreg.HKEYType:
     try:
-        Key = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, SubKey, 0, winreg.KEY_WRITE)
+        Key = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, SubKey, 0, access)
     except FileNotFoundError:
         Key = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, SubKey)
     return Key

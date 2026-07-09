@@ -211,23 +211,11 @@ if cpreproc.pragma_once("_APISETLIBLOADER_"):
 
     # REGION *** Application Family or OneCore Family or Games Family ***
 
-    @kernel32.foreign(FARPROC, HMODULE, LPCSTR, name='GetProcAddress')
-    def _GetProcAddress(hModule: int, lpProcName: bytes) -> FARPROC:
+    @kernel32.foreign(FARPROC, HMODULE, LPCSTR)
+    def GetProcAddress(hModule: int, lpProcName: bytes) -> FARPROC:
         """
         Retrieves the address of an exported function (also known as a procedure) or variable from the specified dynamic-link library (DLL).
         """
-        
-    def GetProcAddress(hModule: int, lpProcName: Union[str, bytes]) -> FARPROC:
-        """
-        Retrieves the address of an exported function (also known as a procedure) or variable from the specified dynamic-link library (DLL).
-        """
-        
-        if isinstance(lpProcName, bytes):
-            return _GetProcAddress(hModule, lpProcName)
-        elif isinstance(lpProcName, str):
-            lpProcName = lpProcName.encode()
-        else:
-            raise TypeError('Procedure name type must be str or bytes.')
         
     CURRENT_IMPORT_REDIRECTION_VERSION = 1
 

@@ -90,6 +90,8 @@ class COMClass:
     
     def __init__(self, clsctx: int = CLSCTX_INPROC_SERVER):
         self.unk = self.create_deref(IUnknown._iid_, clsctx, NULL)
+        guard = _COM_REF_GUARD(self.unk)
+        setattr(self.unk, '_com_ref_guard', guard)
     
     def QueryInterface(self, itf: type[IT], ppv: IDoublePtr[IT]) -> int:
         return self.unk.QueryInterface(itf, ppv)

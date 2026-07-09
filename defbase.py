@@ -1316,6 +1316,10 @@ class W_CDLL(CDLL):
         """
         return self._name
     
+    @name.setter
+    def name(self, name: str):
+        self._name = name
+    
     @property
     def func_ptr(self) -> Type[CFuncPtr]:
         """
@@ -1323,6 +1327,10 @@ class W_CDLL(CDLL):
         Presented as opaque _ctypes.CFuncPtr descendant.
         """
         return self._FuncPtr
+    
+    @func_ptr.setter
+    def func_ptr(self, func_ptr: type[CFuncPtr]):
+        self._FuncPtr = func_ptr
 
 W_CDLL.collection = W_CDLL.Collection(W_CDLL)
 
@@ -2141,6 +2149,8 @@ class CStructure(Structure):
         """
         Allocate the structure using size (optional) and allocator (optional).
         """
+        if size is None:
+            size = cls.size()
         if allocator is None:
             allocator = getattr(_defb_state, '_local_allocator')
             if allocator is None:
@@ -2181,6 +2191,9 @@ class CStructure(Structure):
         allocated = allocator.allocate(size)
         allocator.copy(allocated, self.addressof(), size)
         return self.__class__.from_address(allocated)
+    
+    def __eq__(self, other: 'CStructure') -> bool:
+        return hash(self) == hash(other)
 
 def resolve_genericalias(generic_alias: IGenericAlias) -> type:
     """

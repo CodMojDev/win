@@ -3,6 +3,7 @@
 #
 
 from ..unknwn import *
+from win.defbase_allocator import *
 
 # *****************
 # * Ancient parts *
@@ -239,8 +240,8 @@ TL_OLESTR_NORMAL = 0
 TL_OLESTR_EXTERNAL = 1
 
 class TL_OLESTR(LPOLESTR):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, *args):
+        super().__init__(*args)
         self._external = False
     
     @classmethod
@@ -313,7 +314,7 @@ class TL_ITERATOR(Template[WT]):
         tl_enumerator = _TL_LPENUMERATOR()
         hr = self._tl_enumerator.Clone(byref(tl_enumerator))
         if FAILED(hr): raise COMError(hr)
-        tl_iterator = TL_ITERATOR(tl_enumerator)
+        tl_iterator = TL_ITERATOR[self.get_single_type()](tl_enumerator)
         tl_enumerator.contents.Release()
         return tl_iterator
     
@@ -708,6 +709,22 @@ def TlPath_AddInterpreter(path: str, first: bool = False):
     """
     TlPath_Add(path + '\\Lib', first)
     TlPath_Add(path + '\\Lib\\site-packages', first)
+    
+# Misc Working Dir manipulation
+def TlSetWorkingDirectoryToFile(file: str):
+    """
+    Set working directory to `__file__` directory.
+    """
+    directory = os.path.dirname(file)
+    os.chdir(directory)
+
+# Allocator
+class CCOMAllocator(CLocalAllocator):
+    def allocate(self, size: int, **kwargs) -> int:
+        return CoTaskMemAlloc(size)
+    
+    def deallocate(self, address: WT_ADDRLIKE):
+        CoTaskMemFree(address)
 
 # Local context manipulation
 def TlContext_Hold(context_holder = None):

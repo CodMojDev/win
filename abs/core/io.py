@@ -16,6 +16,9 @@ def GlobalSize(hMem: int) -> int: ...
 @kernel32.foreign(BOOL, HGLOBAL)
 def GlobalUnlock(hMem: int) -> int: ...
 
+@kernel32.foreign(HGLOBAL, UINT, SIZE_T)
+def GlobalAlloc(uFlags: int, dwBytes: int) -> int: ...
+
 @kernel32.foreign(HGLOBAL, HGLOBAL)
 def GlobalFree(hMem: int) -> int: ...
 
@@ -286,6 +289,12 @@ class MemoryIO(io.IOBase):
         
         return self.write(bytes(BOOL(boolean)))
     
+GMEM_FIXED = 0x0000
+GMEM_MOVEABLE = 0x0002
+GMEM_ZEROINIT = 0x0040
+GMEM_MODIFY = 0x0080
+GMEM_DISCARDABLE = 0x0100
+    
 class GlobalIO(MemoryIO):
     """
     Class, wrapping the functionality of HGLOBAL, extending the MemoryIO.
@@ -300,6 +309,7 @@ class GlobalIO(MemoryIO):
         self.handle = hMem
         super().__init__(pMem, GlobalSize(hMem))
         self._owning = False
+        self._locked = True
     
     def owning(self, owning: bool = True):
         """
@@ -309,11 +319,24 @@ class GlobalIO(MemoryIO):
         self._owning = owning
         return self
     
+    def unlock(self):
+        if self._locked:
+            GlobalUnlock(self.handle)
+            self._locked = False
+    
     def close(self):
-        GlobalUnlock(self.handle)
+        if self._locked:
+            GlobalUnlock(self.handle)
         if self._owning:
             GlobalFree(self.handle)
         super().close()
+        
+    @classmethod
+    def allocate(cls, size: int, flags: int = GMEM_FIXED):
+        pIOMemory = GlobalAlloc(flags, size)
+        if not pIOMemory: raise WinException()
+        global_io = cls(pIOMemory).owning()
+        return global_io
         
 class StreamIO(io.IOBase):
     """
