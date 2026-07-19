@@ -34,11 +34,9 @@ class CThread:
     
     @property
     def alive(self) -> bool:
-        try:
-            self.join(0)
-        except Exception:
-            return False
-        return True
+        dwRet = WaitForSingleObject(self.handle, timeout)
+        if dwRet == WAIT_TIMEOUT: return True
+        return False
     
     def join(self, timeout: int = INFINITE):
         dwRet = WaitForSingleObject(self.handle, timeout)

@@ -147,6 +147,8 @@ class CModule:
             address = PtrUtil.get_address(address)
         
         start = self.handle
+        if start is None:
+            return None
         end = start + self.size
         
         if start < address and end > address:

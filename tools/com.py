@@ -1,5 +1,5 @@
-from ..com.interfacedef import *
-from ..defbase_process import *
+from win.com.interfacedef import *
+from win.defbase_process import *
 
 def VTable_View(itf: COMInterface, virtual_table: COMVirtualTable, process: CProcess = CProcess()) -> str:
     vtable = i_cast(getattr(itf, virtual_table.field_name), PTR(virtual_table.VType))
@@ -8,7 +8,7 @@ def VTable_View(itf: COMInterface, virtual_table: COMVirtualTable, process: CPro
         field_name = field[0]
         address = getattr(vtable.contents, field_name)
         address = process.format_address(address)
-        offset = format_hex(vtable.contents.Offset(field_name), sizeof(WORD))
+        offset = format_hex(vtable.contents.offset(field_name), sizeof(WORD))
         if i != 0:
             result += '\n'
         result += f'{offset} {field_name} = {address}'

@@ -69,7 +69,7 @@ if cpreproc.ifndef("__shtypes_h__"):
         _fields_ = [
             ("mkid", SHITEMID)
         ]
-        mkid: int
+        mkid: SHITEMID
 
     ITEMIDLIST_RELATIVE = ITEMIDLIST
     ITEMID_CHILD = ITEMIDLIST

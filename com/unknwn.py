@@ -32,24 +32,23 @@ class IUnknown(COMInterface):
         @overload
         def QueryInterface(self, iid: IID, ppvObject: IPointer[PVOID]) -> int: ...
     
+    @virtual_table.com_function(REFIID, PVOID, intermediate_method=True)
     def QueryInterface(self, iid_or_interface,
-                       ppvObject: IPointer[PVOID], **kwargs):
+                       ppvObject: IPointer[PVOID], **kwargs) -> int:
         if isinstance(iid_or_interface, IID):
             return self.virt_delegate(iid_or_interface.ref(), ppvObject)
         if issubclass(iid_or_interface, COMInterface):
             return self.virt_delegate(iid_or_interface._iid_.ref(), ppvObject)
         raise TypeError('Unknown type. Expected IID/Interface.')
     
-    QueryInterface = virtual_table.com_function(REFIID, PVOID, intermediate_method=True)(QueryInterface)
+    @virtual_table.function(ULONG)
+    def AddRef(self) -> int: ...
     
     @virtual_table.function(ULONG)
-    def AddRef(self): ...
-    
-    @virtual_table.function(ULONG)
-    def Release(self): ...
+    def Release(self) -> int: ...
     
     _fields_ = virtual_table.build()
-    
+
 IT = TypeVar('IT', bound=IUnknown)
 IT2 = TypeVar('IT2', bound=IUnknown)
 

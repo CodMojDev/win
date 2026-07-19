@@ -250,7 +250,7 @@ def format_hex(value: int, zeros: int = -1) -> str:
         return '0x' + '0'.zfill(zeros)
     if zeros == -1:
         return hex(value)
-    value &= ((1 << (zeros << 3)) - 1)
+    value &= ((1 << (zeros << 2)) - 1)
     return '0x' + (hex(value)[2:].zfill(zeros))
 
 if TYPE_CHECKING:
@@ -1004,12 +1004,12 @@ class VirtualTable:
         self.fields = []
         self.name = name
     
-    @staticmethod
-    def set_func_ptr(func_ptr: Type[CFuncPtr]):
+    @classmethod
+    def set_func_ptr(cls, func_ptr: Type[CFuncPtr]):
         """
         Set function pointer type in VirtualTable
         """
-        VirtualTable.func_ptr = func_ptr
+        cls.func_ptr = func_ptr
         
     # make sure name is not overriding important fields in vtable structure
     def _pack_name(self, name: str) -> str:
@@ -1089,7 +1089,7 @@ class VirtualTable:
                 address = getattr(vtable.contents, name)
                 
                 # set callback access
-                callback = VirtualTable.func_ptr(address)
+                callback = self.func_ptr(address)
                 callback.restype = ret
                 
                 if 'variadic' in kwargs:
@@ -1138,12 +1138,11 @@ class VirtualTable:
         Name declaring contract: `<function name>_Impl`.
         """
         function_name = function.__name__
-        
         # thunk between C and Python, garbages unused `this` pointer and uses closured `self`
         def thunk(this, *f_args, **kwargs):
             thunk.__name__ = f'{self.name}_{function_name}_Thunk'
             thunk.__qualname__ = thunk.__code__.co_name = thunk.__code__.co_qualname = thunk.__name__
-            function = getattr(self_class, function_name + '_Impl')
+            impl = getattr(self_class, function_name + '_Impl')
             marshal_scheme = getattr(function, 'marshal_scheme', None)
             
             # if marshal scheme provided, marshal the input arguments
@@ -1160,7 +1159,7 @@ class VirtualTable:
             else:
                 args = f_args
             
-            result = function(*args, **kwargs)
+            result = impl(*args, **kwargs)
             if ret_ptr is not None:
                 return PtrUtil.get_address(result)
             return result
@@ -1456,9 +1455,15 @@ def foreign_optimized(ret: type,
                 wet_trace.dbg_trace(_defb_state._provider, message, up_stack=(1 + (3 if intermediate_method else 0)))
             
             if class_method:
-                result = function(pointer(args[0]), *(args[1:]))
+                arguments = (pointer(args[0]), *(args[1:]))
             else:
-                result = function(*args)
+                arguments = args
+            
+            if 'variadic' in kwargs:
+                result = call_variadic(function, kwargs['variadic'], *arguments)
+            else:
+                result = function(*arguments)
+            
             if callable(result_function):
                 return result_function(result)
             return result
@@ -2031,15 +2036,21 @@ class CStructure(Structure):
         Intermediate Methods Process and call it.
         """
         if len(args) != 0 and isinstance(args[0], dict): # deprecated, temporary explicit call
-            return self.call_method(args[0]['function'], *args[1:], **kwargs)
+            return self.call_method(args[0]['function'], *args[1:], **kwargs, wt_im_delegate=True)
         locs = get_caller_frame().f_locals
         if 'kwargs' not in locs:
             raise TypeError('Intermediate method must have **kwargs argument.')
-        return self.call_method(locs['kwargs']['function'], *args, **kwargs)
+        return self.call_method(locs['kwargs']['function'], *args, **kwargs, wt_im_delegate=True)
     
     # internal function, deprecated to use
     def call_method(self, method: Callable[..., Any], *args, **kwargs) -> Any:
-        return method(byref(self), *args, **kwargs)
+        if 'wt_im_delegate' in kwargs:
+            this = self
+        else:
+            this = byref(self)
+        if 'variadic' in kwargs:
+            return call_variadic(method, kwargs['variadic'], this, *args)
+        return method(this, *args)
     
     def ref(self) -> IPointer['CStructure']:
         """
@@ -2097,11 +2108,18 @@ class CStructure(Structure):
         return None
     
     @classmethod
-    def Offset(cls, field: str) -> int:
+    def offset(cls, field: str) -> int:
         """
         Get the offset of field.
         """
         return getattr(cls, field).offset
+    
+    @classmethod
+    def field_size(cls, field: str) -> int:
+        """
+        Get the size of field.
+        """
+        return getattr(cls, field).size
     
     @classmethod
     def inter_process(cls, process, remote_address: WT_ADDRLIKE) -> Self:
@@ -2673,6 +2691,8 @@ def delegate(*args, **kwargs) -> Any:
     locs = get_caller_frame().f_locals
     if 'kwargs' not in locs:
         raise TypeError('Intermediate method must have **kwargs argument.')
+    if 'variadic' in locs['kwargs']:
+        return locs['kwargs']['function'](*args, **kwargs, variadic=locs['kwargs']['variadic'])
     return locs['kwargs']['function'](*args, **kwargs)
     
 class CClass(CStructure):

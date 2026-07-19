@@ -204,6 +204,12 @@ def TlAccessPpv(pvPpv: int, type_object: type[WT]) -> WT:
     """
     return i_cast(pvPpv, PTR(type_object)).contents
 
+def TlZeroPpv(pvPpv: int):
+    """
+    Zero the `void**`-like argument.
+    """
+    i_cast(pvPpv, PLPVOID).contents.value = 0
+
 class _TL_REF_GUARD:
     itf: IUnknown
     
@@ -609,6 +615,21 @@ def TlOverrideEx(vtable: VirtualTable, method: Callable):
     """
     vtable.override(method.__self__, method)
 
+def TlOverrideEx2(vtable: VirtualTable, self: Any, method: Callable):
+    """
+    Indirectly override the method from local context and with direct method self.
+    Naming contract: `<function name>`_Impl
+    """
+    vtable.override(self, method)
+
+def TlOverrideInterface(self: COMInterface, interface: COMInterface):
+    TlOverrideInterfaceEx(self, interface, _TlContext_GetLocalContext_Guarantee()._virtual_table_on_ctx)
+
+def TlOverrideInterfaceEx(self: COMInterface, interface: COMInterface, virtual_table: COMVirtualTable):
+    methods = [value for value in interface.__dict__.values() if hasattr(value, 'proto') and hasattr(value, 'f')]
+    for method in methods:
+        TlOverrideEx2(virtual_table, self, method)
+
 def TlContext_SetVtable(vtable: VirtualTable):
     """
     Assign the virtual table to local context.
@@ -684,7 +705,7 @@ def TlGetMethodPtrEx(self, method_name: str, virtual_table: VirtualTable) -> int
     Indiectly get the method pointer in virtual table.
     """
     vtable_ptr = TlGetVtablePtrEx(self, virtual_table)
-    method_offset = virtual_table.VType.Offset(method_name)
+    method_offset = virtual_table.VType.offset(method_name)
     return vtable_ptr + method_offset
 
 def TlGetMethodPtr(self, method_name: str) -> int:

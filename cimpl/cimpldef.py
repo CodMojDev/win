@@ -341,6 +341,7 @@ class CImplAssembly:
     
     assembly: CAssembly
     ks_instance: ks.Ks
+    symbols: dict[str, int]
     
     def __init__(self, is_32: bool = cpreproc.defined('_WIN32'), 
                  allocator: IAllocator = CLocalAllocator()):
@@ -366,6 +367,7 @@ class CImplAssembly:
             mode = ks.KS_MODE_64
         
         ks_instance = ks.Ks(arch, mode)
+        ks_instance.sym_resolver = self.on_symbol
         self.ks_instance = ks_instance
         
         self._KS_CACHE[cache_flags] = ks_instance
@@ -380,3 +382,9 @@ class CImplAssembly:
     
     def size(self) -> int:
         return len(self.assembly.buffer)
+    
+    def on_symbol(self, lpwszSymbol: str, pUllAddress: IPointer[UINT64]) -> bool:
+        n = self.symbols.get(lpwszSymbol, None)
+        if n is None: return False
+        pUllAddress[0] = n
+        return True

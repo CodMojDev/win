@@ -126,7 +126,7 @@ class TreeItem(HTREEITEM):
     
     def insert(self, after: int | HANDLE = TVI_LAST, text: str = '',
                image_index: int | None = None, selected_image_index: int | None = None,
-               value: int | None = None, children_count: int = 0) -> 'TreeItem':
+               value: int | None = None, children_count: int = 0, blocking: bool = True) -> TUnion['TreeItem', None]:
         """
         Insert another item into tree item.
         """
@@ -154,10 +154,13 @@ class TreeItem(HTREEITEM):
         tvis.hInsertAfter = after
         tvis.hParent = self
         tvis.itemex = tviex
-        hItem = self.tree_view.send(TVM_INSERTITEMW, lParam=tvis.addressof())
-        if not hItem:
-            return None
-        return TreeItem(self.tree_view, hItem)
+        if blocking:
+            hItem = self.tree_view.send(TVM_INSERTITEMW, lParam=tvis.addressof())
+            if not hItem:
+                return None
+            return TreeItem(self.tree_view, hItem)
+        else:
+            self.tree_view.post(TVM_INSERTITEMW, lParam=tvis.addressof())
     
     def information(self, mask: int | None = None) -> TVITEMEXW:
         """
@@ -167,8 +170,7 @@ class TreeItem(HTREEITEM):
         tviex = TVITEMEXW()
         if mask is None:
             mask = (
-                TVIF_TEXT | TVIF_CHILDREN | 
-                TVIF_SELECTED_IMAGE | 
+                TVIF_TEXT | TVIF_CHILDREN | TVIF_SELECTEDIMAGE | TVIF_EXPANDEDIMAGE |
                 TVIF_IMAGE | TVIF_PARAM | 
                 TVIF_INTEGRAL | TVIF_STATE | 
                 TVIF_STATEEX)
@@ -180,6 +182,25 @@ class TreeItem(HTREEITEM):
             tviex.cchTextMax = 256
         self.tree_view.send(TVM_GETITEMW, lParam=tviex.addressof())
         return tviex
+    
+    def set(self, tviex: TVITEMEXW, mask: int | None = None):
+        """
+        Set the information of a tree item.
+        """
+        if mask is None:
+            mask = (
+                TVIF_TEXT | TVIF_CHILDREN | TVIF_SELECTEDIMAGE | TVIF_EXPANDEDIMAGE |
+                TVIF_IMAGE | TVIF_PARAM | 
+                TVIF_INTEGRAL | TVIF_STATE | 
+                TVIF_STATEEX)
+        tviex.mask = mask
+        tviex.hItem = self.value
+        self.tree_view.send(TVM_SETITEMW, lParam=tviex.addressof())
+        
+    def next(self, tvgn: int) -> TUnion['TreeItem', None]:
+        hItem = self.tree_view.send(TVM_GETNEXTITEM, tvgn, self.value)
+        if not hItem: return None
+        return TreeItem(self.tree_view, hItem)
 
 class TreeView(Control):
     """

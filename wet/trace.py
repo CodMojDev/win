@@ -27,7 +27,7 @@ class WET_PROVIDER(CStructure):
     _consumers: list[tuple[int, ConsumerCallback]]
     
     fEnabled: int
-    RegName: str
+    RegName: LPCWSTR
     
     def __init__(self, reg_name: str, enabled: bool = True):
         self.RegName = reg_name
@@ -120,7 +120,7 @@ class WET_TRACE_COMPONENT(CStructure):
     _anonymous_ = ['_u']
     
     pWetParameter: IPointer[WET_PARAMETER]
-    TraceString: str
+    TraceString: LPCWSTR
     Type: int
     
 PWET_TRACE_COMPONENT = WET_TRACE_COMPONENT.PTR()
@@ -140,7 +140,7 @@ class WET_ADDITIONAL_INFO(CStructure):
     IsClassMethod: int
     IsComObject: int
     TraceID: int
-    Class: str
+    Class: LPCWSTR
 
 PWET_ADDITIONAL_INFO = WET_ADDITIONAL_INFO.PTR()
 
@@ -170,7 +170,7 @@ class WET_EVENT(CStructure):
     pWetProvider: IPointer[WET_PROVIDER]
     nTraceComponents: int
     TimeDateStamp: int
-    FunctionName: str
+    FunctionName: LPCWSTR
     Level: int
     
 PWET_EVENT = WET_EVENT.PTR()
@@ -181,7 +181,7 @@ class _WET_GLOBAL_STATE:
     @classmethod
     def LookupProvider(cls, reg_name: str) -> WET_PROVIDER:
         for provider in cls._providers_:
-            if provider.RegName == reg_name:
+            if provider.RegName.value == reg_name:
                 return provider
         return None
     
@@ -271,7 +271,7 @@ class STDCONSUMER_FILE(CStructure):
         ('FileName', LPCWSTR)
     ]
     
-    FileName: str
+    FileName: LPCWSTR
     
 PSTDCONSUMER_FILE = STDCONSUMER_FILE.PTR()
     
@@ -315,7 +315,7 @@ def ConstructMessage(pEvent: IPointer[WET_EVENT]):
     if Event.AdditionalInfo:
         AdditionalInfo = Event.AdditionalInfo.contents
         
-    Message = f'[{TimeStr}] [{Provider.RegName}] {FunctionName}() '
+    Message = f'[{TimeStr}] [{Provider.RegName.value}] {FunctionName.value}() '
     
     if AdditionalInfo is not None:
         if AdditionalInfo.IsComObject:
@@ -325,7 +325,7 @@ def ConstructMessage(pEvent: IPointer[WET_EVENT]):
         TraceComponent = Event.TraceComponents[i]
         
         if TraceComponent.Type == WET_TRACE_TYPE_STRING:
-            Message += f'{TraceComponent.TraceString} '
+            Message += f'{TraceComponent.TraceString.value} '
         elif TraceComponent.Type == WET_TRACE_TYPE_PARAMETER:
             Parameter = TraceComponent.pWetParameter.contents
             ParameterType = Parameter.ParameterType
@@ -336,12 +336,12 @@ def ConstructMessage(pEvent: IPointer[WET_EVENT]):
             elif ParameterType == WET_PARAMETER_TYPE_UINT:
                 Value = str(Parameter.Value.UnsignedInt)
             elif ParameterType == WET_PARAMETER_TYPE_STRING:
-                Value = f'"{Parameter.Value.String}"'
+                Value = f'"{Parameter.Value.String.value}"'
             elif ParameterType == WET_PARAMETER_TYPE_PYTHON:
                 PyObject = i_cast(Parameter.Value.PyObject, py_object).contents
                 Value = f'{PyObject}'
             else: Value = '[Unknown Type]'
-            Message += f'{Parameter.Parameter}={Value} '
+            Message += f'{Parameter.Parameter.value}={Value} '
             
     Message += '\n'
     return Message

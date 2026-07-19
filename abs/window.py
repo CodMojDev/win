@@ -18,7 +18,7 @@ from win.com.comdefbase import HRESULT, COMError, FAILED
 import random
 
 # WinAbs initialization procedure
-def _abs_init():
+def init_common_controls():
     # initialize the INITCOMMONCONTROLSEX structure
     icex = INITCOMMONCONTROLSEX()
     icex.dwSize = sizeof(icex)
@@ -105,6 +105,17 @@ ZBID_ABOVELOCK_UX = 18
 
 @kernel32.foreign(UINT, ATOM, LPWSTR, INT)
 def GlobalGetAtomNameW(nAtom: int, lpBuffer: WT_LPWSTR, nSize: int) -> int: ...
+
+SUBCLASSPROC = CALLBACK(LRESULT, HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR)
+
+@comctl32.foreign(BOOL, HWND, SUBCLASSPROC, UINT_PTR, DWORD_PTR)
+def SetWindowSubclass(hWnd: int, pfnSubclass: FARPROC, uIdSubclass: int, dwRefData: int) -> int: ...
+
+@comctl32.foreign(BOOL, HWND, SUBCLASSPROC, UINT_PTR)
+def RemoveWindowSubclass(hWnd: int, pfnSubclass: FARPROC, uIdSubclass: int) -> int: ...
+
+@comctl32.foreign(LRESULT, HWND, UINT, WPARAM, LPARAM)
+def DefSubclassProc(hWnd: int, uMsg: int, wParam: int, lParam: int) -> int: ...
 
 class ACCENTPOLICY(CStructure):
     _fields_ = [
@@ -261,6 +272,52 @@ class Window(HWND, Abs.Object):
         HWND.__init__(self, *args)
         self.styles = self.Styles(self)
         
+        # subclass procedure
+        self.pfnSubclassThunkProc = SUBCLASSPROC(self.window_subclass_thunk_proc)
+        
+        # events collection
+        self.on_create = MultiEvent()
+        self.on_left_button_down = MultiEvent()
+        self.on_left_button_up = MultiEvent()
+        self.on_left_button_double_click = MultiEvent()
+        self.on_right_button_down = MultiEvent()
+        self.on_right_button_up = MultiEvent()
+        self.on_right_button_double_click = MultiEvent()
+        self.on_close = MultiEvent()
+        self.on_destroy = MultiEvent()
+        self.on_key_down = MultiEvent()
+        self.on_key_up = MultiEvent()
+        self.on_move = MultiEvent()
+        self.on_show = MultiEvent()
+        self.on_style_changed = MultiEvent()
+        self.on_theme_changed = MultiEvent()
+        self.on_user_changed = MultiEvent()
+        self.on_unknown_message = MultiEvent()
+        self.on_enable = MultiEvent()
+        self.on_set_font = MultiEvent()
+        self.on_mouse_wheel = MultiEvent()
+        self.on_timer = MultiEvent()
+        self.after_message = MultiEvent()
+        self.on_notify = MultiEvent()
+        self.on_message = MultiEvent()
+        self.on_mouse_move = MultiEvent()
+        self.on_draw_item = MultiEvent()
+        self.on_palette_changed = MultiEvent()
+        self.on_measure_item = MultiEvent()
+        self.on_compare_item = MultiEvent()
+        self.on_char = MultiEvent()
+        self.on_command = MultiEvent()
+        self.on_hscroll = MultiEvent()
+        self.on_vscroll = MultiEvent()
+        self.on_nc_destroy = MultiEvent()
+        self.on_mouse_leave = MultiEvent()
+            
+        # bind the standard handler for destroy: application cycle notifier
+        self.on_nc_destroy += self.Window_on_nc_destroy
+        
+        # bind the standard handler for creation: application cycle notifier
+        self.on_create += self.Window_on_create
+        
         # headless construct = construct `Window` object from HWND
         if 'headless' not in kwargs:
             Abs.Object.__init__(self)
@@ -277,48 +334,6 @@ class Window(HWND, Abs.Object):
             
             # timer callback cache
             self._timers = {}
-            
-            # events collection
-            self.on_create = MultiEvent()
-            self.on_left_button_down = MultiEvent()
-            self.on_left_button_up = MultiEvent()
-            self.on_left_button_double_click = MultiEvent()
-            self.on_right_button_down = MultiEvent()
-            self.on_right_button_up = MultiEvent()
-            self.on_right_button_double_click = MultiEvent()
-            self.on_close = MultiEvent()
-            self.on_destroy = MultiEvent()
-            self.on_key_down = MultiEvent()
-            self.on_key_up = MultiEvent()
-            self.on_move = MultiEvent()
-            self.on_show = MultiEvent()
-            self.on_style_changed = MultiEvent()
-            self.on_theme_changed = MultiEvent()
-            self.on_user_changed = MultiEvent()
-            self.on_unknown_message = MultiEvent()
-            self.on_enable = MultiEvent()
-            self.on_set_font = MultiEvent()
-            self.on_mouse_wheel = MultiEvent()
-            self.on_timer = MultiEvent()
-            self.after_message = MultiEvent()
-            self.on_notify = MultiEvent()
-            self.on_message = MultiEvent()
-            self.on_mouse_move = MultiEvent()
-            self.on_draw_item = MultiEvent()
-            self.on_palette_changed = MultiEvent()
-            self.on_measure_item = MultiEvent()
-            self.on_compare_item = MultiEvent()
-            self.on_char = MultiEvent()
-            self.on_command = MultiEvent()
-            self.on_hscroll = MultiEvent()
-            self.on_vscroll = MultiEvent()
-            self.on_nc_destroy = MultiEvent()
-            
-            # bind the standard handler for destroy: application cycle notifier
-            self.on_nc_destroy += self.Window_on_nc_destroy
-            
-            # bind the standard handler for creation: application cycle notifier
-            self.on_create += self.Window_on_create
     
     _timers: dict[int, FARPROC]
     class_name: str | None
@@ -626,6 +641,9 @@ class Window(HWND, Abs.Object):
             # if sentinel value matches, we are falling back to default procedure
             if result is not self: 
                 return 0 # otherwise we are handled the message
+        elif msg == WM_MOUSELEAVE:
+            self.on_mouse_leave.execute()
+            return 0
         else:
             # unknown window message received
             result = self.on_unknown_message.execute(hwnd, msg, wParam, lParam) # trying to call all unknown message handlers
@@ -634,6 +652,24 @@ class Window(HWND, Abs.Object):
                     return value # return handler value as procedure LRESULT
         
         return self.default_window_proc(hwnd, msg, wParam, lParam) # otherwise let procedure fallback into defined fallback procedure (commonly DefWindowProc)
+    
+    def window_subclass_thunk_proc(self, hwnd: int, msg: int, wParam: int, lParam: int, subclassId: int, dwUnused: int): 
+        if msg == WM_NCDESTROY:
+            RemoveWindowSubclass(hwnd, self.pfnSubclassThunkProc, subclassId)
+        elif msg == WM_CREATE:
+            self.value = hwnd
+        result = self.window_subclass_proc(hwnd, msg, wParam, lParam)
+        if result is None: return DefSubclassProc(hwnd, msg, wParam, lParam)
+        return result
+    
+    def subclass(self):
+        SetWindowSubclass(self, self.pfnSubclassThunkProc, SubclassIdentifiers[id(self)], 0)
+    
+    def unsubclass(self):
+        RemoveWindowSubclass(self, self.pfnSubclassThunkProc, SubclassIdentifiers[id(self)])
+        
+    def window_subclass_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int | None:
+        return None
     
     def default_window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         return DefWindowProcW(hwnd, msg, wParam, lParam) # standard window procedure fallback
@@ -1276,7 +1312,7 @@ class Application:
         if not self.windows:
             self.running = False
     
-    def launch(self):
+    def launch(self, window: int | HANDLE = NULL):
         """
         Launch the application event cycle.
         """
@@ -1288,7 +1324,8 @@ class Application:
         
         while self.running:
             try:
-                if PeekMessage(pMsg, NULL, 0, 0, PM_REMOVE): # asynchronous PeekMessage
+                if PeekMessage(pMsg, window, 0, 0, PM_REMOVE): # asynchronous PeekMessage
+                    if msg.message == WM_QUIT: break
                     dispatch = True
                     # check if window belongs to one of modeless dialogs
                     for modeless_dialog in self.modeless_dialogs:
@@ -1365,6 +1402,28 @@ class MessagesT:
         return message_id
     
 Messages = MessagesT()
+
+class AutoIncrementMap:
+    _map: dict[str, int]
+    
+    def __init__(self, start: int):
+        self.start = start
+        self._map = {}
+    
+    def __getitem__(self, name: str) -> int:
+        value = self._map.get(name, None)
+        if value is None:
+            value = self.start
+            self._map[name] = value
+            self.start += 1
+        return value
+    
+    def get(self) -> int:
+        value = self.start
+        self.start += 1
+        return value
+    
+SubclassIdentifiers = AutoIncrementMap(0)
 
 class Control(Window):
     """
@@ -1596,5 +1655,3 @@ class ExtendedGLWindow(GLWindow):
         # set the WGL attributes of version
         self.attributes[WGL_CONTEXT_MAJOR_VERSION_ARB] = major
         self.attributes[WGL_CONTEXT_MINOR_VERSION_ARB] = minor
-        
-_abs_init()

@@ -18,7 +18,7 @@ class CUnknown(IUnknown):
     _lock: Lock
     
     _trace_id_next_: ClassVar[int] = 0
-    _trace_id: int
+    trace_id: int
     
     _unk_outer: Optional[IUnknown]
     
@@ -37,7 +37,7 @@ class CUnknown(IUnknown):
             self._lock = Lock()
         
         # Initialize Trace ID for WET Trace Logging
-        self._trace_id = CUnknown._trace_id_next_
+        self.trace_id = CUnknown._trace_id_next_
         CUnknown._trace_id_next_ += 1
         
         self.dbg_trace(provider)
@@ -109,7 +109,7 @@ class CUnknown(IUnknown):
         """
         Debug trace for COM Object.
         """
-        dbg_trace(provider, message, getattr(self, '_trace_id', -1) if trace_id == -1 else trace_id, level, 1)
+        dbg_trace(provider, message, getattr(self, 'trace_id', -1) if trace_id == -1 else trace_id, level, 1)
         
 class CUnknownMTA(CUnknown):
     """

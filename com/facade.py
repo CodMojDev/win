@@ -1,17 +1,28 @@
 from ..libloaderapi import *
-from ..dbg.dbghelp import *
 from .guidmaintain import *
 from .interfacedef import *
+from ..abs import winregx
+
+DbgHelp = get_win_library('DbgHelp.dll')
+
+@DbgHelp.foreign(PIMAGE_NT_HEADERS, PVOID)
+def ImageNtHeader(Base: WT_ADDRLIKE) -> IPointer[IMAGE_NT_HEADERS64 | IMAGE_NT_HEADERS32]: ...
+
+@DbgHelp.foreign(PIMAGE_NT_HEADERS, PVOID)
+def ImageNtHeader(Base: WT_ADDRLIKE) -> IPointer[IMAGE_NT_HEADERS64 | IMAGE_NT_HEADERS32]: ...
 
 import winreg
 import shutil
 import os
 
-def OpenHKCR(SubKey: str, access = winreg.KEY_WRITE) -> winreg.HKEYType:
+def OpenHKCR(SubKey: str, access = winreg.KEY_WRITE, create: bool = True) -> winreg.HKEYType:
     try:
         Key = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, SubKey, 0, access)
-    except FileNotFoundError:
-        Key = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, SubKey)
+    except FileNotFoundError as e:
+        if create:
+            Key = winreg.CreateKey(winreg.HKEY_CLASSES_ROOT, SubKey)
+        else:
+            raise e from None
     return Key
 
 class FacadeFactory:
@@ -75,8 +86,7 @@ class FacadeFactory:
     def UnregisterCLSID(self, ClsidName: str):
         Clsid = NewClsid(ClsidName)
         ClsidPath = f'CLSID\\{Clsid}'
-        winreg.DeleteKey(winreg.HKEY_CLASSES_ROOT, f'{ClsidPath}\\InprocServer32')
-        try:
-            winreg.DeleteKey(winreg.HKEY_CLASSES_ROOT, f'{ClsidPath}\\ProgID')
-        except: ...
-        winreg.DeleteKey(winreg.HKEY_CLASSES_ROOT, ClsidPath)
+        winregx.DeleteTree(winreg.HKEY_CLASSES_ROOT, ClsidPath)
+                
+    def UnregisterInterface(self, onterface: COMInterface):
+        winregx.DeleteTree(winreg.HKEY_CLASSES_ROOT, f'Interface\\{interface.iid()}')

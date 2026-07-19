@@ -10,13 +10,14 @@ class ValueEnumerator(CComObject, _TL_ENUMERATOR):
     _type_: ClassVar[type]
     _index: int
     
-    def __init__(self, array: list):
+    def __init__(self, array: list, vtable: COMVirtualTable | None = None):
+        if vtable is None: vtable = self.virtual_table
         self.dbg_trace(provider, trace_id=CUnknown._trace_id_next_)
         super().__init__()
         
-        self.set_vtable_on_ctx(self.virtual_table)
+        self.set_vtable_on_ctx(vtable)
         self.implement_interface(_TL_ENUMERATOR)
-        self._array = array
+        self.array = array
         self._index = 0
         
     def Next_Impl(self, celt: int, rgelt: IDoublePtr,
@@ -45,7 +46,7 @@ class ValueEnumerator(CComObject, _TL_ENUMERATOR):
             index = self._index + i
             
             # if reached out of bounds
-            if index == len(self._array):
+            if index == len(self.array):
                 self._index += celt # move the index
                 
                 if pceltFetched: # if pceltFetched, return the fetched elements count
@@ -56,7 +57,7 @@ class ValueEnumerator(CComObject, _TL_ENUMERATOR):
                 return S_FALSE # enumeration stopped
             
             # otherwise, write the provider pointer to rgelt[i]
-            rgelt[i] = self._array[index]
+            rgelt[i] = self.array[index]
         
         # if pceltFetched, return the fetched elements count
         if pceltFetched:
@@ -84,7 +85,7 @@ class ValueEnumerator(CComObject, _TL_ENUMERATOR):
             return E_POINTER
         
         # clone the enumerator and its state
-        enum = self.__class__(self._array)
+        enum = self.__class__(self.array)
         enum._index = self._index
         ppenum.contents = enum.ptr()
         
@@ -100,13 +101,14 @@ class StructurePtrEnumerator(CComObject, _TL_ENUMERATOR):
     _type_: ClassVar[type]
     _index: int
     
-    def __init__(self, array: list):
+    def __init__(self, array: list, vtable: COMVirtualTable | None = None):
+        if vtable is None: vtable = self.virtual_table
         self.dbg_trace(provider, trace_id=CUnknown._trace_id_next_)
         super().__init__()
         
-        self.set_vtable_on_ctx(self.virtual_table)
+        self.set_vtable_on_ctx(vtable)
         self.implement_interface(_TL_ENUMERATOR)
-        self._array = array
+        self.array = array
         self._index = 0
         
     def Next_Impl(self, celt: int, rgelt: IDoublePtr,
@@ -135,7 +137,7 @@ class StructurePtrEnumerator(CComObject, _TL_ENUMERATOR):
             index = self._index + i
             
             # if reached out of bounds
-            if index == len(self._array):
+            if index == len(self.array):
                 self._index += celt # move the index
                 
                 if pceltFetched: # if pceltFetched, return the fetched elements count
@@ -146,7 +148,7 @@ class StructurePtrEnumerator(CComObject, _TL_ENUMERATOR):
                 return S_FALSE # enumeration stopped
             
             # otherwise, write the provider pointer to rgelt[i]
-            rgelt[i] = self._array[index].ptr()
+            rgelt[i] = self.array[index].ptr()
         
         # if pceltFetched, return the fetched elements count
         if pceltFetched:
@@ -174,7 +176,7 @@ class StructurePtrEnumerator(CComObject, _TL_ENUMERATOR):
             return E_POINTER
         
         # clone the enumerator and its state
-        enum = self.__class__(self._array)
+        enum = self.__class__(self.array)
         enum._index = self._index
         ppenum.contents = enum.ptr()
         

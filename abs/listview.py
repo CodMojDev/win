@@ -107,14 +107,35 @@ class ListView(Control):
             list_view: 'ListView'
             index: int
             
-            def __init__(self, list_view: 'ListView'):
+            def __init__(self, list_view: 'ListView', index: int = 0):
                 super().__init__()
                 self.list_view = list_view
-                self.index = 0
+                self.index = index
                 
             @property
             def visible(self) -> bool:
                 return bool(self.list_view.send(LVM_ISITEMVISIBLE, self.index))
+            
+            def next(self, command: int) -> TUnion['ListView.Items.Item', None]:
+                index = self.list_view.send(LVM_GETNEXTITEM, self.index, command)
+                if index == -1: return None
+                return ListView.Items.Item(self.list_view, index)
+            
+            def query(self, mask: int | None = None, sub_item: int | None = None):
+                if mask is None:
+                    mask = (LVIF_COLFMT | LVIF_COLUMNS | LVIF_GROUPID | LVIF_IMAGE |
+                            LVIF_INDENT | LVIF_PARAM | LVIF_TEXT | LVIF_STATE)
+                self.iItem = self.index
+                self.iSubItem = sub_item or 0
+                if mask & LVIF_TEXT:
+                    self.buf = create_unicode_buffer(256)
+                    self.cchTextMax = 256
+                    self.pszText = i_cast(self.buf, LPWSTR)
+                self.mask = mask
+                self.list_view.send(LVM_GETITEMW, lParam=self.ref())
+            
+            def state(self, mask: int) -> int:
+                return self.list_view.send(LVM_GETITEMSTATE, self.index, mask)
                 
         list_view: 'ListView'
         
@@ -204,6 +225,10 @@ class ListView(Control):
             
         def clear(self):
             self.list_view.send(LVM_DELETEALLITEMS)
+            
+        @property
+        def first(self) -> 'ListView.Items.Item':
+            return ListView.Items.Item(self.list_view, -1)
     
     def __init__(self, width: int, height: int, parent: int | HWND, identifier: int | HWND):
         super().__init__(parent, identifier)
@@ -315,4 +340,4 @@ class ListView(Control):
         lvhti.pt.y = y
         i = self.send(LVM_HITTEST, 0, lvhti.ref())
         if i == -1: return (lvhti.flags, None)
-        return (lvhti.flags, self.items[i])
+        return (lvhti.flags, self.items.Item(self, i))

@@ -2,7 +2,10 @@ from .baseinterfacedef import *
 from ..sdkddkver import *
 
 _version = cpreproc.get_version()
-combase = W_WinDLL('combase.dll')
+try:
+    combase = W_WinDLL('combase.dll')
+except:
+    combase = W_WinDLL('ole32.dll')
 
 def combase_foreign(*args: type, 
             name: Optional[str] = None,

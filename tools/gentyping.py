@@ -1,4 +1,4 @@
-from ..minwindef import *
+from win.minwindef import *
 from typing import List
 
 TYPE_MAP = {

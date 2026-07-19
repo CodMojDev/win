@@ -7,7 +7,8 @@ from .minwindef import *
 from typing import (Callable)
 
 if cpreproc.pragma_once("_PSAPI_H_"):
-    kernelbase = W_WinDLL("kernelbase.dll")
+    kernelbase = get_win_library("kernelbase.dll")
+    kernel32 = get_win_library("kernel32.dll")
 
     EnumProcesses = declare(kernelbase.EnumProcesses, BOOL, PDWORD, DWORD, LPDWORD)
     # WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_SYSTEM | WINAPI_PARTITION_GAMES)
@@ -17,6 +18,8 @@ if cpreproc.pragma_once("_PSAPI_H_"):
     # REGION *** Desktop Family or OneCore Family or Games Family ***
 
     EnumProcessModules = declare(kernelbase.EnumProcessModules, BOOL, HANDLE, POINTER(HMODULE), DWORD, LPDWORD)
+    if is_null(EnumProcessModules):
+        EnumProcessModules = declare(kernel32.K32EnumProcessModules, BOOL, HANDLE, POINTER(HMODULE), DWORD, LPDWORD)
     EnumProcessModulesEx = declare(kernelbase.EnumProcessModulesEx, BOOL, HANDLE, POINTER(HMODULE), DWORD, LPDWORD, DWORD)
 
     # REGION ***
@@ -46,6 +49,8 @@ if cpreproc.pragma_once("_PSAPI_H_"):
     LPMODULEINFO = POINTER(MODULEINFO)
 
     GetModuleInformation = declare(kernelbase.GetModuleInformation, BOOL, HANDLE, HMODULE, LPMODULEINFO, DWORD)
+    if is_null(GetModuleInformation):
+        GetModuleInformation = declare(kernel32.K32GetModuleInformation, BOOL, HANDLE, HMODULE, LPMODULEINFO, DWORD)
 
     # REGION ***
 

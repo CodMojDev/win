@@ -1489,7 +1489,7 @@ IU IPropertyUI
 	iid 757a7d9f-919a-4118-99d7-dbb208c8cc66
 	cf ParsePropertyName pszName LPCWSTR pfmtid P.FMTID ppid P.PROPID pchEaten P.ULONG
 	cf GetCannonicalName fmtid R.FMTID pid PROPID pwszText LPWSTR cchText DWORD
-	cf GetDisplayName fmtid R.FMTID pid PROPID flags PROPERTYUI_NAME_FLAGS pwszText cchText DWORD
+	cf GetDisplayName fmtid R.FMTID pid PROPID flags PROPERTYUI_NAME_FLAGS pwszText LPWSTR cchText DWORD
 	cf GetPropertyDescription fmtid R.FMTID pid PROPID pwszText LPWSTR cchText DWORD
 	cf GetDefaultWidth fmtid R.FMTID pid PROPID pcxChars P.ULONG
 	cf GetFlags fmtid R.FMTID pid PROPID pflags P.PROPERTYUI_FLAGS
@@ -1558,7 +1558,7 @@ ifver @WIN2K
 	pie SHDRAGIMAGE LPSHDRAGIMAGE
 
 	eq DI_GETDRAGIMAGE TEXT("ShellGetDragImage")
-	~
+~
 
 	IU IDropTargetHelper
 	{
@@ -1811,7 +1811,7 @@ IU IUserNotification
 {
 	iid ba9711ba-5893-4787-a7e1-41277151550b
 	cf SetBalloonInfo pszTitle LPCWSTR pszText LPCWSTR dwInfoFlags DWORD
-	cf SetBalloonRetry dwShowTime DWORD dwInterval DWORD cRetryCount
+	cf SetBalloonRetry dwShowTime DWORD dwInterval DWORD cRetryCount UINT
 	cf SetIconInfo hIcon HICON pszToolTip LPCWSTR
 	cf Show pqc P.IQueryContinue dwContinuePollInterval DWORD
 	cf PlaySound pszSoundName LPCWSTR
@@ -1833,7 +1833,7 @@ ifver @VISTA
 		cf SetFolderTypeID ftid GUID
 		cf SetFolderLogicalViewMode flvm FOLDERLOGICALVIEWMODE
 		cf SetIconSize iIconSize INT
-		cf SetVisibleColumns cVisibleCZolumns rgKey P.PROPERTYKEY
+		cf SetVisibleColumns cVisibleColumns UINT rgKey P.PROPERTYKEY
 		cf SetSortColumns cSortColumns UINT rgSortColumns P.SORTCOLUMN
 		cf SetGroupColumn keyGroup R.PROPERTYKEY
 		cf SetStacks cStacksKeys UINT rgStackKeys P.PROPERTYKEY
@@ -1949,14 +1949,14 @@ eq DBIF_VIEWMODE_TRANSPARENT 0x0004
 
 ed DESKBANDCID
 {
-    DBID_BANDINFOCHANGED 0
-    DBID_SHOWONLY 1
-    DBID_MAXIMIZEBAND 2      // Maximize the specified band (VT_UI4 =dwID)
-    DBID_PUSHCHEVRON 3
-    DBID_DELAYINIT 4      // Note: _bandsite_ calls _band_ with this code
-    DBID_FINISHINIT 5      // Note: _bandsite_ calls _band_ with this code
-    DBID_SETWINDOWTHEME 6      // Note: _bandsite_ calls _band_ with this code
-    DBID_PERMITAUTOHIDE 7
+    ee DBID_BANDINFOCHANGED 0
+    ee DBID_SHOWONLY 1
+    ee DBID_MAXIMIZEBAND 2      // Maximize the specified band (VT_UI4 =dwID)
+    ee DBID_PUSHCHEVRON 3
+    ee DBID_DELAYINIT 4      // Note: _bandsite_ calls _band_ with this code
+    ee DBID_FINISHINIT 5      // Note: _bandsite_ calls _band_ with this code
+    ee DBID_SETWINDOWTHEME 6      // Note: _bandsite_ calls _band_ with this code
+    ee DBID_PERMITAUTOHIDE 7
 }
 
 eq DBPC_SELECTFIRST DWORD(-1).value
@@ -2086,7 +2086,7 @@ ifver_ie @IE70
 	{
 	    ee EBO_NONE 0x00000000     // No options
 		ee EBO_NAVIGATEONCE 0x00000001     // Don't navigate after initial navigation
-		ee EBO_SHOWFRAMES 0X00000002     // Show with frame module manager on - otherwise, single view object
+		ee EBO_SHOWFRAMES 0x00000002     // Show with frame module manager on - otherwise, single view object
 		ee EBO_ALWAYSNAVIGATE 0x00000004     // Always navigate, even if you are attempting to navigate to the current folder
 		ee EBO_NOTRAVELLOG 0x00000008     // Do not update travel log
 		ee EBO_NOWRAPPERWINDOW 0x00000010     // For legacy clients that need the browser parented directly on themselves
@@ -2207,7 +2207,7 @@ ifver_ie @IE70
 	eq FOFX_ADDUNDORECORD           0x20000000  // This is a user-invoked operation, and should be placed on the undo stack.  This flag is preferred to FOF_ALLOWUNDO
 	eq FOFX_COPYASDOWNLOAD          0x40000000  // Show Downloading instead of Copying
 	eq FOFX_DONTDISPLAYLOCATIONS    0x80000000  // Hides the locations line in the progress dialog
-	~
+~
 	
 	IU IFileOperation
 	{

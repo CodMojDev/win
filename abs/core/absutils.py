@@ -1,6 +1,7 @@
 from typing import Callable, TYPE_CHECKING
 from win.defbase_thread import *
 from win.synchapi import *
+from win.winuser import user32
 
 import threading
 import traceback
@@ -9,6 +10,9 @@ import queue
 if TYPE_CHECKING:
     from .handle import CriticalSection, Win32Event
     from ..window import Window, Application
+    
+@user32.foreign(BOOL)
+def SetProcessDPIAware() -> int: ...
 
 def _abs_is_main(stack_level: int = 0) -> bool:
     # check upper frame + stack_level is running as main script (standard __name__ == __main__ check)
@@ -164,6 +168,7 @@ class Abs:
         Run the WinAbs entry point.
         """
         
+        SetProcessDPIAware()
         if _abs_is_main(1): return entry_point(*args, **kwargs)
         return None
     
