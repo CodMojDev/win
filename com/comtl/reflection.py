@@ -107,7 +107,7 @@ class IPythonObject(IUnknown):
         
     @virtual_table.com_function(PVOID, PVOID)
     def SetItem(self, pItemIndex: IPointer['IPythonObject'],
-                pItem: IDoublePtr['IPythonObject']) -> int: 
+                pItem: IPointer['IPythonObject']) -> int: 
         """
         Set the item by Python index.
         """
@@ -734,13 +734,13 @@ class IPythonManager(IUnknown):
         """
         
     @virtual_table.com_function(LPCWSTR, PVOID)
-    def ObjectFromString(self, pwszString: str, ppObject: IDoublePtr['IPythonObject']) -> int:
+    def ObjectFromString(self, pwszString: LPCWSTR, ppObject: IDoublePtr['IPythonObject']) -> int:
         """
         Create the Python object from string.
         """
         
     @virtual_table.com_function(LPCWSTR, PVOID)
-    def ImportModule(self, pwszModule: str, ppObject: IDoublePtr['IPythonObject']) -> int:
+    def ImportModule(self, pwszModule: LPCWSTR, ppObject: IDoublePtr['IPythonObject']) -> int:
         """
         Import the module by its name.
         """
@@ -805,7 +805,7 @@ class PythonManager(CComClass, IPythonManager):
         self.dbg_trace(provider, 'S_OK')
         return S_OK
     
-    def GetFromGlobal_Impl(self, pwszName: str, pvPpObject: int) -> int:
+    def GetFromGlobal_Impl(self, pwszName: LPCWSTR, pvPpObject: int) -> int:
         if not pwszName:
             self.dbg_trace(provider, 'pwszName == NULL!')
             return E_POINTER
@@ -814,17 +814,17 @@ class PythonManager(CComClass, IPythonManager):
             self.dbg_trace(provider, 'ppObject == NULL!')
             return E_POINTER
         
-        if pwszName not in globals():
-            if pwszName not in locals():
-                if pwszName not in dir(builtins):
-                    self.dbg_trace(provider, f'L"{pwszName}" not in global scope!')
+        if pwszName.value not in globals():
+            if pwszName.value not in locals():
+                if pwszName.value not in dir(builtins):
+                    self.dbg_trace(provider, f'L"{pwszName.value}" not in global scope!')
                     return E_INVALIDARG
                 else:
-                    pyobj = getattr(builtins, pwszName)
+                    pyobj = getattr(builtins, pwszName.value)
             else:
-                pyobj = locals()[pwszName]
+                pyobj = locals()[pwszName.value]
         else:
-            pyobj = globals()[pwszName]
+            pyobj = globals()[pwszName.value]
         
         obj = PythonObject(pyobj)
         TlWritePointerToPpv(pvPpObject, obj.ptr())
@@ -832,7 +832,7 @@ class PythonManager(CComClass, IPythonManager):
         self.dbg_trace(provider, 'S_OK')
         return S_OK
     
-    def ObjectFromString_Impl(self, pwszString: str, pvPpObject: int) -> int:
+    def ObjectFromString_Impl(self, pwszString: LPCWSTR, pvPpObject: int) -> int:
         if not pwszString:
             self.dbg_trace(provider, 'pwszString == NULL!')
             return E_POINTER
@@ -841,7 +841,7 @@ class PythonManager(CComClass, IPythonManager):
             self.dbg_trace(provider, 'ppObject == NULL!')
             return E_POINTER
         
-        obj = PythonObject(pwszString)
+        obj = PythonObject(pwszString.value)
         TlWritePointerToPpv(pvPpObject, obj.ptr())
         
         self.dbg_trace(provider, 'S_OK')
@@ -858,7 +858,7 @@ class PythonManager(CComClass, IPythonManager):
         self.dbg_trace(provider, 'S_OK')
         return S_OK
     
-    def ImportModule_Impl(self, pwszModule: str, pvPpObject: int) -> int:
+    def ImportModule_Impl(self, pwszModule: LPCWSTR, pvPpObject: int) -> int:
         if not pwszModule:
             self.dbg_trace(provider, 'pwszModule == NULL!')
             return E_POINTER
@@ -868,7 +868,7 @@ class PythonManager(CComClass, IPythonManager):
             return E_POINTER
         
         try:
-            module = __import__(pwszModule)
+            module = __import__(pwszModule.value)
             obj = PythonObject(module)
             TlWritePointerToPpv(pvPpObject, obj.ptr())
         except Exception as e:

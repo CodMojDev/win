@@ -107,10 +107,72 @@ class Point(POINT, CStructure): ...
     
 class Size(SIZE, CStructure): ...
 
-class Handle(HANDLE):
-    """
-    Main Win32 abstract handle wrapper.
-    """
+class BitGroup:
+    value: int
+    
+    def __init__(self, value: int):
+        self.value = value
+        
+    def add(self, *bits: int):
+        for bit in bits:
+            self.value |= bit
+        
+    def remove(self, *bits: int):
+        for bit in bits:
+            self.value &= ~bit
+        
+    def has(self, *bits: int) -> bool:
+        bit = 0
+        for i in bits:
+            bit |= i
+        return (self.value & bit) != 0
+    
+    def __and__(self, bit: int) -> 'BitGroup':
+        return BitGroup(self.value & bit)
+    
+    def __iand__(self, bit: int) -> 'BitGroup':
+        self.value &= bit
+        return self
+    
+    def __xor__(self, bit: int) -> 'BitGroup':
+        return BitGroup(self.value ^ bit)
+    
+    def __ixor__(self, bit: int) -> 'BitGroup':
+        self.value ^= bit
+        return self
+    
+    def __or__(self, bit: int) -> 'BitGroup':
+        return BitGroup(self.value | bit)
+    
+    def __ior__(self, bit: int) -> 'BitGroup':
+        self.value |= bit
+        return self
+    
+    def __int__(self) -> 'BitGroup':
+        return self.value
+    
+    def __lshift__(self, bit: int) -> 'BitGroup':
+        return BitGroup(self.value << bit)
+    
+    def __ilshift__(self, bit: int) -> 'BitGroup':
+        self.value <<= bit
+        return self
+    
+    def __rshift__(self, bit: int) -> 'BitGroup':
+        return BitGroup(self.value >> bit)
+    
+    def __irshift__(self, bit: int) -> 'BitGroup':
+        self.value >>= bit
+        return self
+    
+    def test(self, mapping: dict[int, str]) -> list[str]:
+        result = []
+        for k, v in mapping.items():
+            if self.value & v: result.append(k)
+        return result
+
+class ControllableValue:
+    value: int
     
     _released: bool
     _closed: bool
@@ -121,22 +183,19 @@ class Handle(HANDLE):
         self._closed = False
     
     @classmethod
-    def foreign_owner(cls, val: int | HANDLE) -> Self:
+    def foreign_owner(cls, val: int | HANDLE, *args, **kwargs) -> Self:
         """
         Create the handle instance from foreign handle.
         """
-        
-        if not val: return None # if invalid handle was provided, when return None
-        instance = cls(val)
-        instance._closed = True # formally the handle is closed (by logic if it is already closed, 
-                                # it cannot be closed, so it is our variant)
+        instance = cls(val).exchange_owner()
+        if instance.invalid(): return None # if invalid handle was provided, when return None
+        instance.initialize_from_foreign(*args, **kwargs)
         return instance
     
     def exchange_owner(self):
         """
         Exchange the owner of handle from local -> foreign, or foreign -> local.
         """
-        
         self._closed = not self._closed
         return self
     
@@ -148,7 +207,7 @@ class Handle(HANDLE):
     def __exit__(self, *_):
         if not self._released:
             self._released = True
-            if self.value:
+            if self.valid:
                 self.close()
             
     def __del__(self):
@@ -160,6 +219,27 @@ class Handle(HANDLE):
         """
         Abstract method to release the handle.
         """
+        
+    def invalid(self) -> bool:
+        """
+        Check this handle is invalid.
+        """
+        return not self.value
+    
+    @property
+    def valid(self) -> bool:
+        return not self.invalid()
+    
+    def initialize_from_foreign(self, *args, **kwargs):
+        """
+        Virtual method for initialize handle instance from foreign arguments.
+        """
+        return
+
+class Handle(ControllableValue, HANDLE):
+    """
+    Main Win32 abstract handle wrapper.
+    """
         
 class GDIObjectHandle(Handle):
     def close(self):
@@ -225,7 +305,6 @@ class StockObject(GDIObjectHandle):
     def close(self):
         self._closed = True
 
-# i don't know why UxTheme is there, but let it stay here
 uxtheme = get_win_library('uxtheme.dll')
 
 HTHEME = HANDLE

@@ -2,9 +2,9 @@ from win.com.facade import *
 
 import sys
 
-def main():
-    factory = FacadeFactory()
+factory = FacadeFactory()
 
+def main():
     if '-reg' in sys.argv:
         reg_pos = sys.argv.index('-reg')
         class_name, script_name = sys.argv[reg_pos:reg_pos+2]

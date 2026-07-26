@@ -110,6 +110,9 @@ class WRPCUDPHost(IWRPCHost):
             else:
                 raise e from None
     
+    def _worker_client(self, ip: str, port: int):
+        ...
+    
     def _worker(self):
         while self.alive:
             data, client_address = self.sock.recvfrom(WRPC_UDP_PACKET_MAXSIZE)

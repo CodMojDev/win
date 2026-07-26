@@ -1307,6 +1307,19 @@ if cpreproc.pragma_once("_WINUSER_"):
                 # Win 4.0
                 ("hIconSm", HICON)
             ]
+            
+            lpszClassName: LPCSTR
+            lpszMenuName: LPCSTR
+            lpfnWndProc: FARPROC
+            hbrBackground: int
+            cbClsExtra: int
+            cbWndExtra: int
+            hInstance: int
+            hCursor: int
+            hIconSm: int
+            cbSize: int
+            hIcon: int
+            style: int
         WNDCLASSEXA = tagWNDCLASSEXA
         NPWNDCLASSEXA = POINTER(WNDCLASSEXA)
         LPWNDCLASSEXA = NPWNDCLASSEXA
@@ -1329,6 +1342,19 @@ if cpreproc.pragma_once("_WINUSER_"):
                 # Win 4.0
                 ("hIconSm", HICON)
             ]
+            
+            lpszClassName: LPCWSTR
+            lpszMenuName: LPCWSTR
+            lpfnWndProc: FARPROC
+            hbrBackground: int
+            cbClsExtra: int
+            cbWndExtra: int
+            hInstance: int
+            hCursor: int
+            hIconSm: int
+            cbSize: int
+            hIcon: int
+            style: int
         WNDCLASSEXW = tagWNDCLASSEXW
         NPWNDCLASSEXW = POINTER(WNDCLASSEXW)
         LPWNDCLASSEXW = NPWNDCLASSEXW
@@ -1355,7 +1381,7 @@ if cpreproc.pragma_once("_WINUSER_"):
             
             lpszClassName: LPCSTR
             lpszMenuName: LPCSTR
-            lpfnWndProc: PVOID
+            lpfnWndProc: FARPROC
             hbrBackground: int
             cbClsExtra: int
             cbWndExtra: int
@@ -1385,7 +1411,7 @@ if cpreproc.pragma_once("_WINUSER_"):
             
             lpszClassName: LPCWSTR
             lpszMenuName: LPCWSTR
-            lpfnWndProc: PVOID
+            lpfnWndProc: FARPROC
             hbrBackground: int
             cbClsExtra: int
             cbWndExtra: int

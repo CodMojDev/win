@@ -44,4 +44,4 @@ def GetErrorMessage(hr: int) -> str:
             if error:
                 return error
     
-    return format_hex(ULONG(hr).value, sizeof(HRESULT))
+    return format_hex(ULONG(hr).value, 8)

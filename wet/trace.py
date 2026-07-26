@@ -290,7 +290,7 @@ def ConfigureStandardConsumer(StdConsumerId: int, pData: IVoidPtr):
     if StdConsumerId == STD_CONSUMER_FILE:
         if pData:
             StdConsumerFile = i_cast(pData, PSTDCONSUMER_FILE).contents
-            _FILE_GLOBAL_STATE._file_name = StdConsumerFile.FileName
+            _FILE_GLOBAL_STATE._file_name = StdConsumerFile.FileName.value
             _FILE_GLOBAL_STATE._file = open(_FILE_GLOBAL_STATE._file_name, 'w')
         else: # ConfigureStandardConsumer(STD_CONSUMER_FILE, NULL) releases the opened log file
             if _FILE_GLOBAL_STATE._file and not _FILE_GLOBAL_STATE._file.closed:

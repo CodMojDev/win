@@ -1371,7 +1371,7 @@ class W_PyDLL(W_CDLL):
 W_PyDLL.current = W_PyDLL("python dll", None, sys.dllhandle)
 
 # Address-like typing interface (void*, T*, Python int).
-WT_ADDRLIKE: TypeAlias = TUnion[int, IVoidPtr, IPointer[WT]]
+WT_ADDRLIKE: TypeAlias = TUnion[int, IVoidPtr, IPointer[WT], None]
 
 def declare(func: IFunction, ret: type, *args: type) -> IFunction:
     """

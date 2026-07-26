@@ -24,7 +24,7 @@ class Dialog(Window):
         self.on_close += self.on_close_dialog
         
         # remove standard window destroy procedure
-        self.on_destroy -= self.Window_on_nc_destroy
+        self.on_nc_destroy -= self.Window_on_nc_destroy
         
         # dialog is modal by default
         self.modal = True
@@ -141,3 +141,10 @@ class Dialog(Window):
             GetModuleHandleW(NULL), 
             self.pDlg, self._parent, 
             self.pfnWndProc)
+        
+    def center(self):
+        """
+        Center the dialog over parent.
+        """
+        rc = self.parent.rect
+        self.position = (rc.left + (rc.width - self.width) // 2, rc.top + (rc.height - self.height) // 2)

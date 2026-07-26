@@ -8,8 +8,12 @@ DbgHelp = get_win_library('DbgHelp.dll')
 @DbgHelp.foreign(PIMAGE_NT_HEADERS, PVOID)
 def ImageNtHeader(Base: WT_ADDRLIKE) -> IPointer[IMAGE_NT_HEADERS64 | IMAGE_NT_HEADERS32]: ...
 
-@DbgHelp.foreign(PIMAGE_NT_HEADERS, PVOID)
-def ImageNtHeader(Base: WT_ADDRLIKE) -> IPointer[IMAGE_NT_HEADERS64 | IMAGE_NT_HEADERS32]: ...
+@DbgHelp.foreign(PVOID, PIMAGE_NT_HEADERS, PVOID, ULONG,
+                PTR(PIMAGE_SECTION_HEADER))
+def ImageRvaToVa(
+    NtHeaders: IPointer[IMAGE_NT_HEADERS64 | IMAGE_NT_HEADERS32],
+    Base: PVOID, Rva: int, 
+    LastRvaSection: IDoublePtr[IMAGE_SECTION_HEADER]) -> int: ...
 
 import winreg
 import shutil

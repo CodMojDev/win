@@ -85,3 +85,15 @@ class Edit(Control):
     @property
     def line_count(self) -> int:
         return self.send(EM_GETLINECOUNT)
+    
+    def balloon(self, icon: int, title: str, text: str):
+        title_buffer = create_unicode_buffer(title)
+        text_buffer = create_unicode_buffer(text)
+        
+        tip = EDITBALLOONTIP()
+        tip.cbStruct = tip.size()
+        tip.pszTitle = i_cast(title_buffer, LPCWSTR)
+        tip.pszText = i_cast(text_buffer, LPCWSTR)
+        tip.ttiIcon = icon
+        
+        self.send(EM_SHOWBALLOONTIP, 0, tip.ref())

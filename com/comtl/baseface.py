@@ -210,7 +210,7 @@ def TlZeroPpv(pvPpv: int):
     """
     i_cast(pvPpv, PLPVOID).contents.value = 0
 
-class _TL_REF_GUARD:
+class  _TL_REF_GUARD:
     itf: IUnknown
     
     def __init__(self, itf: IUnknown):
@@ -342,8 +342,13 @@ def TlAddRefGuard(itf: IT):
     """
     Add ref-guard to interface.
     """
-    itf = TlGetInterface(itf)
-    i_setattr(itf, '_tl_ref_guard', _TL_REF_GUARD(itf))
+    TlAddRefGuardEx(itf, itf)
+    
+def TlAddRefGuardEx(holder: Any, itf: IT):
+    """
+    Indirectly add ref-guard of interface to any guard holder object.
+    """
+    i_setattr(holder, '_tl_ref_guard', _TL_REF_GUARD(TlGetInterface(itf)))
 
 def TlHoldInterface(itf: IT):
     """
@@ -374,7 +379,7 @@ def TlNullPtrCheck(*pointers, pointer_names: list[str] = [], provider: WET_PROVI
         if not pointer:
             if provider is None: return True
             pointer_name = pointer_names[pointer_no]
-            comobj.dbg_trace(provider, f'{pointer_name} == NULL!')
+            comobj.dbg_trace(provider, f'{pointer_name}==NULL E_POINTER')
             return True
     return False
     
@@ -511,10 +516,21 @@ def TlBSTR(bstrLike: BSTR |str) -> str:
     Check the providen string is BSTR, then access and free it,
     otherwise return it.
     """
-    print(type(bstrLike), bstrLike)
     if isinstance(bstrLike, BSTR):
         return TlAccessOAStringAndFree(bstrLike)
     return bstrLike
+
+def TlPpUnknown(pvPp: WT_ADDRLIKE) -> IDoublePtr[IUnknown]:
+    """
+    Convert `void**`-like argument to `IUnknown**`.
+    """
+    return i_cast(pvPp, PTR(LPUNKOWN))
+
+def TlPvPp(pvPp: WT_ADDRLIKE) -> int:
+    """
+    Convert `void**`-like argument to `void**`.
+    """
+    return PtrUtil.get_address(pvPp)
 
 #
 # COM TL Context utilities
@@ -762,11 +778,11 @@ def TlContext_Hold(context_holder = None):
     _tl_context._local_contexts.append(context)
     _TlContext_Init()
     
-def TlContext_Acquire(context = None):
+def TlContext_Acquire(context_holder = None):
     """
     Acquire the local context.
     """
-    TlContext_Hold(context)
+    TlContext_Hold(context_holder)
     
 def TlContext_Release():
     """

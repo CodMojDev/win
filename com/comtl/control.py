@@ -57,4 +57,3 @@ class PythonControl(CComClass, IPythonControl):
     
     def AddCrashLogging_Impl(self):
         RegisterStandardConsumer(STD_CONSUMER_PRINT, provider)
-        StdStreamsToStandardConsumer(STD_CONSUMER_DEBUG)

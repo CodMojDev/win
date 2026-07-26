@@ -456,6 +456,6 @@ class CProcess:
             if module_address is None: continue
             return module_address
             
-        return format_hex(address, sizeof(PVOID))
+        return format_hex(address, 16)
     
 CProcess.current = CProcess()
