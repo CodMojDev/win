@@ -1698,12 +1698,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         LPTBNOTIFY = LPNMTOOLBAR
     #====== REBAR CONTROL ========================================================
     if cpreproc.ifndef("NOREBAR"):
-        if cpreproc.ifdef("_WIN32"):
-            REBARCLASSNAMEW = u"ReBarWindow32"
-            REBARCLASSNAMEA = "ReBarWindow32"
-            REBARCLASSNAME = unicode(REBARCLASSNAMEW, REBARCLASSNAMEA)
-        else:
-            REBARCLASSNAME = "ReBarWindow"
+        REBARCLASSNAMEW = u"ReBarWindow32"
+        REBARCLASSNAMEA = b"ReBarWindow32"
+        REBARCLASSNAME = unicode(REBARCLASSNAMEW, REBARCLASSNAMEA)
         RBIM_IMAGELIST = 0x00000001
         # begin_r_commctrl
         RBS_TOOLTIPS = 0x00000100
@@ -2411,12 +2408,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         MINSYSCOMMAND = SC_SIZE
     #====== TRACKBAR CONTROL =====================================================
     if cpreproc.ifndef("NOTRACKBAR"):
-        if cpreproc.ifdef("_WIN32"):
-            TRACKBAR_CLASSA = "msctls_trackbar32"
-            TRACKBAR_CLASSW = u"msctls_trackbar32"
-            TRACKBAR_CLASS = unicode(TRACKBAR_CLASSW, TRACKBAR_CLASSA)
-        else:
-            TRACKBAR_CLASS = "msctls_trackbar"
+        TRACKBAR_CLASSA = b"msctls_trackbar32"
+        TRACKBAR_CLASSW = u"msctls_trackbar32"
+        TRACKBAR_CLASS = unicode(TRACKBAR_CLASSW, TRACKBAR_CLASSA)
         # begin_r_commctrl
         TBS_AUTOTICKS = 0x0001
         TBS_VERT = 0x0002
@@ -2532,12 +2526,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         LBItemFromPt = declare(comctl32.LBItemFromPt, INT, HWND, POINT, BOOL)
     #====== UPDOWN CONTROL =======================================================
     if cpreproc.ifndef("NOUPDOWN"):
-        if cpreproc.ifdef("_WIN32"):
-            UPDOWN_CLASSA = "msctls_updown32"
-            UPDOWN_CLASSW = u"msctls_updown32"
-            UPDOWN_CLASS = unicode(UPDOWN_CLASSW, UPDOWN_CLASSA)
-        else:
-            UPDOWN_CLASS = "msctls_updown"
+        UPDOWN_CLASSA = b"msctls_updown32"
+        UPDOWN_CLASSW = u"msctls_updown32"
+        UPDOWN_CLASS = unicode(UPDOWN_CLASSW, UPDOWN_CLASSA)
         class UDACCEL(CStructure):
             _fields_ = [
                 ("nSec", UINT),
@@ -5140,7 +5131,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ('dwStateMask', DWORD),
                 ('pszText', LPSTR),
                 ('cchTextMax', INT),
-                ('iImage', INT)
+                ('iImage', INT),
+                ('lParam', LPARAM)
             ]
             
             mask: int
@@ -5149,6 +5141,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             pszText: LPSTR
             cchTextMax: int
             iImage: int
+            lParam: int
 
         LPTCITEMA = TCITEMA.PTR()
 
@@ -5159,7 +5152,8 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ('dwStateMask', DWORD),
                 ('pszText', LPWSTR),
                 ('cchTextMax', INT),
-                ('iImage', INT)
+                ('iImage', INT),
+                ('lParam', LPARAM)
             ]
             
             mask: int
@@ -5168,6 +5162,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             pszText: LPWSTR
             cchTextMax: int
             iImage: int
+            lParam: int
             
         LPTCITEMW = TCITEMW.PTR()
 

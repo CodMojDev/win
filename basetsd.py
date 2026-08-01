@@ -284,25 +284,14 @@ if cpreproc.pragma_once("_BASETSD_H_"):
     DWORD32 = UINT
     PDWORD32 = PUINT
     
-    INT_PTR = INT
-    PINT_PTR = PINT
-    UINT_PTR = UINT
-    PUINT_PTR = PUINT
-
-    LONGLONG = INT64
-    ULONGLONG = UINT64
-    
     MAXLONGLONG = 0x7fffffffffffffff
-    
-    PLONGLONG = POINTER(LONGLONG)
-    PULONGLONG = POINTER(ULONGLONG)
-
-    LONG_PTR = LONGLONG
-    PLONG_PTR = PLONGLONG
-    ULONG_PTR = ULONGLONG
-    PULONG_PTR = PULONGLONG
 
     ADDRESS_TAG_BIT = 0x40000000000
+
+    LONGLONG = c_longlong
+    ULONGLONG = c_ulonglong
+    PLONGLONG = PTR(LONGLONG)
+    PULONGLONG = PTR(ULONGLONG)
 
     SHANDLE_PTR = INT64
     HANDLE_PTR = INT64
@@ -345,10 +334,15 @@ if cpreproc.pragma_once("_BASETSD_H_"):
 
     if cpreproc.ifdef("_WIN64"): # 64-bit
         INT_PTR   = INT64
+        PINT_PTR  = PINT64
         UINT_PTR  = UINT64
+        PUINT_PTR = PUINT64
         LONG_PTR  = INT64
+        PLONG_PTR = PINT64
         ULONG_PTR = UINT64
+        PULONG_PTR = PUINT64
         UHALF_PTR = UINT64  # or c_uint32 depending on definition
+        PHALF_PTR = PINT
         SIZE_T    = UINT64
         SSIZE_T   = INT64
         PSIZE_T   = PUINT64
@@ -357,9 +351,13 @@ if cpreproc.pragma_once("_BASETSD_H_"):
         PDWORD_PTR = PUINT64
     else: # 32-bit
         INT_PTR   = INT
+        PINT_PTR  = PINT
         UINT_PTR  = UINT
+        PUINT_PTR = PUINT
         LONG_PTR  = LONG
+        PLONG_PTR = PLONG
         ULONG_PTR = ULONG
+        PULONG_PTR = PULONG
         UHALF_PTR = UINT
         PHALF_PTR = PINT
         SIZE_T    = UINT
@@ -368,7 +366,7 @@ if cpreproc.pragma_once("_BASETSD_H_"):
         PSSIZE_T  = PINT
         DWORD_PTR = UINT
         PDWORD_PTR = PUINT
-        
+    
     MAXUINT_PTR = UINT_PTR(~0).value
     MAXINT_PTR = UINT_PTR(MAXUINT_PTR >> 1).value
     MININT_PTR = INT_PTR(~MAXINT_PTR).value

@@ -183,7 +183,8 @@ __all__ = [
     "is_CData", "is_CFuncPtr",
     "CData", "SimpleCData",
     "PTRD",
-    "is_float_like", "is_int_like"
+    "is_float_like", "is_int_like",
+    "format_qualname"
 ]
 
 def pcall(f, *args, **kwargs) -> tuple[Any, BaseException]:
@@ -971,6 +972,15 @@ def DOUBLE_PTR(typ: Type[WT]) -> Type[IDoublePtr[WT]]:
 # alias (for compatibility) instead of dumb `ctypes.POINTER`
 POINTER = PTR
 
+def defb_dbg_trace(message: str = '', trace_id: int = -1,
+                   level: int = 0, up_stack: int = 0):
+    wet_trace = getattr(_defb_state, '_wet_trace', None)
+    if wet_trace is None:
+        from .wet import trace as wet_trace
+        _defb_state._wet_trace = wet_trace
+        _defb_state._provider = wet_trace.WET_PROVIDER('DEFB')
+    wet_trace.dbg_trace(_defb_state._provider, message, trace_id, level, up_stack+1)
+
 from ctypes import WINFUNCTYPE
 
 class VirtualTable:
@@ -1082,6 +1092,7 @@ class VirtualTable:
                 
                 if get_vtable is not None:
                     field_name = get_vtable()
+                defb_dbg_trace(f'(vtable {self.name}) Called {format_qualname(f.__qualname__)}, vtable field {field_name}', up_stack=(1 + (3 if intermediate_method else 0)))
                 
                 # get vtable in memory and method address
                 vtable = i_cast(getattr(f_self, field_name), 
@@ -1280,6 +1291,13 @@ class W_CDLL(CDLL):
         except Exception:
             return NullFunction(self._name, name_or_ordinal)
     
+    def __init__(self, *args, wt_link_api_up_stack: int = 0, **kwargs):
+        super().__init__(*args, **kwargs)
+        if not isinstance(self, W_PyDLL):
+            name = args[0]
+            if not name.startswith(('ucrtbase', 'msvcrt', 'ole32', 'kernel32', 'kernelbase')):
+                defb_dbg_trace(f'DLL:Load {args[0]}', up_stack=1+wt_link_api_up_stack)
+    
     def foreign(self,
                 ret: type, 
                 *args: type, 
@@ -1443,16 +1461,11 @@ def foreign_optimized(ret: type,
         
         def _function(*args, **kwargs):
             if (name is None or name not in ('IsDebuggerPresent', 'OutputDebugStringW')):
-                wet_trace = getattr(_defb_state, '_wet_trace', None)
-                if wet_trace is None:
-                    from .wet import trace as wet_trace
-                    _defb_state._wet_trace = wet_trace
-                    _defb_state._provider = wet_trace.WET_PROVIDER('DEFB')
                 if ordinal is None:
                     message = f'Called [{name}]'
                 else:
                     message = f'Called [{format_qualname(f.__qualname__)}] [#{ordinal}]'
-                wet_trace.dbg_trace(_defb_state._provider, message, up_stack=(1 + (3 if intermediate_method else 0)))
+                defb_dbg_trace(message, up_stack=(1 + (3 if intermediate_method else 0)))
             
             if class_method:
                 arguments = (pointer(args[0]), *(args[1:]))
@@ -3181,18 +3194,18 @@ def unicode(wide: WT, ansi: WT) -> WT:
         return wide
     return ansi
 
-def link_library(library: str, library_type: Type[LI] = W_CDLL):
+def link_library(library: str, library_type: Type[LI] = W_CDLL, **kwargs):
     """
     Link library to the foreign libraries collection.
     """
     
     if not isinstance(library_type, type):
         raise ValueError('Library type must be Python type.')
-    if not issubclass(library_type, CDLL):
-        raise ValueError('Library type must be CDLL descendant.')
-    _defb_state._linked_libraries[library] = library_type(library)
+    if not issubclass(library_type, W_CDLL):
+        raise ValueError('Library type must be W_CDLL descendant.')
+    _defb_state._linked_libraries[library] = library_type(library, wt_link_api_up_stack=1+kwargs.get('wt_link_api_up_stack', 0))
 
-def get_library(library: str, library_type: Type[LI] = W_CDLL) -> LI:
+def get_library(library: str, library_type: Type[LI] = W_CDLL, **kwargs) -> LI:
     """
     Get library from foreign libraries collection or
     create new library of provided type.
@@ -3202,7 +3215,7 @@ def get_library(library: str, library_type: Type[LI] = W_CDLL) -> LI:
     if not issubclass(library_type, CDLL):
         raise ValueError('Library type must be CDLL descendant.')
     if library not in _defb_state._linked_libraries:
-        link_library(library, library_type)
+        link_library(library, library_type, wt_link_api_up_stack=1+kwargs.get('wt_link_api_up_stack', 0))
     return _defb_state._linked_libraries[library]
 
 def get_win_library(library: str) -> W_WinDLL:
@@ -3211,7 +3224,7 @@ def get_win_library(library: str) -> W_WinDLL:
     create new library of `W_WinDLL` type.
     """
     
-    return get_library(library, W_WinDLL)
+    return get_library(library, W_WinDLL, wt_link_api_up_stack=1)
 
 from types import ModuleType
 

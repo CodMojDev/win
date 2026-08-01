@@ -10,6 +10,7 @@ from win.commctrl import *
 from .core.handle import * # Handles, colors and utils core logic
 from .core.event import * # Event class
 from .core.absutils import * # Abs.* access
+from .core.theme import * # Theme API
 
 # COM HRESULTs
 from win.com.comdefbase import HRESULT, COMError, FAILED
@@ -27,6 +28,120 @@ def init_common_controls():
     # initialize the common controls (comctl32)
     if not InitCommonControlsEx(icex.ref()):
         raise WinException()
+
+# menu APIs
+class Menu(Handle):
+    """
+    Main window menu.
+    """
+    
+    def close(self):
+        DestroyMenu(self)
+        self._closed = True
+    
+    @classmethod
+    def create(cls):
+        menu = cls(CreateMenu())
+        if not menu.value:
+            raise WinException()
+        return menu
+    
+    def append(self, item: int, lp, flags: int):
+        """
+        Append the item to menu.
+        """
+        
+        if isinstance(lp, str):
+            lp = create_unicode_buffer(lp)
+        if not AppendMenuW(self, flags, PtrUtil.get_address(item), i_cast(lp, LPCWSTR)):
+            raise WinException()
+
+    def modify(self, position: int, item: int, lp, flags: int):
+        """
+        Modify the menu.
+        """
+        
+        if isinstance(lp, str):
+            lp = create_unicode_buffer(lp)
+        if not ModifyMenuW(self, position, flags, PtrUtil.get_address(item), i_cast(lp, LPWSTR)):
+            raise WinException()
+
+    def get_state(self, identifier: int, flags: int = MF_BYCOMMAND) -> int:
+        """
+        Get state of the menu item.
+        """
+        state = GetMenuState(self, identifier, flags)
+        if state == -1: raise WinException()
+        return state
+    
+    def check(self, identifier: int, check: bool = False, flags: int = MF_BYCOMMAND) -> int:
+        """
+        Check or uncheck the menu item.
+        """
+        if check: extra = MF_CHECKED
+        else: extra = MF_UNCHECKED
+        result = CheckMenuItem(self, identifier, flags | extra)
+        if result == MAXDWORD:
+            raise WinException()
+        return result
+    
+    def information(self, mask: int | None = None) -> MENUINFO:
+        """
+        Get the menu information.
+        """
+        mi = MENUINFO()
+        mi.cbSize = mi.size()
+        if mask is None:
+            mask = (MIM_APPLYTOSUBMENUS | MIM_BACKGROUND | MIM_HELPID |
+                    MIM_MAXHEIGHT | MIM_MENUDATA | MIM_MAXHEIGHT)
+        mi.fMask = mask
+        if not GetMenuInfo(self, mi.ref()):
+            raise WinException()
+        return mi
+    
+    def item_info(self, index: int, mask: int | None = None, positioned: bool = True) -> MENUITEMINFOW:
+        """
+        Get the item menu information
+        """
+        mii = MENUITEMINFOW()
+        mii.cbSize = mii.size()
+        if mask is None:
+            mask = (MIIM_BITMAP | MIIM_CHECKMARKS | MIIM_ID | MIIM_STATE |
+                    MIIM_FTYPE | MIIM_STRING | MIIM_DATA | MIIM_STRING |
+                    MIIM_TYPE | MIIM_SUBMENU)
+        if mask & MIIM_STRING:
+            self._buffer = create_unicode_buffer(256)
+            mii.dwTypeData = i_cast(self._buffer, LPWSTR)
+            mii.cch = 256
+        mii.fMask = mask
+        if not GetMenuItemInfoW(self, index, positioned, mii.ref()):
+            raise WinException()
+        return mii
+
+class PopupMenu(Menu):
+    """
+    Popup menu class.
+    """
+    
+    @classmethod
+    def create(cls):
+        menu = cls(CreatePopupMenu())
+        if not menu.value:
+            raise WinException()
+        return menu
+        
+    def track(self, x: int, y: int, hWnd: int | HANDLE, flags: int=0):
+        """
+        Track the popup menu in given coordinates of window.
+        """
+        if not TrackPopupMenu(self, flags, x, y, 0, hWnd, NULL):
+            raise WinException()
+        
+    def information(self, mask: int | None = None) -> MENUITEMINFOW:
+        """
+        Get the popup menu information.
+        """
+        return self.item_info(self.value, mask, False)
 
 dwmapi = get_win_library('dwmapi.dll')
 
@@ -114,6 +229,76 @@ ZBID_IMMERSIVE_RESTRICTED = 15
 ZBID_SYSTEM_TOOLS = 16
 ZBID_LOCK = 17
 ZBID_ABOVELOCK_UX = 18
+
+# document "undocumented" UAH (User Aero Hooks) infrastructure
+WM_UAHDESTROYWINDOW = 0x0090
+WM_UAHDRAWMENU = 0x0091
+WM_UAHDRAWMENUITEM = 0x0092
+WM_UAHINITMENU = 0x0093
+WM_UAHMEASUREMENUITEM = 0x0094
+WM_UAHNCPAINTMENUPOPUP = 0x0095
+
+class UAHMENU(CStructure):
+    _fields_ = [
+        ('hmenu', HMENU),
+        ('hdc', HDC),
+        ('dwFlags', DWORD)
+    ]
+    hmenu: int
+    hdc: int
+    dwFlags: int
+    
+LPUAHMENU = PTR(UAHMENU)
+    
+class UAHMENUITEMMETRICS(CStructure):
+    _fields_ = [
+        ('rgsizeBar', SIZE * 2),
+        ('rgsizePopup', SIZE * 4)
+    ]
+    rgsizeBar: IArray[SIZE]
+    rgsizePopup: IArray[SIZE]
+    
+class UAHMENUPOPUPMETRICS(CStructure):
+    _fields_ = [
+        ('rgcx', DWORD * 4),
+        ('fUpdateMaxWidths', DWORD, 2)
+    ]
+    rgcx: IArray[int]
+    fUpdateMaxWidths: int
+    
+class UAHMENUITEM(CStructure):
+    _fields_ = [
+        ('iPosition', INT),
+        ('umim', UAHMENUITEMMETRICS),
+        ('umpm', UAHMENUPOPUPMETRICS)
+    ]
+    iPosition: int
+    umim: UAHMENUITEMMETRICS
+    umpm: UAHMENUPOPUPMETRICS
+
+class UAHDRAWMENUITEM(CStructure):
+    _fields_ = [
+        ('dis', DRAWITEMSTRUCT),
+        ('um', UAHMENU),
+        ('umi', UAHMENUITEM)
+    ]
+    dis: DRAWITEMSTRUCT
+    um: UAHMENU
+    umi: UAHMENUITEM
+
+LPUAHDRAWMENUITEM = PTR(UAHDRAWMENUITEM)
+
+class UAHMEASUREMENUITEM(CStructure):
+    _fields_ = [
+        ('mis', MEASUREITEMSTRUCT),
+        ('um', UAHMENU),
+        ('umi', UAHMENUITEM)
+    ]
+    mis: MEASUREITEMSTRUCT
+    um: UAHMENU
+    umi: UAHMENUITEM
+    
+LPUAHMEASUREMENUITEM = PTR(UAHMEASUREMENUITEM)
 
 @kernel32.foreign(UINT, ATOM, LPWSTR, INT)
 def GlobalGetAtomNameW(nAtom: int | ATOM, lpBuffer: WT_LPWSTR, nSize: int) -> int: ...
@@ -216,80 +401,6 @@ class ACCENTPOLICY(CStructure):
     GradientColor: int
     AnimationId: int
 
-class Menu(Handle):
-    """
-    Main window menu.
-    """
-    
-    def close(self):
-        DestroyMenu(self)
-        self._closed = True
-    
-    @classmethod
-    def create(cls):
-        menu = cls(CreateMenu())
-        if not menu.value:
-            raise WinException()
-        return menu
-    
-    def append(self, item: int, lp, flags: int):
-        """
-        Append the item to menu.
-        """
-        
-        if isinstance(lp, str):
-            lp = create_unicode_buffer(lp)
-        if not AppendMenuW(self, flags, PtrUtil.get_address(item), i_cast(lp, LPCWSTR)):
-            raise WinException()
-
-    def modify(self, position: int, item: int, lp, flags: int):
-        """
-        Modify the menu.
-        """
-        
-        if isinstance(lp, str):
-            lp = create_unicode_buffer(lp)
-        if not ModifyMenuW(self, position, flags, PtrUtil.get_address(item), i_cast(lp, LPWSTR)):
-            raise WinException()
-
-    def get_state(self, identifier: int, flags: int = MF_BYCOMMAND) -> int:
-        """
-        Get state of the menu item.
-        """
-        state = GetMenuState(self, identifier, flags)
-        if state == -1: raise WinException()
-        return state
-    
-    def check(self, identifier: int, check: bool = False, flags: int = MF_BYCOMMAND) -> int:
-        """
-        Check or uncheck the menu item.
-        """
-        if check: extra = MF_CHECKED
-        else: extra = MF_UNCHECKED
-        result = CheckMenuItem(self, identifier, flags | extra)
-        if result == MAXDWORD:
-            raise WinException()
-        return result
-
-class PopupMenu(Menu):
-    """
-    Popup menu class.
-    """
-    
-    @classmethod
-    def create(cls):
-        menu = cls(CreatePopupMenu())
-        if not menu.value:
-            raise WinException()
-        return menu
-        
-    def track(self, x: int, y: int, hWnd: int | HANDLE, flags: int=0):
-        """
-        Track the popup menu in given coordinates of window.
-        """
-        if not TrackPopupMenu(self, flags, x, y, 0, hWnd, NULL):
-            raise WinException()
-
 GCLP_MENUNAME = (-8)
 GCLP_HBRBACKGROUND = (-10)
 GCLP_HCURSOR = (-12)
@@ -302,10 +413,14 @@ GCLP_STYLE = (-26)
 GCW_ATOM = (-32)
 GCLP_HICONSM = (-34)
 
+@user32.foreign(BOOL, HWND, LONG, LONG, PMENUBARINFO)
+def GetMenuBarInfo(hwnd: int, idObject: int, idItem: int, pmbi: IPointer[MENUBARINFO]) -> int: ...
+
 WSMT_SEND = 0
 WSMT_POST = 1
+WSMT_DEFAULT = 2
 
-class Window(HWND, Abs.Object):
+class Window(Abs.Object, HWND):
     """
     Class, wrapping functionality of Win32 Window.
     """
@@ -362,6 +477,53 @@ class Window(HWND, Abs.Object):
             return (self.window.extended_style & style) != 0
     
     _foreign_cache: dict[int, 'Window'] = {}
+    styles: Styles
+    on_create: MultiEvent
+    on_left_button_down: MultiEvent
+    on_left_button_up: MultiEvent
+    on_left_button_double_click: MultiEvent
+    on_right_button_down: MultiEvent
+    on_right_button_up: MultiEvent
+    on_right_button_double_click: MultiEvent
+    on_close: MultiEvent
+    on_destroy: MultiEvent
+    on_key_down: MultiEvent
+    on_key_up: MultiEvent
+    on_move: MultiEvent
+    on_show: MultiEvent
+    on_style_changed: MultiEvent
+    on_theme_changed: MultiEvent
+    on_user_changed: MultiEvent
+    on_unknown_message: MultiEvent
+    on_enable: MultiEvent
+    on_set_font: MultiEvent
+    on_mouse_wheel: MultiEvent
+    on_timer: MultiEvent
+    after_message: MultiEvent
+    on_notify: MultiEvent
+    on_message: MultiEvent
+    on_mouse_move: MultiEvent
+    on_draw_item: MultiEvent
+    on_palette_changed: MultiEvent
+    on_measure_item: MultiEvent
+    on_compare_item: MultiEvent
+    on_char: MultiEvent
+    on_command: MultiEvent
+    on_hscroll: MultiEvent
+    on_vscroll: MultiEvent
+    on_nc_destroy: MultiEvent
+    on_mouse_leave: MultiEvent
+    on_power_broadcast: MultiEvent
+    on_sizing: MultiEvent
+    on_enter_menu_loop: MultiEvent
+    on_exit_menu_loop: MultiEvent
+    on_enter_idle: MultiEvent
+    on_sys_command: MultiEvent
+    class_name: str | None
+    class_style: int
+    last_message: MSG
+    hbrBackground: int
+    pending_messages: list[tuple[int, int, int, int]]
     
     def __hash__(self):
         return hash(self.value)
@@ -384,10 +546,9 @@ class Window(HWND, Abs.Object):
             Window._foreign_cache[hwnd] = window
         return window
     
-    styles: Styles
-    
     def __init__(self, *args, **kwargs):
-        HWND.__init__(self, *args)
+        super().__init__(*args)
+        self._abs_managed = 'headless' not in kwargs
         self.styles = self.Styles(self)
         
         # subclass procedure
@@ -444,7 +605,6 @@ class Window(HWND, Abs.Object):
         
         # headless construct = construct `Window` object from HWND
         if 'headless' not in kwargs:
-            Abs.Object.__init__(self)
             # fields for class registering
             self.class_name = None
             self.class_style = 0
@@ -670,6 +830,27 @@ class Window(HWND, Abs.Object):
     def on_nc_calcsize(self, rect: RECT, rectangles: list=None, position: WINDOWPOS=None) -> int:
         return self # sentinel value
     
+    def on_uah_destroy_window(self) -> bool:
+        return False
+    
+    def on_uah_draw_menu(self, menu: UAHMENU) -> bool:
+        return False
+    
+    def on_uah_draw_menu_item(self, item: UAHDRAWMENUITEM) -> bool:
+        return False
+    
+    def on_uah_init_menu(self) -> bool:
+        return False
+    
+    def on_uah_measure_menu_item(self, item: UAHMEASUREMENUITEM) -> bool:
+        return False
+    
+    def on_uah_nc_paint_init_menu_popup(self) -> bool:
+        return False
+    
+    def on_nc_activate(self, active: bool, window: TUnion['Window', None]) -> bool:
+        return False
+    
     # ** Main window procedure ** #
     def window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         # setup last message structure for access
@@ -871,6 +1052,35 @@ class Window(HWND, Abs.Object):
         elif msg == WM_EXITMENULOOP: # window is exited menu loop
             self.on_exit_menu_loop.execute(wParam != 0) # unpack boolean from wParam and call handler
             return 0 # message handled
+        # undocumented UAH messages handling
+        elif msg == WM_UAHDESTROYWINDOW:
+            # UAH: window destroying notification
+            if self.on_uah_destroy_window():
+                return TRUE # if handled return TRUE, otherwise let it fallback
+        elif msg == WM_UAHDRAWMENU:
+            # UAH: handle this to draw menu
+            if self.on_uah_draw_menu(UAHMENU.from_address(lParam)):
+                return TRUE # if handled return TRUE, otherwise let it fallback
+        elif msg == WM_UAHDRAWMENUITEM:
+            # UAH: handle this to draw menu item
+            if self.on_uah_draw_menu_item(UAHDRAWMENUITEM.from_address(lParam)):
+                return TRUE # if handled return TRUE, otherwise let it fallback
+        elif msg == WM_UAHINITMENU:
+            # UAH: called when menu is initialized
+            if self.on_uah_init_menu():
+                return TRUE # if handled return TRUE, otherwise let it fallback
+        elif msg == WM_UAHMEASUREMENUITEM:
+            # UAH: handle this to measure menu item
+            if self.on_uah_measure_menu_item(UAHMEASUREMENUITEM.from_address(lParam)):
+                return TRUE # if handled return TRUE, otherwise let it fallback
+        elif msg == WM_UAHNCPAINTMENUPOPUP:
+            # UAH: menu popup window NCPAINT
+            if self.on_uah_nc_paint_init_menu_popup():
+                return TRUE # if handled return TRUE, otherwise let it fallback
+        elif msg == WM_NCACTIVATE:
+            # non-client area is being activated
+            if self.on_nc_activate(wParam != FALSE, Window.foreign(lParam) if lParam != MAXULONG_PTR else None):
+                return TRUE # if handled return TRUE, otherwise let it fallback
         else:
             # unknown window message received
             result = self.on_unknown_message.execute(hwnd, msg, wParam, lParam) # trying to call all unknown message handlers
@@ -1041,6 +1251,8 @@ class Window(HWND, Abs.Object):
             return 0
         elif smt == WSMT_SEND:
             return SendMessageW(self, message, wParam, lParam)
+        elif smt == WSMT_DEFAULT:
+            return self.default_window_proc(self, message, wParam, lParam)
         return 0
     
     def send(self, message: int, wParam: int = 0, lParam: int = 0) -> int:
@@ -1076,6 +1288,12 @@ class Window(HWND, Abs.Object):
         Indirectly send MSG structure to the window.
         """
         return self.send_message(WSMT_SEND, msg.message, msg.wParam, msg.lParam)
+    
+    def send_message_indirect(self, smt: int, msg: MSG) -> int:
+        """
+        Indirectly send message with send/post negotiation.
+        """
+        return self.send_message(smt, msg.message, msg.wParam, msg.lParam)
     
     def unpend_all_messages(self) -> tuple[int, int]:
         """
@@ -1558,6 +1776,16 @@ class Window(HWND, Abs.Object):
     @property
     def identifier(self) -> int:
         return GetDlgCtrlID(self)
+    
+    def get_menu_bar_info(self, object_id: int = OBJID_MENU, identifier: int = 0) -> MENUBARINFO:
+        """
+        Get the menu bar info.
+        """
+        mbi = MENUBARINFO()
+        mbi.cbSize = mbi.size()
+        if not GetMenuBarInfo(self, object_id, identifier, mbi.ref()):
+            raise WinException()
+        return mbi
 
 class MDIMenu(Menu):
     """

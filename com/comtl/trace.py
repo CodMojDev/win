@@ -95,6 +95,13 @@ class IWETManager(IUnknown):
         """
         Restore the Std Streams
         """
+        
+    @virtual_table.com_function(PWET_PROVIDER)
+    def RegisterProvider(self, pWetProvider: IPointer[WET_PROVIDER]) -> int:
+        """
+        Register the WET provider.
+        """
+        
     
     virtual_table.build()
     
@@ -124,10 +131,11 @@ class WETManager(CComClass, IWETManager):
         self.implement(self.ConfigureStandardConsumer)
         self.implement(self.StdStreamsToStandardConsumer)
         self.implement(self.RestoreStdStreams)
+        self.implement(self.RegisterProvider)
         
-    def Subscribe_Impl(self, Provider: str, EventCallback: FARPROC, pdwCookie: PDWORD) -> int: 
+    def Subscribe_Impl(self, Provider: LPCWSTR, EventCallback: FARPROC, pdwCookie: PDWORD) -> int: 
         if not EventCallback:
-            self.dbg_trace(provider, 'EventCallback == NULL!')
+            self.dbg_trace(provide, 'EventCallback == NULL!')
             return E_POINTER
         
         if not pdwCookie:
@@ -140,29 +148,29 @@ class WETManager(CComClass, IWETManager):
         
         # Subscribe to provider
         try:
-            Cookie = WETProvider_Subscribe(Provider, EventCallback)
+            Cookie = WETProvider_Subscribe(Provider.value, EventCallback)
         except ValueError: # No provider: ValueError thrown
-            self.dbg_trace(provider, f'No provider {Provider}')
+            self.dbg_trace(provider, f'No provider {Provider.value}')
             return E_INVALIDARG
         
-        self.dbg_trace(provider, f'Subscribed consumer cookie "{Cookie}" for provider {Provider}')
+        self.dbg_trace(provider, f'Subscribed consumer cookie "{Cookie}" for provider {Provider.value}')
         pdwCookie.contents.value = Cookie # Return the Cookie
         
         return S_OK
     
-    def Unsubscribe_Impl(self, Provider: str, dwCookie: int) -> int:
+    def Unsubscribe_Impl(self, Provider: LPCWSTR, dwCookie: int) -> int:
         if not Provider:
             self.dbg_trace(provider, 'Provider == NULL!')
             return E_POINTER
         
         # Unsubscribe from provider
         try:
-            WETProvider_Unsubscribe(Provider, dwCookie)
+            WETProvider_Unsubscribe(Provider.value, dwCookie)
         except ValueError: # No provider: ValueError thrown
-            self.dbg_trace(provider, f'No provider {Provider} for consumer cookie "{dwCookie}"')
+            self.dbg_trace(provider, f'No provider {Provider.value} for consumer cookie "{dwCookie}"')
             return E_INVALIDARG
         
-        self.dbg_trace(provider, f'Unsubscribed consumer cookie "{dwCookie}" from provider {Provider}')
+        self.dbg_trace(provider, f'Unsubscribed consumer cookie "{dwCookie}" from provider {Provider.value}')
         return S_OK
     
     def GetProviderEnumerator_Impl(self, ppenum: IDoublePtr[IEnumWETProvider]) -> int: 
@@ -177,7 +185,7 @@ class WETManager(CComClass, IWETManager):
         self.dbg_trace(provider, 'S_OK')
         return S_OK
     
-    def SendEvent_Impl(self, Provider: str, pWetEvent: IPointer[WET_EVENT]) -> int:
+    def SendEvent_Impl(self, Provider: LPCWSTR, pWetEvent: IPointer[WET_EVENT]) -> int:
         # Pointer checks
         if not Provider:
             self.dbg_trace(provider, 'Provider == NULL!')
@@ -188,9 +196,9 @@ class WETManager(CComClass, IWETManager):
             return E_POINTER
         
         # Lookup the provider
-        WetProvider = _WET_GLOBAL_STATE.LookupProvider(Provider)
+        WetProvider = _WET_GLOBAL_STATE.LookupProvider(Provider.value)
         if WetProvider is None:
-            self.dbg_trace(provider, f'No provider "{Provider}"')
+            self.dbg_trace(provider, f'No provider "{Provider.value}"')
             return E_INVALIDARG
         
         # This fields are set by SendEvent implementation
@@ -207,7 +215,7 @@ class WETManager(CComClass, IWETManager):
         self.dbg_trace(provider, 'S_OK')
         return S_OK
     
-    def RegisterStandardConsumer_Impl(self, StdConsumerId: int, Provider: str, pdwCookie: PDWORD) -> int: 
+    def RegisterStandardConsumer_Impl(self, StdConsumerId: int, Provider: LPCWSTR, pdwCookie: PDWORD) -> int: 
         if not pdwCookie:
             self.dbg_trace(provider, 'pdwCookie == NULL!')
             return E_POINTER
@@ -218,9 +226,9 @@ class WETManager(CComClass, IWETManager):
         
         # Register the standard consumer
         try:
-            Cookie = RegisterStandardConsumer(StdConsumerId, Provider)
+            Cookie = RegisterStandardConsumer(StdConsumerId, Provider.value)
         except ValueError: # No provider: ValueError thrown
-            self.dbg_trace(provider, f'No provider {Provider}')
+            self.dbg_trace(provider, f'No provider {Provider.value}')
             return E_INVALIDARG
         
         if Cookie == -1: # no ID
@@ -239,6 +247,17 @@ class WETManager(CComClass, IWETManager):
     def RestoreStdStreams_Impl(self) -> int: 
         self.dbg_trace(provider, 'S_OK')
         RestoreStdStreams() # Restore the Std Streams
+        return S_OK
+    
+    def RegisterProvider_Impl(self, pWetProvider: IPointer[WET_PROVIDER]) -> int:
+        if not pWetProvider:
+            self.dbg_trace(provider, 'pWetProvider==NULL E_POINTER')
+            return E_pOINTER
+        self.dbg_trace(provider, 'S_OK')
+        Provider = pWetProvider.contents
+        Provider._consumers = []
+        import win.wet.trace
+        win.wet.trace._WET_GLOBAL_STATE._providers_.append(Provider)
         return S_OK
     
 SetGuid('EnumWETProvider', CLSID('{2F8EAAC1-D186-46F1-B2A4-7023AD1E1338}'))

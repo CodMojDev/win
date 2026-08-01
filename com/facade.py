@@ -30,8 +30,11 @@ def OpenHKCR(SubKey: str, access = winreg.KEY_WRITE, create: bool = True) -> win
     return Key
 
 class FacadeFactory:
-    def Facade(self, ScriptPath: str) -> str:
+    def Facade(self, ScriptPath: str, FacadeTemplate: str | None = None) -> str:
         if not os.path.isfile(ScriptPath): return None
+        if FacadeTemplate is None:
+            Facade = os.path.join(os.path.dirname(__file__), 'data\\FacadeDLL.dll')
+            
         ScriptNameW = os.path.splitext(os.path.basename(ScriptPath))[0]
         ScriptName = ScriptNameW.encode('ascii')
         assert len(ScriptName) < 128
@@ -39,14 +42,13 @@ class FacadeFactory:
         FacadeName = os.path.splitext(os.path.basename(ScriptPath))[0] + '.dll'
         FacadeDirectory = os.path.dirname(ScriptPath)
         FacadePath = os.path.join(FacadeDirectory, FacadeName)
-        FacadeDLL = os.path.join(os.path.dirname(__file__), 'data\\FacadeDLL.dll')
         
         if os.path.exists(FacadePath):
             os.remove(FacadePath)
             
-        shutil.copy(FacadeDLL, FacadePath)
+        shutil.copy(FacadeTemplate, FacadePath)
         
-        Facade = W_WinDLL(FacadeDLL, winmode=DONT_RESOLVE_DLL_REFERENCES)
+        Facade = W_WinDLL(FacadeTemplate, winmode=DONT_RESOLVE_DLL_REFERENCES)
         @Facade.foreign(PVOID)
         def InternalScriptNameAddr() -> int: ...
         ScriptNameRVA = InternalScriptNameAddr() - Facade.handle

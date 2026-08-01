@@ -17,95 +17,14 @@ from .io import *
 # WinAbs utilities
 from .absutils import *
 
-class Rect(RECT, CStructure):
-    """
-    Rectangle.
-    """
-    
-    def __init__(self, left: int = 0, top: int = 0,
-                 right: int = 0, bottom: int = 0):
-        super().__init__(left, top, right, bottom)
-        
-    @classmethod
-    def create(self, left: int = 0, top: int = 0,
-               width: int = 0, height: int = 0) -> 'Rect':
-        """
-        Create the rectangle by x/y + width/height.
-        """
-        
-        return Rect(left, top, left + width, top + height)
-    
-    @property
-    def width(self) -> int:
-        return self.right - self.left
-    
-    @width.setter
-    def width(self, width: int):
-        self.right = self.left + width
-    
-    @property
-    def height(self) -> int:
-        return self.bottom - self.top
+# WinAbs controllable value
+from .controllable import *
 
-    @height.setter
-    def height(self, height: int):
-        self.bottom = self.top + height
-        
-    def Offset(self, dx: int, dy: int):
-        """
-        Offset the rect by delta X and delta Y.
-        """
-        
-        OffsetRect(byref(self), int(dx), int(dy))
-    
-    def deflate(self, dx: int, dy: int):
-        """
-        Deflate the rect by delta X and delta Y.
-        (Inflate by {-dx, -dy})
-        """
-        
-        InflateRect(byref(self), -int(dx), -int(dy))
-    
-    def inflate(self, dx: int, dy: int):
-        """
-        Deflate the rect by delta X and delta Y.
-        """
-        
-        InflateRect(byref(self), int(dx), int(dy))
-    
-    def __contains__(self, pt: 'GraphicUtils.Point') -> bool:
-        pt = GraphicUtils.point(pt)
-        return PtInRect(byref(self), pt)
-    
-    def __str__(self) -> str:
-        return StringUtil.to_string(self)
-    
-    def __repr__(self) -> str:
-        return str(self)
-    
-    @property
-    def x(self) -> int:
-        return self.left
-    
-    @x.setter
-    def x(self, x: int):
-        width = self.width
-        self.left = x
-        self.width = width
-    
-    @property
-    def y(self) -> int:
-        return self.top
-    
-    @y.setter
-    def y(self, y: int):
-        height = self.height
-        self.top = y
-        self.height = height
-    
-class Point(POINT, CStructure): ...
-    
-class Size(SIZE, CStructure): ...
+# WinAbs color API
+from .color import *
+
+# WinAbs geometric definitions
+from .geom import *
 
 class BitGroup:
     value: int
@@ -170,76 +89,6 @@ class BitGroup:
         for k, v in mapping.items():
             if self.value & v: result.append(k)
         return result
-
-class ControllableValue:
-    value: int
-    
-    _released: bool
-    _closed: bool
-    
-    def __init__(self, *args):
-        super().__init__(*args)
-        self._released = False
-        self._closed = False
-    
-    @classmethod
-    def foreign_owner(cls, val: int | HANDLE, *args, **kwargs) -> Self:
-        """
-        Create the handle instance from foreign handle.
-        """
-        instance = cls(val).exchange_owner()
-        if instance.invalid(): return None # if invalid handle was provided, when return None
-        instance.initialize_from_foreign(*args, **kwargs)
-        return instance
-    
-    def exchange_owner(self):
-        """
-        Exchange the owner of handle from local -> foreign, or foreign -> local.
-        """
-        self._closed = not self._closed
-        return self
-    
-    def __enter__(self):
-        self._released = False
-        self._closed = False
-        return self
-        
-    def __exit__(self, *_):
-        if not self._released:
-            self._released = True
-            if self.valid:
-                self.close()
-            
-    def __del__(self):
-        if not self._closed and self.value:
-            self.close()
-    
-    @interface_abstract_method 
-    def close(self):
-        """
-        Abstract method to release the handle.
-        """
-        
-    def invalid(self) -> bool:
-        """
-        Check this handle is invalid.
-        """
-        return not self.value
-    
-    @property
-    def valid(self) -> bool:
-        return not self.invalid()
-    
-    def initialize_from_foreign(self, *args, **kwargs):
-        """
-        Virtual method for initialize handle instance from foreign arguments.
-        """
-        return
-
-class Handle(ControllableValue, HANDLE):
-    """
-    Main Win32 abstract handle wrapper.
-    """
         
 class GDIObjectHandle(Handle):
     def close(self):
@@ -304,32 +153,6 @@ class StockObject(GDIObjectHandle):
     
     def close(self):
         self._closed = True
-
-uxtheme = get_win_library('uxtheme.dll')
-
-HTHEME = HANDLE
-
-@uxtheme.foreign(HRESULT, HWND, HDC, PRECT)
-def DrawThemeParentBackground(hwnd: int | HANDLE, hdc: int | HANDLE, prc: PRECT) -> int: ...
-
-@uxtheme.foreign(HTHEME, HWND, LPCWSTR)
-def OpenThemeData(hwnd: int | HANDLE, pszClassList: str | LPCWSTR) -> int: ...
-
-@uxtheme.foreign(HRESULT, HTHEME)
-def CloseThemeData(hTheme: int | HANDLE): ...
-
-@uxtheme.foreign(BOOL, HTHEME, INT, INT)
-def IsThemeBackgroundPartiallyTransparent(hTheme: int | HANDLE, iPartId: int, iStateId: int) -> int: ...
-
-@uxtheme.foreign(HRESULT, HTHEME, HDC, INT, INT, LPCWSTR, INT, DWORD, DWORD, LPCRECT)
-def DrawThemeText(
-    hTheme: int | HANDLE, hdc: int | HANDLE, iPartId: int, iStateId: int,
-    pszText: str | LPCWSTR, cchText: int, dwTextFlags: int,
-    dwTextFlags2: int, pRect: IPointer[RECT]) -> int: ...
-
-@uxtheme.foreign(HRESULT, HTHEME, HDC, INT, INT, LPCRECT, LPCRECT)
-def DrawThemeBackground(hTheme: int | HANDLE, hdc: int | HANDLE, iPartId: int, iStateId: int, 
-                        pRect: IPointer[RECT], pClipRect: IPointer[RECT]) -> int: ...
 
 class DC(Handle):
     """
@@ -596,13 +419,23 @@ class DC(Handle):
     @classmethod
     def get(cls, hwnd: int | HWND = NULL, region: int | HANDLE = NULL, flags: int = 0) -> 'DC':
         """
-        Get the device context for HWND.
+        Get the device context for HWND (for client area).
         """
         
         if region is None:
             hDC = GetDC(hwnd)
         else:
             hDC = GetDCEx(hwnd, region, flags)
+        if not hDC:
+            raise WinException()
+        return DC(hDC)
+        
+    @classmethod
+    def window(self, window: int | HWND) -> 'DC':
+        """
+        Get the device context for HWND (for window area).
+        """
+        hDC = GetWindowDC(window)
         if not hDC:
             raise WinException()
         return DC(hDC)
@@ -1084,6 +917,64 @@ class DC(Handle):
         """
         if not DrawFrameControl(self, rect.ref(), type, state):
             raise WinException()
+        
+    def draw_border_3d(self, rect: RECT, style: int, sides: int):
+        """
+        Draw the 3D border.
+        """
+        self.draw_edge(rect, style & 0xf, sides | (style & 0xf))
+        
+    def capabilities(self, index: int) -> int:
+        """
+        Get the device context capabilities.
+        """
+        return GetDeviceCaps(self, index)
+
+class Monitor(HMONITOR):
+    @classmethod
+    def from_window(cls, window: int | HWND, flags: int = MONITOR_DEFAULTTONULL) -> TUnion['Monitor', None]:
+        hm = MonitorFromWindow(window, flags)
+        if not hm: return None
+        return Monitor(hm)
+    
+    @classmethod
+    def from_rect(cls, rc: RECT, flags: int = MONITOR_DEFAULTTONULL) -> TUnion['Monitor', None]:
+        hm = MonitorFromRect(rc.ref(), flags)
+        if not hm: return None
+        return Monitor(hm)
+    
+    @classmethod
+    def from_point(cls, x: int, y: int, flags: int = MONITOR_DEFAULTTONULL) -> TUnion['Monitor', None]:
+        hm = MonitorFromPoint(Point(x, y), flags)
+        if not hm: return None
+        return Monitor(hm)
+    
+    def information(self) -> MONITORINFOEXW:
+        miex = MONITORINFOEXW()
+        miex.cbSize = miex.size()
+        if not GetMonitorInfoW(self, miex.ref()):
+            raise WinException()
+        return miex
+    
+    @property
+    def width(self) -> int:
+        return i_cast_structure(self.information().rcMonitor, Rect).width
+    
+    @property
+    def height(self) -> int:
+        return i_cast_structure(self.information().rcMonitor, Rect).height
+
+class DPIUtil:
+    system_dpi = DC.get().capabilities(LOGPIXELSX)
+    scale_factor = system_dpi / 96.0
+    
+    @staticmethod
+    def adjust(lx: int, ly: int) -> tuple[int, int]:
+        return DPIUtil.adjust_single(lx), DPIUtil.adjust_single(ly)
+    
+    @staticmethod
+    def adjust_single(li: int) -> int:
+        return round(DPIUtil.scale_factor * li)
 
 class BitmapInfo(BITMAPINFO):
     def __init__(self, width: int, height: int, bpp: int, **kwargs):
@@ -1126,787 +1017,6 @@ class BitmapInfo(BITMAPINFO):
     @bpp.setter
     def bpp(self, bpp: int):
         self.bmiHeader.biBitCount = bpp
-
-class GraphicUtils:
-    Point: TypeAlias = POINT | tuple[SupportsInt, SupportsInt]
-    Size: TypeAlias = SIZE | tuple[SupportsInt, SupportsInt]
-    PointArray: TypeAlias = Iterable[Point]
-    
-    @staticmethod
-    def linear(x: int, y: int, rcSource: RECT, rcTarget: RECT) -> POINT:
-        """
-        Linear expansion of (x, y) by source and target rectangles.
-        """
-        
-        x = rcTarget.left + (x - rcSource.left) * (rcTarget.right - rcTarget.left) / (rcSource.right - rcSource.left)
-        y = rcTarget.top + (y - rcSource.top) * (rcTarget.bottom - rcTarget.top) / (rcSource.bottom - rcSource.top)
-        return POINT(int(x), int(y))
-    
-    @staticmethod
-    def center(x: int, y: int, rcSource: RECT, rcTarget: RECT) -> POINT:
-        """
-        Center expansion of (x, y) by source and target rectangles.
-        """
-        
-        x = x + ((rcTarget.left + rcTarget.right) / 2 - (rcSource.left + rcSource.right) / 2)
-        y = y + ((rcTarget.top + rcTarget.bottom) / 2 - (rcSource.top + rcSource.bottom) / 2)
-        return POINT(int(x), int(y))
-    
-    @staticmethod
-    def size_rect(rcSource: RECT, rcTarget: RECT) -> RECT:
-        """
-        Proportionally size the given rect into the target rect.
-        """
-        
-        scaleX = (rcTarget.right - rcTarget.left) / (rcSource.right - rcSource.left)
-        scaleY = (rcTarget.bottom - rcTarget.top) / (rcSource.bottom - rcTarget.top)
-        scale = min(scaleX, scaleY)  
-        newW = (rcSource.right - rcSource.left) * scale
-        newH = (rcSource.bottom - rcSource.top) * scale
-        left = rcTarget.left + ((rcTarget.right - rcTarget.left) - newW) / 2
-        top = rcTarget.top + ((rcTarget.bottom - rcTarget.top) - newH) / 2
-        right = left + newW
-        bottom = top + newH
-        return RECT(int(left), int(top), int(right), int(bottom))
-    
-    @staticmethod
-    def in_rect(x: int, y: int, rc: RECT) -> bool:
-        """
-        Check point in rectangle.
-        """
-        
-        return bool(PtInRect(byref(rc), POINT(x, y)))
-    
-    class Vertex(TRIVERTEX):
-        def __init__(self, x: int, y: int, red: int, green: int, blue: int, alpha: int = 255):
-            red *= 256
-            green *= 256
-            blue *= 256
-            alpha *= 256
-            
-            super().__init__(x, y, red, green, blue, alpha)
-    
-    @staticmethod
-    def size_tuple(size: 'GraphicUtils.Size') -> tuple[int, int]:
-        """
-        Convert SIZE/tuple to (cx, cy) tuple.
-        """
-        
-        if isinstance(size, SIZE):
-            return (size.cx, size.cy)
-        return size[0:2]
-    
-    @staticmethod
-    def size(size: 'GraphicUtils.Size') -> SIZE:
-        """
-        Convert SIZE/tuple to SIZE structure.
-        """
-        
-        if isinstance(size, SIZE):
-            return size
-        return SIZE(*size[0:2])
-    
-    @staticmethod
-    def point_tuple(pt: 'GraphicUtils.Point') -> tuple[int, int]:
-        """
-        Convert POINT/tuple to (x, y) tuple.
-        """
-        
-        if isinstance(pt, POINT):
-            return (pt.x, pt.y)
-        return pt[0:2]
-    
-    @staticmethod
-    def point(pt: 'GraphicUtils.Point') -> POINT:
-        """
-        Convert POINT/tuple to POINT structure.
-        """
-        
-        if isinstance(pt, POINT):
-            return pt
-        return POINT(*pt[0:2])
-            
-    @staticmethod
-    def point_array(array: 'GraphicUtils.PointArray') -> IArray[POINT]:
-        """
-        Convert the POINT/{x,y} iterable to ctypes POINT array.
-        """
-        
-        result_array = []
-        
-        for point in array:
-            if isinstance(point, POINT):
-                result_array.append(point)
-            elif isinstance(point, tuple):
-                x, y = point[0:2]
-                x, y = int(x), int(y)
-                result_array.append(POINT(x, y))
-            else:
-                raise ValueError(type(point))
-        
-        c_array = (POINT * len(array))(*array)
-        return c_array
-
-class Color:
-    @classmethod
-    def system(cls, index: int) -> 'Color.BGR':
-        """
-        Get the system color.
-        """
-        
-        return Color.BGR(GetSysColor(index))
-    
-    class IColor(IHasInit):
-        """
-        Abstract class for interfacing color functionality.
-        """
-        
-        value: int
-        
-        def __init__(self, value: int = 0):
-            self.value = value
-        
-        @interface_abstract_method
-        @property
-        def r(self) -> int: ...
-        
-        @interface_abstract_method
-        @property
-        def g(self) -> int: ...
-        
-        @interface_abstract_method
-        @property
-        def b(self) -> int: ...
-        
-        @interface_abstract_method
-        @classmethod
-        def color(self, r: int, g: int, b: int) -> 'Color.IColor': ...
-
-        def rgb(self) -> 'Color.RGB':
-            """
-            Convert color into RGB.
-            """
-            
-            return Color.RGB.color(self.r, self.g, self.b)
-        
-        def bgr(self) -> 'Color.BGR':
-            """
-            Convert color into BGR.
-            """
-            
-            return Color.BGR.color(self.r, self.g, self.b)
-        
-        def rgba(self) -> 'Color.RGBA':
-            """
-            Convert color into RGBA.
-            """
-            
-            return Color.RGBA.color(self.r, self.g, self.b, 0xff)
-        
-        def argb(self) -> 'Color.ARGB':
-            """
-            Convert color into ARGB.
-            """
-            
-            return Color.ARGB.color(self.r, self.g, self.b, 0xff)
-        
-        def abgr(self) -> 'Color.ABGR':
-            """
-            Convert color into ABGR.
-            """
-            
-            return Color.ABGR.color(self.r, self.g, self.b, 0xff)
-        
-        def bgra(self) -> 'Color.BGRA':
-            """
-            Convert color into BGRA.
-            """
-            
-            return Color.BGRA.color(self.r, self.g, self.b, 0xff)
-        
-        def gl(self) -> 'Color.GLColor':
-            """
-            Convert color into OpenGL format.
-            """
-            
-            return self.rgba().gl()
-        
-        def __index__(self) -> int:
-            return self.value
-        
-        def __int__(self) -> int:
-            return self.value
-        
-        def __str__(self) -> str:
-            return format_hex(self, 6)
-        
-        def __repr__(self) -> str:
-            return str(self)
-        
-        def __add__(self, value):
-            return self.value + value
-        
-        def __sub__(self, value):
-            return self.value - value
-        
-        def __mul__(self, value):
-            return self.value * value
-        
-        def __truediv__(self, value):
-            return self.value / value
-        
-        def __floordiv__(self, value):
-            return self.value // value
-        
-        def __lshift__(self, value):
-            return self.value << value
-        
-        def __rshift__(self, value):
-            return self.value >> value
-        
-        def __or__(self, value):
-            return self.value | value
-        
-        def __and__(self, value):
-            return self.value & value
-        
-        def __inv__(self):
-            return ~self.value
-        
-        def __neg__(self):
-            return -self.value
-        
-        def __pos__(self):
-            return +self.value
-        
-        def hsl(self) -> 'Color.HSL':
-            """
-            Convert color into HSL.
-            """
-            
-            r_norm = self.r / 255
-            g_norm = self.g / 255
-            b_norm = self.b / 255
-            maximum = max(r_norm, g_norm, b_norm)
-            minimum = min(r_norm, g_norm, b_norm)
-            delta = maximum - minimum
-            if delta == 0:
-                hue = 0
-            elif maximum == r_norm:
-                hue = 60 * (((g_norm - b_norm) / delta) % 6)
-            elif maximum == g_norm:
-                hue = 60 * (((b_norm - r_norm) / delta) + 2)
-            elif maximum == b_norm:
-                hue = 60 * (((r_norm - g_norm) / delta) + 4)
-            else:
-                hue = 0
-            luminance = (maximum + minimum) / 2
-            if delta == 0:
-                saturation = 0
-            else:
-                saturation = delta / (1 - abs(2 * luminance - 1))
-            return Color.HSL(hue, luminance, saturation)
-        
-        def copy(self) -> 'Color.IColor':
-            return self.__class__(self.value)
-
-    class IColorAlpha(IColor):
-        """
-        Abstract class for interfacing color functionality with alpha channel.
-        """
-        
-        @interface_abstract_method
-        @property
-        def a(self) -> int: ...
-        
-        @interface_abstract_method
-        @classmethod
-        def color(self, r: int, g: int, b: int, a: int) -> 'Color.IColorAlpha': ...
-        
-        def rgba(self) -> 'Color.RGBA':
-            return Color.RGBA(self.r, self.g, self.b, self.a)
-        
-        def argb(self) -> 'Color.ARGB':
-            return Color.ARGB.color(self.r, self.g, self.b, self.a)
-        
-        def abgr(self) -> 'Color.ABGR':
-            return Color.ABGR.color(self.r, self.g, self.b, self.a)
-        
-        def bgra(self) -> 'Color.BGRA':
-            return Color.BGRA.color(self.r, self.g, self.b, self.a)
-        
-        def gl(self) -> 'Color.GLColor':
-            return Color.GLColor(self)
-        
-        def __str__(self) -> str:
-            return format_hex(self, 8)
-        
-    class RGB(IColor):
-        """
-        RGB Representation of color.
-        """
-        
-        @classmethod
-        def color(cls, r: int, g: int, b: int) -> 'Color.RGB':
-            return cls((r << 8 | g) << 8 | b)
-        
-        @property
-        def r(self) -> int:
-            return self >> 16 & 0xff
-        
-        @property
-        def g(self) -> int:
-            return self >> 8 & 0xff
-        
-        @property
-        def b(self) -> int:
-            return self & 0xff
-        
-        @r.setter
-        def r(self, r: int):
-            self.value = (r << 8 | self.g) << 8 | self.b
-        
-        @g.setter
-        def g(self, g: int):
-            self.value = (self.r << 8 | g) << 8 | self.b
-        
-        @b.setter
-        def b(self, b: int):
-            self.value = (self.r << 8 | self.g) << 8 | b
-        
-        def __iter__(self):
-            return iter((self.r, self.g, self.b))
-        
-        def rgb(self) -> 'Color.RGB':
-            return self
-
-    class RGBA(IColorAlpha):
-        """
-        RGBA Representation of alpha-channeled color.
-        """
-        
-        @classmethod
-        def color(cls, r: int, g: int, b: int, a: int) -> 'Color.RGBA':
-            return cls(((r << 8 | g) << 8 | b) << 8 | a)
-        
-        @property
-        def a(self) -> int: 
-            return self & 0xff
-
-        @property
-        def r(self) -> int:
-            return self >> 24 & 0xff
-        
-        @property
-        def g(self) -> int:
-            return self >> 16 & 0xff
-        
-        @property
-        def b(self) -> int:
-            return self >> 8 & 0xff
-        
-        @r.setter
-        def r(self, r: int):
-            self.value = ((r << 8 | self.g) << 8 | self.b) << 8 | self.a
-        
-        @g.setter
-        def g(self, g: int):
-            self.value = ((self.r << 8 | g) << 8 | self.b) << 8 | self.a
-        
-        @b.setter
-        def b(self, b: int):
-            self.value = ((self.r << 8 | self.g) << 8 | b) << 8 | self.a
-
-        @a.setter
-        def a(self, a: int):
-            self.value = ((self.r << 8 | self.g) << 8 | self.b) << 8 | a
-        
-        def __iter__(self):
-            return iter((self.r, self.g, self.b, self.a))
-        
-        def rgba(self) -> 'Color.RGBA':
-            return self
-        
-    class BGR(IColor):
-        """
-        BGR Representation of color.
-        """
-        
-        @classmethod
-        def color(cls, r: int, g: int, b: int) -> 'Color.BGR':
-            return cls((b << 8 | g) << 8 | r)
-        
-        @property
-        def b(self) -> int:
-            return self >> 16 & 0xff
-        
-        @property
-        def g(self) -> int:
-            return self >> 8 & 0xff
-        
-        @property
-        def r(self) -> int:
-            return self & 0xff
-        
-        @b.setter
-        def b(self, b: int):
-            self.value = (b << 8 | self.g) << 8 | self.r
-        
-        @g.setter
-        def g(self, g: int):
-            self.value = (self.b << 8 | g) << 8 | self.r
-        
-        @r.setter
-        def r(self, r: int):
-            self.value = (self.b << 8 | self.g) << 8 | r
-        
-        def __iter__(self):
-            return iter((self.b, self.g, self.r))
-        
-        def bgr(self) -> 'Color.BGR':
-            return self
-        
-    class BGRA(IColorAlpha):
-        """
-        BGRA Representation of alpha-channeled color.
-        """
-        
-        @classmethod
-        def color(cls, r: int, g: int, b: int, a: int) -> 'Color.BGRA':
-            return cls(((b << 8 | g) << 8 | r) << 8 | a)
-        
-        @property
-        def b(self) -> int:
-            return self >> 24 & 0xff
-        
-        @property
-        def g(self) -> int:
-            return self >> 16 & 0xff
-        
-        @property
-        def r(self) -> int:
-            return self >> 8 & 0xff
-        
-        @property
-        def a(self) -> int:
-            return self & 0xff
-        
-        @b.setter
-        def b(self, b: int):
-            self.value = ((b << 8 | self.g) << 8 | self.r) << 8 | self.a
-        
-        @g.setter
-        def g(self, g: int):
-            self.value = ((self.b << 8 | g) << 8 | self.r) << 8 | self.a
-        
-        @r.setter
-        def r(self, r: int):
-            self.value = ((self.b << 8 | self.g) << 8 | r) << 8 | self.a
-
-        @a.setter
-        def a(self, a: int):
-            self.value = ((self.b << 8 | self.g) << 8 | self.r) << 8 | a
-        
-        def __iter__(self):
-            return iter((self.b, self.g, self.r, self.a))
-        
-    class ARGB(IColorAlpha):
-        """
-        ARGB Representation of alpha-channeled color.
-        """
-        
-        @classmethod
-        def color(cls, r: int, g: int, b: int, a: int) -> 'Color.ARGB':
-            return cls(((a << 8 | r) << 8 | g) << 8 | b)
-        
-        @property
-        def a(self) -> int:
-            return self >> 24 & 0xff
-        
-        @property
-        def r(self) -> int:
-            return self >> 16 & 0xff
-        
-        @property
-        def g(self) -> int:
-            return self >> 8 & 0xff
-        
-        @property
-        def b(self) -> int:
-            return self & 0xff
-        
-        @a.setter
-        def a(self, a: int):
-            self.value = ((a << 8 | self.r) << 8 | self.g) << 8 | self.b
-            
-        @r.setter
-        def r(self, r: int):
-            self.value = ((self.a << 8 | r) << 8 | self.g) << 8 | self.b
-        
-        @g.setter
-        def g(self, g: int):
-            self.value = ((self.a << 8 | self.r) << 8 | g) << 8 | self.b
-        
-        @b.setter
-        def b(self, b: int):
-            self.value = ((self.a << 8 | self.r) << 8 | self.g) << 8 | b
-        
-        def __iter__(self):
-            return iter((self.a, self.r, self.g, self.b))
-        
-        def argb(self) -> 'Color.ARGB':
-            return self
-        
-    class ABGR(IColorAlpha):
-        """
-        ABGR Representation of alpha-channeled color.
-        """
-        
-        @classmethod
-        def color(cls, r: int, g: int, b: int, a: int) -> 'Color.ABGR':
-            return cls(((a << 8 | b) << 8 | g) << 8 | r)
-        
-        @property
-        def a(self) -> int:
-            return self >> 24 & 0xff
-        
-        @property
-        def b(self) -> int:
-            return self >> 16 & 0xff
-        
-        @property
-        def g(self) -> int:
-            return self >> 8 & 0xff
-        
-        @property
-        def r(self) -> int:
-            return self & 0xff
-        
-        @a.setter
-        def a(self, a: int):
-            self.value = ((a << 8 | self.b) << 8 | self.g) << 8 | self.r
-        
-        @b.setter
-        def b(self, b: int):
-            self.value = ((self.a << 8 | b) << 8 | self.g) << 8 | self.r
-        
-        @g.setter
-        def g(self, g: int):
-            self.value = ((self.a << 8 | self.b) << 8 | g) << 8 | self.r
-        
-        @r.setter
-        def r(self, r: int):
-            self.value = ((self.a << 8 | self.b) << 8 | self.g) << 8 | r
-        
-        def __iter__(self):
-            return iter((self.a, self.b, self.g, self.r))
-        
-        def abgr(self) -> 'Color.ABGR':
-            return self
-        
-    class HSL:
-        """
-        HSL Representation of color.
-        """
-        
-        @classmethod
-        def color(cls, r: int, g: int, b: int) -> 'Color.HSL':
-            return Color.RGB.color(r, g, b).hsl()
-        
-        @classmethod
-        def from_hsl(cls, h: float, s: float, l: float):
-            return cls(h / 360, s / 100, l / 100)
-        
-        def __init__(self, hue: float = 0.0, saturation: float = 0.0, luminance: float = 0.0):
-            self.hue = hue
-            self.saturation = saturation
-            self.luminance = luminance
-            
-        @property
-        def h(self) -> int:
-            return round(self.hue * 360)
-        
-        @h.setter
-        def h(self, h: int):
-            self.hue = h / 360.0
-        
-        @property
-        def s(self) -> int:
-            return round(self.saturation * 100)
-        
-        @s.setter
-        def s(self, s: int):
-            self.saturation = s / 100.0
-        
-        @property
-        def l(self) -> int:
-            return round(self.luminance * 100)
-        
-        @l.setter
-        def l(self, l: int):
-            self.luminance = l / 100.0
-            
-        def __iter__(self):
-            return iter((self.h, self.s, self.l))
-        
-        def __str__(self):
-            return f'({self.h} {self.s} {self.l})'
-            
-        def __repr__(self):
-            return str(self)
-
-        def rgb(self) -> 'Color.RGB':
-            """
-            Convert color into RGB.
-            """
-            
-            r = MathUtil.clamp(abs(self.hue * 6.0 - 3.0) - 1.0, 0.0, 1.0)
-            g = MathUtil.clamp(2.0 - abs(self.hue * 6.0 - 2.0), 0.0, 1.0)
-            b = MathUtil.clamp(2.0 - abs(self.hue * 6.0 - 4.0), 0.0, 1.0)
-            c = (1.0 - abs(2.0 * self.luminance - 1.0)) * self.saturation
-            r = (r - 0.5) * c + self.luminance
-            g = (g - 0.5) * c + self.luminance
-            b = (b - 0.5) * c + self.luminance
-            return Color.RGB.color(int(r * 255), int(g * 255), int(b * 255))
-        
-        def rgba(self) -> 'Color.RGBA':
-            """
-            Convert color into RGBA.
-            """
-            
-            return self.rgb().rgba()
-        
-        def bgr(self) -> 'Color.BGR':
-            """
-            Convert color into BGR.
-            """
-            
-            return self.rgb().bgr()
-        
-        def bgra(self) -> 'Color.BGRA':
-            """
-            Convert color into BGRA.
-            """
-            
-            return self.rgb().bgra()
-        
-        def argb(self) -> 'Color.ARGB':
-            """
-            Convert color into ARGB.
-            """
-            
-            return self.rgb().argb()
-        
-        def abgr(self) -> 'Color.ABGR':
-            """
-            Convert color into ABGR.
-            """
-            
-            return self.rgb().abgr()
-        
-        def hsl(self) -> 'Color.HSL':
-            """
-            Convert color into HSL.
-            """
-            return self
-        
-        def gl(self) -> 'Color.GLColor':
-            """
-            Convert color into OpenGL format (by HSL->RGBA->OpenGL conversion).
-            """
-            return Color.GLColor(self.rgba())
-    
-    class GLColor:
-        """
-        OpenGL format color representation.
-        """
-        value: 'Color.IColorAlpha'
-        
-        def __init__(self, value: 'Color.IColorAlpha'):
-            self.value = value
-        
-        @property
-        def r(self) -> float:
-            return self.value.r / 255
-        
-        @r.setter
-        def r(self, r: float):
-            self.value.r = int(r * 255)
-        
-        @property
-        def g(self) -> float:
-            return self.value.g / 255
-        
-        @g.setter
-        def g(self, g: float):
-            self.value.g = int(g * 255)
-        
-        @property
-        def b(self) -> float:
-            return self.value.b / 255
-        
-        @b.setter
-        def b(self, b: float):
-            self.value.b = int(b * 255)
-        
-        @property
-        def a(self) -> float:
-            return self.value.a / 255
-        
-        @a.setter
-        def a(self, a: float):
-            self.value.a = int(a * 255)
-            
-        def rgb(self) -> 'Color.RGB':
-            """
-            Convert color into RGB.
-            """
-            return self.value.rgb()
-            
-        def bgr(self) -> 'Color.BGR':
-            """
-            Convert color into BGR.
-            """
-            return self.value.bgr()
-            
-        def rgba(self) -> 'Color.RGBA':
-            """
-            Convert color into RGBA.
-            """
-            return self.value.rgba()
-            
-        def argb(self) -> 'Color.ARGB':
-            """
-            Convert color into ARGB.
-            """
-            return self.value.argb()
-            
-        def abgr(self) -> 'Color.ABGR':
-            """
-            Convert color into ABGR.
-            """
-            return self.value.abgr()
-            
-        def bgra(self) -> 'Color.BGRA':
-            """
-            Convert color into BGRA.
-            """
-            return self.value.bgra()
-        
-        def hsl(self) -> 'Color.HSL':
-            """
-            Convert color into HSL.
-            """
-            return self.value.hsl()
-        
-        def gl(self) -> 'Color.GLColor':
-            """
-            Convert color into OpenGL format.
-            """
-            return self
-        
-        def __eq__(self, color: TUnion['Color.IColorAlpha', 'Color.GLColor']) -> bool:
-            return self.value == color.gl().value
         
 class MathUtil:
     """
@@ -2252,25 +1362,25 @@ class Icon(Handle):
         return iiex
     
     @classmethod
-    def from_bitmap(self, bitmap: int | HANDLE) -> 'Icon':
-        """
-        Create an icon from bitmap.
-        """
-        
+    def from_bitmap(self, bitmap: int | HANDLE, mask: int | Color.IColor | None = None) -> 'Icon':
         if not isinstance(bitmap, Bitmap):
             bitmap = Bitmap.foreign_owner(bitmap)
         
         bm = bitmap.object
-        mask = Bitmap(bm.bmWidth, bm.bmHeight, bit_count=1)
+        mask_bitmap = Bitmap.create(bm.bmWidth, bm.bmHeight, bit_count=1)
         
         with DC.create_compatible(NULL) as bitmapDC, DC.create_compatible(NULL) as maskDC:
-            with bitmapDC.select_ex(bitmap), maskDC.select_ex(mask):
-                maskDC.bit_blt(0, 0, 0, 0, bm.bmWidth, bm.bmHeight, bitmapDC, SRCCOPY)
+            with bitmapDC.select_ex(bitmap), maskDC.select_ex(mask_bitmap):
+                if mask is not None:
+                    bitmapDC.bk_color = mask
+                    maskDC.bit_blt(0, 0, 0, 0, bm.bmWidth, bm.bmHeight, bitmapDC, SRCCOPY)
+                else:
+                    maskDC.bit_blt(0, 0, 0, 0, bm.bmWidth, bm.bmHeight, bitmapDC, SRCCOPY)
         
-        info = IconInfo.foreign_owner()
+        info = IconInfo()
         info.is_icon = True
         info.color = bitmap
-        info.mask = mask
+        info.mask = mask_bitmap
         
         icon = Icon()
         icon.value = CreateIconIndirect(info.ref())
@@ -2756,26 +1866,3 @@ class Semaphore(Handle):
     def close(self):
         CloseHandle(self)
         self._closed = True
-        
-class Theme(Handle):
-    """
-    Class, representing Windows theme.
-    """
-    
-    @classmethod
-    def create(cls, hwnd: int | HANDLE, class_list: str) -> 'Theme':
-        theme = cls(OpenThemeData(hwnd, class_list))
-        if not theme.value: raise RuntimeError('Theme not found.')
-        return theme
-    
-    def close(self):
-        hr = CloseThemeData(self)
-        if FAILED(hr): raise COMError(hr)
-        self._closed = True
-        
-    def draw_background(self, dc: int | HANDLE, part_id: int, state_id: int, rect: RECT, clip: RECT=NULL):
-        """
-        Draw the border and fill defined by the visual style for the specified control part.
-        """
-        hr = DrawThemeBackground(self, dc, part_id, state_id, rect.ref(), clip.ref() if clip is not NULL else NULL)
-        if FAILED(hr): raise COMError(hr)

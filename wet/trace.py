@@ -134,13 +134,15 @@ class WET_ADDITIONAL_INFO(CStructure):
         ('IsComObject', BOOLEAN),
         ('IsClassMethod', BOOLEAN),
         ('Class', LPCWSTR),
-        ('TraceID', UINT)
+        ('TraceID', UINT),
+        ('ModuleName', LPCWSTR)
     ]
     
     IsClassMethod: int
     IsComObject: int
     TraceID: int
     Class: LPCWSTR
+    ModuleName: LPCWSTR
 
 PWET_ADDITIONAL_INFO = WET_ADDITIONAL_INFO.PTR()
 
@@ -183,6 +185,13 @@ class _WET_GLOBAL_STATE:
         for provider in cls._providers_:
             if provider.RegName.value == reg_name:
                 return provider
+        if reg_name == 'DEFB':
+            provider = WET_PROVIDER('DEFB')
+            from . import trace
+            from .. import defbase
+            defbase._defb_state._wet_trace = trace
+            defbase._defb_state._provider = provider
+            return provider
         return None
     
 PWET_EVENT_CALLBACK = CALLBACK(VOID, PWET_EVENT)
@@ -205,22 +214,20 @@ def dbg_trace(provider: WET_PROVIDER | str, message: str = '', trace_id: int = -
     caller = get_py_frame(1 + up_stack)
     cls = None
     
-    additional_info = None
+    additional_info = WET_ADDITIONAL_INFO()
     
     if trace_id != -1:
-        additional_info = WET_ADDITIONAL_INFO(IsComObject=True, TraceID=trace_id)
+        additional_info.IsComObject = True
+        additional_info.TraceID = trace_id
     
     name = caller.f_code.co_qualname
        
     if 'self' in caller.f_locals: 
         self = caller.f_locals['self']
         cls = self.__class__
-        
-        if additional_info is None:
-            additional_info = WET_ADDITIONAL_INFO(IsClassMethod=True, Class=cls.__qualname__)
-        else:
-            additional_info.IsClassMethod = True
-            additional_info.Class = cls.__qualname__
+
+        additional_info.IsClassMethod = True
+        additional_info.Class = cls.__qualname__
     
     name = name.replace('.', '::').replace('::<locals>', '')
     
@@ -228,6 +235,14 @@ def dbg_trace(provider: WET_PROVIDER | str, message: str = '', trace_id: int = -
         name = name[:-5]
     elif name.endswith('__init__'):
         name = f'new {name[:-10]}'
+    
+    module = os.path.splitext(caller.f_code.co_filename)[0]
+    for path in sorted(sys.path, key=lambda i: len(i), reverse=True):
+        module = module.removeprefix(path)
+    module = module.removeprefix(os.getcwd())
+    module = module.removeprefix('\\')
+    module = module.replace('\\', '.')
+    additional_info.ModuleName = module
     
     # 
     # send event to WET
@@ -310,12 +325,24 @@ def ConstructMessage(pEvent: IPointer[WET_EVENT]):
     TimeStr = DateTime.strftime('%d.%m.%Y %H:%M:%S')
     Provider = Event.pWetProvider.contents
     FunctionName = Event.FunctionName
+    if Event.Level == WET_LEVEL_INFO:
+        Level = 'Info'
+    elif Event.Level == WET_LEVEL_WARNING:
+        Level = 'Warning'
+    elif Event.Level == WET_LEVEL_ERROR:
+        Level = 'Error'
+    elif Event.Level == WET_LEVEL_FATAL:
+        Level = 'Fatal'
+    else:
+        Level = 'Unknown'
     
     AdditionalInfo = None
     if Event.AdditionalInfo:
         AdditionalInfo = Event.AdditionalInfo.contents
-        
-    Message = f'[{TimeStr}] [{Provider.RegName.value}] {FunctionName.value}() '
+        if AdditionalInfo.ModuleName:
+            ExtraFunction = f'[{AdditionalInfo.ModuleName.value}] '
+    
+    Message = f'[{TimeStr}] [{Provider.RegName.value}] [{Level}] {ExtraFunction}{FunctionName.value}() '
     
     if AdditionalInfo is not None:
         if AdditionalInfo.IsComObject:
@@ -416,11 +443,3 @@ def RestoreStdStreams():
     """
     sys.stdout = sys.__stdout__
     sys.stderr = sys.__stderr__
-    
-def ConfigureDefbProvider():
-    from ..defbase import _defb_state
-    defb_provider = getattr(_defb_state, '_provider', None)
-    if defb_provider is None:
-        _defb_state._provider = WET_PROVIDER('DEFB')
-        from . import trace
-        _defb_state._wet_trace = trace

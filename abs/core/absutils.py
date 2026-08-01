@@ -31,7 +31,7 @@ class Abs:
         property_map: dict[str, Any]
         reference_list: list[Any]
         
-        def __init__(self):
+        def __init__(self, *args, **kwargs):
             self.property_map = {}
             self.reference_list = []
             self._abs_managed = True
@@ -48,7 +48,7 @@ class Abs:
         Check object is WinAbs-managed.
         """
         
-        return hasattr(obj, '_abs_managed')
+        return i_getattr(obj, '_abs_managed', False)
     
     class Thread(CThread):
         """

@@ -1998,6 +1998,13 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("cy", INT),
                     ("flags", UINT)
                 ]
+                hwnd: int
+                hwndInsertAfter: int
+                x: int
+                y: int
+                cx: int
+                cy: int
+                flags: int
             WINDOWPOS = tagWINDOWPOS
             LPWINDOWPOS = POINTER(WINDOWPOS)
             PWINDOWPOS = LPWINDOWPOS
@@ -7632,6 +7639,10 @@ if cpreproc.ifndef("CCHDEVICENAME"):
             ("rcWork", RECT),
             ("dwFlags", DWORD)
         ]
+        cbSize: int
+        rcMonitor: RECT
+        rcWork: RECT
+        dwFlags: int
     LPMONITORINFO = POINTER(MONITORINFO)
 
     class MONITORINFOEXA(CStructure):
@@ -7642,6 +7653,11 @@ if cpreproc.ifndef("CCHDEVICENAME"):
             ("dwFlags", DWORD),
             ("szDevice", CHAR * CCHDEVICENAME)
         ]
+        cbSize: int
+        rcMonitor: RECT
+        rcWork: RECT
+        dwFlags: int
+        szDevice: ICharArray
     LPMONITORINFOEXA = POINTER(MONITORINFOEXA)
 
     class MONITORINFOEXW(CStructure):
@@ -7652,6 +7668,11 @@ if cpreproc.ifndef("CCHDEVICENAME"):
             ("dwFlags", DWORD),
             ("szDevice", WCHAR * CCHDEVICENAME)
         ]
+        cbSize: int
+        rcMonitor: RECT
+        rcWork: RECT
+        dwFlags: int
+        szDevice: IWideCharArray
     LPMONITORINFOEXW = POINTER(MONITORINFOEXW)
 
     GetMonitorInfoA = declare(user32.GetMonitorInfoA, BOOL, HMONITOR, LPMONITORINFO)
