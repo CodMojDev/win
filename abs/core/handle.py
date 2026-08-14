@@ -373,6 +373,24 @@ class DC(Handle):
             if complexity == ERROR: raise WinException()
             return complexity
     
+    class TransactSelect:
+        dc: 'DC'
+        n: Any
+        f: Callable[[Any], Any]
+        v: Any
+        
+        def __init__(self, dc: 'DC', n: Any, f: Callable[[Any], Any]):
+            self.dc = dc
+            self.f = f
+            self.n = n
+            self.v = None
+            
+        def __enter__(self):
+            self.v = self.f(self.n)
+            
+        def __exit__(self, *_):
+            self.f(self.v)
+    
     pixels: 'DC.Pixels'
     _created: bool
     path: 'DC.Path'
@@ -929,6 +947,20 @@ class DC(Handle):
         Get the device context capabilities.
         """
         return GetDeviceCaps(self, index)
+    
+    def draw_text(self, text: str, rect: RECT, fmt: int):
+        """
+        Draw the text.
+        """
+        if not DrawTextW(self, text, len(text), rect.ref(), fmt):
+            raise WinException()
+        
+    def rectangle(self, rc: RECT):
+        """
+        Draw the rectangle.
+        """
+        if not Rectangle(self, *tuple(rc)):
+            raise WinException()
 
 class Monitor(HMONITOR):
     @classmethod
@@ -1018,19 +1050,6 @@ class BitmapInfo(BITMAPINFO):
     def bpp(self, bpp: int):
         self.bmiHeader.biBitCount = bpp
         
-class MathUtil:
-    """
-    Math utilities.
-    """
-    
-    @staticmethod
-    def clamp(value: int | float, min_value: int | float, max_value: int | float) -> int | float:
-        """
-        Clamp the value into [min, max]
-        """
-        
-        return max(min_value, min(max_value, value))
-        
 class StringUtil:
     """
     String and stringify utilities.
@@ -1119,7 +1138,13 @@ class Font(GDIObjectHandle):
                 quality, pitch_and_family, name)
             )
         if not font.value:
-            print('Sheize')
+            raise WinException()
+        return font
+    
+    @classmethod
+    def indirect(cls, logfont: LOGFONTW) -> 'Font':
+        font = cls(CreateFontIndirectW(logfont.ref()))
+        if not font.value:
             raise WinException()
         return font
         
@@ -1317,6 +1342,16 @@ class IconInfo(ICONINFO):
         if not self._foreign_owner:
             self.color.close()
             self.mask.close()
+
+class ICONDIR(CStructure):
+    _fields_ = [
+        ('idReserved', WORD),
+        ('idType', WORD),
+        ('idCount', WORD)
+    ]
+    idReserved: int
+    idType: int
+    idCount: int
 
 class ICONDIRENTRY(CStructure):
     _fields_ = [

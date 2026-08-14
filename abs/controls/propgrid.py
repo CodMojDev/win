@@ -1,183 +1,828 @@
 from win.abs.window import *
+from win.abs.colordlg import *
+from win.abs.button import *
+from win.abs.edit import *
+from win.abs.combobox import *
+from win.abs.msgbox import *
+from win.abs.toolbar import *
+
+PGIO_REVERT = 0
+PGIO_DBLCLK = 1
+PGIO_COMMIT = 2
+PGIO_FOCUS  = 3
 
 class PropertyGridItem:
-    buddy: Window | None
+    name: str
+    selected: bool
+    description: str
     
-    def __init__(self, name: str, buddy: Window | None = None):
+    def __init__(self, name: str, description: str = ''):
         self.name = name
-        self.buddy = buddy
+        self.selected = False
+        self.description = description
+        
+    def paint(self, dc: DC):
+        """
+        Draw the property grid item value.
+        """
+    
+    def measure(self, rect: Rect):
+        """
+        Measure the given value rectangle by-value.
+        """
+    
+    def host(self, view: 'PropertyGridView', rect: Rect):
+        """
+        Host the property grid item by parent view and rectangle.
+        """
+        
+    def enter(self):
+        """
+        Enter the property grid item edit mode.
+        """
+        
+    def abort(self) -> bool:
+        """
+        Abort if the property grid item is in edit mode.
+        """
+        return True
+        
+    def show(self):
+        """
+        Show the property grid item.
+        """
 
+    def hide(self):
+        """
+        Hide the property grid item.
+        """
+        
+    def operation(self, op: int):
+        """
+        Perform an operation over property grid item.
+        """
+    
+    def destroy(self):
+        """
+        Destroy the property grid item.
+        """
+    
+    def __del__(self):
+        self.destroy()
+
+class PropertyGridItemString(PropertyGridItem):
+    edit: Edit | None
+    rect: Rect | None
+    view: TUnion['PropertyGridView', None]
+    text: str
+    styles: int
+    original_text: str
+    
+    def __init__(self, name: str, text: str = '', description: str = '', styles: int = 0):
+        super().__init__(name, description)
+        self.original_text = self.text = text
+        self.edit = None
+        self.rect = None
+        self.view = None
+        self.styles = styles
+        
+    def host(self, view: 'PropertyGridView', rect: Rect):
+        self.rect = rect
+        if self.view is None:
+            self.view = view
+        if self.edit is None:
+            self.edit = Edit(rect.width, rect.height, view, 0, text=self.text)
+            
+            self.edit.style |= self.styles
+            self.edit.create(rect.x, rect.y)
+            self.edit.font = view.logical_name_font
+        else:
+            self.edit.position = (rect.x, rect.y)
+            self.edit.size = (rect.width, rect.height)
+            
+    def paint(self, dc: DC):
+        rect = Rect.create(0, 0, self.rect.width, self.rect.height)
+        self.text = self.edit.name
+        if self.text != self.original_text:
+            font = self.view.logical_bold_name_font
+        else:
+            font = self.view.logical_name_font
+        with dc.select_ex(font):
+            dc.draw_text(self.text, rect, DT_LEFT)
+    
+    def show(self):
+        if self.edit is not None and not self.edit.visible:
+            self.edit.show()
+            
+    def hide(self):
+        if self.edit is not None and self.edit.visible:
+            self.edit.hide()
+    
+    def enter(self):
+        self.edit.show()
+
+    def abort(self) -> bool:
+        if self.edit is not None:
+            self.edit.hide()
+            self.text = self.edit.name
+            self.operation(PGIO_COMMIT)
+        return True
+    
+    def operation(self, op: int):
+        if op == PGIO_DBLCLK:
+            self.edit.selection = (0, len(self.edit.name))
+        elif op == PGIO_REVERT:
+            self.text = self.original_text
+        elif op == PGIO_COMMIT:
+            if self.text != self.original_text:
+                self.view.on_item_updated.execute(self)
+        elif op == PGIO_FOCUS:
+            self.edit.focus()
+            
+    def destroy(self):
+        if self.edit is not None:
+            self.edit.hide()
+    
+class PropertyGridItemCombobox(PropertyGridItem):
+    variants: list[str]
+    view: TUnion['PropertyGridView', None]
+    rect: Rect | None
+    combobox: Combobox | None
+    default: int
+    current: int
+    
+    def __init__(self, name: str, variants: list[str] = [], default: int = 0, description: str = ''):
+        super().__init__(name, description)
+        self.variants = variants
+        self.view = None
+        self.rect = None
+        self.combobox = None
+        self.current = self.default = default
+    
+    def measure(self, rect: Rect):
+        rect.right -= GetSystemMetrics(SM_CXVSCROLL)
+    
+    def host(self, view: 'PropertyGridView', rect: Rect):
+        self.rect = rect
+        if self.view is None:
+            self.view = view
+        if self.combobox is None:
+            self.combobox = Combobox(rect.width, rect.height, view, Identifiers['PropertyGridItemCombobox->Combobox'])
+            self.combobox.styles.add(CBS_DROPDOWN)
+            self.combobox.create(rect.x, rect.y)
+            self.combobox.font = self.view.logical_name_font
+            for variant in self.variants:
+                self.combobox.append(variant)
+            self.combobox.current = self.default
+            self.combobox.hide()
+        else:
+            self.combobox.position = (rect.x, rect.y)
+            self.combobox.size = (rect.width, rect.height)
+    
+    def paint(self, dc: DC):
+        rect = Rect.create(0, 0, self.rect.width, self.rect.height)
+        self.current = self.combobox.current
+        if self.current != self.default:
+            font = self.view.logical_bold_name_font
+        else:
+            font = self.view.logical_name_font
+        with dc.select_ex(font):
+            dc.draw_text(self.combobox.text(self.current), rect, DT_LEFT)
+    
+    def enter(self):
+        self.combobox.show()
+    
+    def abort(self) -> bool:
+        if self.combobox is not None:
+            self.current = self.combobox.current
+            self.combobox.hide()
+            self.operation(PGIO_COMMIT)
+        return True
+    
+    def show(self):
+        if self.combobox is not None and not self.combobox.visible:
+            self.combobox.show()
+            
+    def hide(self):
+        if self.combobox is not None and self.combobox.visible:
+            self.combobox.hide()
+            
+    def operation(self, op: int):
+        if op == PGIO_REVERT:
+            self.combobox.current = self.current = self.default
+            self.view.invalidate()
+        elif op == PGIO_DBLCLK:
+            self.current = self.combobox.current
+            if self.current < self.combobox.count():
+                self.current += 1
+                self.combobox.current = self.current
+            self.view.invalidate()
+        elif op == PGIO_COMMIT:
+            if self.current != self.default:
+                self.view.on_item_updated.execute(self)
+        elif op == PGIO_FOCUS:
+            self.combobox.focus()
+            
+    def destroy(self):
+        if self.combobox is not None:
+            self.combobox.close()
+
+class LowercaseDict:
+    def __init__(self, dictionary: dict[str, Any]):
+        self.dictionary = {k.lower(): v for k, v in dictionary.items()}
+        
+    def __getitem__(self, key: str) -> Any:
+        return self.dictionary[key.lower()]
+
+class PropertyGridItemColor(PropertyGridItem):
+    color: Color.BGR
+    button: Button | None
+    rect: Rect | None
+    view: TUnion['PropertyGridView', None]
+    edit: Edit | None
+    edit_mode: bool
+    text: str
+    original_text: str
+    
+    def __init__(self, name: str, 
+                 color: Color.IColor = Color.BGR.from_id(Color.ID.Black),
+                 text: str = '',
+                 description: str = ''):
+        super().__init__(name, description)
+        self.original_color = self.color = color.bgr()
+        self.original_text = self.text = text
+        self.button = None
+        self.rect = None
+        self.view = None
+        self.edit = None
+        self.edit_mode = False
+    
+    def paint(self, dc: DC):
+        black = Color.BGR.from_id(Color.ID.Black)
+        with Pen.create(PS_SOLID, 2, black) as pen:
+            with dc.select_ex(pen):
+                dc.frame(Rect.create(0, 0, 24, self.rect.height), Brush.stock(BLACK_BRUSH))
+                with Brush.create(self.color) as brush:
+                    dc.fill(Rect.create(2, 2, 24 - 2 - 2, self.rect.height - 2 - 2), brush)
+                    self.text = self.edit.name
+                    if self.text.strip():
+                        if self.color != self.original_color:
+                            font = self.view.logical_bold_name_font
+                        else:
+                            font = self.view.logical_name_font
+                        with dc.select_ex(font):
+                            dc.draw_text(self.text, Rect.create(
+                                24 + 2, 0, self.rect.width - 25 - 24 - 2, 
+                                self.rect.height), DT_LEFT)
+    
+    def measure(self, rect: Rect):
+        rect.right -= GetSystemMetrics(SM_CXVSCROLL)
+    
+    def host(self, view: 'PropertyGridView', rect: Rect):
+        self.rect = rect
+        if self.view is None:
+            self.view = view
+            view.command_hooks.append(self.on_command)
+        if self.button is None:
+            self.button = Button(25, rect.height, view, Identifiers['PropertyGridItemColor->Color-Button'], text='...')
+            self.button.create(rect.right-25, rect.y)
+            self.button.hide()
+        else:
+            self.button.position = (rect.right-25, rect.y)
+            self.button.size = (25, rect.height)
+        if self.edit is None:
+            self.edit = Edit(rect.width - 25 - 24 - 2, rect.height, view, Identifiers['PropertyGridItemColor->Edit'])
+            self.edit.create(rect.x + 24 + 2, rect.y)
+            self.edit.font = view.logical_name_font
+            self.edit.hide()
+        else:
+            self.edit.position = (rect.x + 24 + 2, rect.y)
+            self.edit.size = (rect.width - 25 - 24 - 2, rect.height)
+            
+    def on_command(self, identifier: int, code: int, hwnd: int) -> bool:
+        if identifier == Identifiers['PropertyGridItemColor->Color-Button']:
+            dialog = ColorDialog(self.view, color=self.color)
+            if dialog.create():
+                self.color = dialog.color
+                self.edit.name = '#'+str(self.color.rgb())[2:]
+                self.view.invalidate()
+                
+    def show(self):
+        if self.button is not None and not self.button.visible:
+            self.button.show()
+        if self.edit is not None and not self.edit.visible:
+            self.edit.show()
+            
+    def hide(self):
+        if self.button is not None and self.button.visible:
+            self.button.hide()
+        if self.edit is not None and self.edit.visible:
+            self.edit.hide()
+            
+    def enter(self):
+        self.edit_mode = True
+        self.button.show()
+        self.edit.show()
+    
+    def abort(self) -> bool:
+        if not self.edit_mode: return True
+        self.button.hide()
+        self.edit.hide()
+        self.text = self.edit.name
+        return self.commit()
+    
+    def operation(self, op: int):
+        if op == PGIO_REVERT:
+            self.color = self.original_color
+            self.text = self.original_text
+            self.edit.name = self.text
+            self.view.invalidate()
+        elif op == PGIO_COMMIT:
+            self.text = self.edit.name
+            self.commit()
+        elif op == PGIO_FOCUS:
+            self.edit.focus()
+            
+    def destroy(self):
+        if self.button is not None:
+            self.button.close()
+        if self.edit is not None:
+            self.edit.close()
+            
+    def commit(self) -> bool:
+        color = self.text.strip()
+        if color:
+            if color.startswith('#'):
+                try:
+                    self.color = Color.BGR.string(color)
+                except Exception:
+                    MsgBox.warning().ok('Properties Window', 'Property value is not valid.', self.view)
+                    self.edit.focus()
+                    return False
+            else:
+                try:
+                    self.color = Color.BGR.from_id(LowercaseDict(Color.ID.__dict__)[color])
+                except Exception:
+                    MsgBox.warning().ok('Properties Window', 'Property value is not valid.', self.view)
+                    self.edit.focus()
+                    return False
+        
+        if self.color != self.original_color:
+            self.view.on_item_updated.execute(self)
+            self.view.invalidate()
+            self.original_text = self.text
+        
+        return True
+
+# property grid view hit-test definitions
 PGVHT_NONE = 0
 PGVHT_DIRBUTTON = 1
 PGVHT_ITEM = 2
+PGVHT_DIRECTORY = 3
+PGVHT_BUDDY = 4
+
+# property grid view render mode definitions
+PGVRM_DIRECTORIES = 1
+PGVRM_ALPHABET = 2
+
+# property grid view notify codes
+PGVN_ROWCLICK = 0
+PGVNRC_DIR = 1 # the lpDir field is valid
+PGVNRC_ITEM = 2 # the iItem field is valid
+class PGVNMRC(NMHDR):
+    _fields_ = [
+        ('flags', UINT),
+        ('lpDir', LPWSTR),
+        ('iItem', INT)
+    ]
+    flags: int
+    lpDir: LPWSTR
+    iItem: int
 
 class PropertyGridView(Window):
-    directories: dict[str, tuple[bool, list[PropertyGridItem]]]
+    SCROLL_Y_UNIT = 3
+    
+    directories: dict[str, tuple[bool, bool, list[PropertyGridItem]]]
     ht_map: list[tuple[Rect, int, int | str]]
-    view_range: tuple[int, int]
+    command_hooks: list[Callable[[int, int, int], bool]]
+    minimal: int
     directory_color: Color.IColor
     directory_font: str
     name_font: str
     propname_width: int
     
-    def invalidate(self, rect: RECT | Region = None, erase: bool = True):
-        self.invalidated_from_managed = True
-        super().invalidate(rect, erase)
-    
     def __init__(self):
         super().__init__()
+        
+        accelerator_table = AcceleratorTable.create(
+            [ACCEL(FVIRTKEY, VK_ESCAPE, 
+                   Identifiers['Property-Grid-View->Accelerators->ESC']
+                   ),
+             ACCEL(FVIRTKEY, VK_RETURN, 
+                   Identifiers['Property-Grid-View->Accelerators->ENTER']
+                   )], self)
+        WindowLoopUnit.current(False).accelerator_tables.append(accelerator_table)
+        
+        # setup styles
         self.styles.add(WS_BORDER, WS_CHILD, WS_VISIBLE, WS_VSCROLL)
         self.styles.remove(WS_OVERLAPPEDWINDOW)
         self.styles.add_ex(WS_EX_CLIENTEDGE)
+        
+        # bind the handlers on window events
         self.on_create += self.gridview_on_create
-        self.directories = {}
-        self.view_range = (0, 0)
         self.on_vscroll += self.gridview_on_vscroll
-        self.directory_color = Color.BGR.string('#c0c0c0')
+        self.on_left_button_up += self.gridview_on_left_button_up
+        self.on_mouse_wheel += self.gridview_on_mouse_wheel
+        self.on_command += self.gridview_on_command
+        self.on_left_button_double_click += self.gridview_on_left_button_double_click
+        self.on_item_updated = MultiEvent()
+        
+        self.propname_width = 40
+        self.command_hooks = []
+        self.directories = {}
+        self.ht_map = []
+        
+        self.minimal = 0
+        
+        # setup property grid colors
+        self.directory_color = Color.BGR.string('#f0f0f0')
+        self.background_color = Color.BGR.string('#ffffff')
+        self.directory_name_color = Color.BGR.string("#000000")
+        self.select_color = Color.BGR.from_id(Color.ID.Highlight)
+        
         self.directory_font = 'MS Shell Dlg'
         self.name_font = 'MS Shell Dlg'
-        self.propname_width = 40
-        self.ht_map = []
-        self.on_left_button_up += self.gridview_on_left_button_up
-        self.invalidated_from_managed = False
-        self.background_color = Color.BGR.string('#ffffff')
         
+        # render mode
+        self.render_mode = PGVRM_DIRECTORIES
+    
+    def gridview_on_mouse_wheel(self, delta: int, key_flags: int, x: int, y: int):
+        sbi = SCROLLBARINFO()
+        sbi.cbSize = sbi.size()
+        if not GetScrollBarInfo(self, OBJID_VSCROLL, sbi.ref()):
+            raise WinException()
+        if delta > 0:
+            if not (sbi.rgstate[1] & 1):
+                self.gridview_on_vscroll(SB_LINEUP, 0, 0)
+        else:
+            if not (sbi.rgstate[5] & 1):
+                self.gridview_on_vscroll(SB_LINEDOWN, 0, 0)
+    
+    def gridview_on_command(self, identifier: int, code: int, hwnd: int):
+        if identifier == Identifiers['Property-Grid-View->Accelerators->ESC']:
+            rows = self.rows()
+            for row in rows:
+                if not isinstance(row, PropertyGridItem): continue
+                if row.selected:
+                    row.operation(PGIO_REVERT)
+                    self.invalidate()
+                    break
+        elif identifier == Identifiers['Property-Grid-View->Accelerators->ENTER']:
+            rows = self.rows()
+            for row in rows:
+                if not isinstance(row, PropertyGridItem): continue
+                if row.selected:
+                    row.operation(PGIO_COMMIT)
+                    self.invalidate()
+                    break
+        else:
+            for hook in self.command_hooks:
+                if hook(identifier, code, hwnd):
+                    return
+    
     def gridview_on_create(self) -> bool:
-        self.directory_brush = Brush.create(self.directory_color)
-        self.background_brush = Brush.create(self.background_color)
-        self.logical_directory_font = Font.create(self.directory_font, 15)
-        self.logical_name_font = Font.create(self.name_font, 12)
+        self.setup_brushes()
+        self.setup_fonts()
+        
         self.last_sb_position = 0
-        self.timer(self.gridview_update_tick, 1*1000)
         return True
+    
+    def setup_brushes(self):
+        self.directory_brush = Brush.create(self.directory_color)
+        self.select_color_brush = Brush.create(self.select_color)
+        self.background_brush = Brush.create(self.background_color)
+        self.directory_name_brush = Brush.create(self.directory_name_color)
+
+    def setup_fonts(self):
+        self.logical_directory_font = Font.create(self.directory_font, 18, weight=FW_DEMIBOLD)
+        self.logical_name_font = Font.create(self.name_font, 20)
+        self.logical_bold_name_font = Font.create(self.name_font, 20, weight=FW_BOLD)
     
     def rows(self) -> list[tuple[str, bool] | PropertyGridItem]:
         result = []
         for k, v in self.directories.items():
-            visible, rows = v
-            result.append((k, visible))
+            visible, selected, rows = v
+            result.append((k, selected, visible))
             if visible:
                 for row in rows:
                     result.append(row)
+        if not (self.render_mode & PGVRM_DIRECTORIES):
+            result = []
+            for _v, _s, directory_rows in self.directories.values():
+                result.extend(directory_rows)
+        # if render mode supports PGVRM_ALPHABET, then sort it by alphabet order
+        if self.render_mode & PGVRM_ALPHABET:
+            def sort_procedure(x): # sort procedure
+                if isinstance(x, PropertyGridItem):
+                    return x.name
+                return x[0]
+            if self.render_mode & PGVRM_DIRECTORIES: # if render mode supports PGVRM_DIRECTORIES
+                directories = []
+                directory_i = -1
+                for row in result:
+                    if isinstance(row, PropertyGridItem):
+                        directories[directory_i][1].append(row)
+                    else:
+                        directories.append((row, []))
+                        directory_i += 1
+                result = []
+                directories = sorted(directories, key=sort_procedure)
+                for directory, directory_rows in directories:
+                    result.append(directory)
+                    directory_rows = sorted(directory_rows, key=sort_procedure)
+                    for row in directory_rows:
+                        result.append(row)
+            else:
+                result = sorted(result, key=sort_procedure)
         return result
     
     def on_paint(self, dc: PaintDC) -> bool:
-        if not self.invalidated_from_managed: return True
-        self.invalidated_from_managed = False
-        y = 0
-        i_min, i_max = self.view_range
-        i = -1
+        # clear the hit-test map
         self.ht_map.clear()
+        # get the rows
         rows = self.rows()
-        si = SCROLLINFO()
-        si.cbSize = si.size()
-        si.fMask = SIF_RANGE | SIF_PAGE
-        si.nMin = 0
-        si.nMax = len(rows)-1
-        si.nPage = 1
-        SetScrollInfo(self, SB_VERT, si.ref(), TRUE)
+        
+        # set the scroll bar info
+        EnableScrollBar(self, SB_VERT, ESB_ENABLE_BOTH)
+        if self.minimal + self.SCROLL_Y_UNIT >= len(rows):
+            EnableScrollBar(self, SB_VERT, ESB_DISABLE_DOWN)
+        elif self.minimal == 0:
+            EnableScrollBar(self, SB_VERT, ESB_DISABLE_UP)
+        else:
+            si = SCROLLINFO()
+            si.cbSize = si.size()
+            si.fMask = SIF_RANGE | SIF_PAGE
+            si.nMin = 0
+            si.nMax = (len(rows)-1)//self.SCROLL_Y_UNIT
+            si.nPage = 1
+            SetScrollInfo(self, SB_VERT, si.ref(), TRUE)
+        
+        # recalc the property name width
         maximal_cx = 0
+        y = 0
+        view_height = self.height
         with dc.select_ex(self.logical_name_font):
             for i, row in enumerate(rows):
                 if isinstance(row, PropertyGridItem):
-                    if i < i_min: continue
-                    if i > i_max: continue
+                    # if row is not in view range, skip it
+                    if i < self.minimal: continue # minimal extent
+                    if y > view_height: continue # maximal extent
                     cx = dc.get_text_extent_point(row.name).cx
                     maximal_cx = max(cx, maximal_cx)
+                y += 24
         if maximal_cx != 0:
             self.propname_width = maximal_cx + 10
-                
+            
+        y = 0
+        # iterate over all rows
         for i, row in enumerate(rows):
             if isinstance(row, PropertyGridItem):
-                if i < i_min:
-                    if row.buddy is not None: row.buddy.hide()
+                # if row is not in view range, skip it
+                if i < self.minimal:
+                    row.hide()
                     continue
-                if i > i_max:
-                    if row.buddy is not None: row.buddy.hide()
+                if y > view_height:
+                    row.hide()
                     continue
-                self.ht_map.append((Rect.create(24, y, self.propname_width, 24), PGVHT_ITEM, i))
-                dc.fill(Rect.create(0, y, 24, 24), self.directory_brush)
-                dc.move(24, y)
-                dc.line(24, y+24)
-                dc.move(24, y)
-                dc.line(self.width, y)
-                dc.move(24 + self.propname_width, y)
-                dc.line(24 + self.propname_width, y+24)
-                dc.move(24, y+23)
-                dc.line(self.width, y+23)
-                dc.bk_color = Color.BGR.string('#ffffff')
-                with dc.select_ex(self.logical_name_font):
-                    dc.text_out(27, y+3, row.name)
-                if row.buddy is not None:
-                    row.buddy.size = (self.width - self.propname_width - 24 - 1 - 1, 24 - 1 - 1)
-                    row.buddy.position = (25 + self.propname_width, y + 1)
-                    if not IsWindowVisible(row.buddy):
-                        self.invalidated_from_managed = True
-                        row.buddy.parent = self
+                self.ht_map.append((Rect.create(21, y, self.propname_width, 23), PGVHT_ITEM, i))
+                
+                # fill the directory area background
+                dc.fill(Rect.create(0, y, 21, 23), self.directory_brush)
+                
+                with Pen.create(PS_SOLID, 1, self.directory_color) as pen:
+                    with dc.select_ex(pen):
+                        # draw the property name delimiter
+                        dc.move(21 + self.propname_width, y)
+                        dc.line(21 + self.propname_width, y+23)
                         
-                        row.buddy.show()
-                else:
-                    dc.fill(Rect.create(24 + self.propname_width + 1, y, self.width - self.propname_width - 24 - 1 - 1, 24 - 1 - 1), self.background_brush)
+                        # draw the lower horizontal delimiter
+                        dc.move(21, y + 23 - 1)
+                        dc.line(self.width, y + 23 - 1)
+                
+                name_rect = Rect.create(21, y, self.propname_width, 23 - 1 - 1)
+                with dc.select_ex(self.logical_name_font):
+                    if row.selected:
+                        dc.fill(name_rect, self.select_color_brush)
+                        with DC.TransactSelect(dc, Color.BGR.from_id(Color.ID.Highlight), dc.set_bk_color):
+                            with DC.TransactSelect(dc, Color.BGR.from_id(Color.ID.HighlightText), dc.set_text_color):
+                                dc.draw_text(row.name, name_rect, DT_LEFT)
+                    else:
+                        with DC.TransactSelect(dc, self.background_color, dc.set_bk_color):
+                            dc.draw_text(row.name, name_rect, DT_LEFT)
+                
+                x = 21 + 1 + self.propname_width
+                width = self.width - self.propname_width - 23 - 1
+                height = 23 - 1
+                rect = Rect.create(x, y, width, height)
+                row.measure(rect)
+                
+                self.ht_map.append((rect, PGVHT_BUDDY, i))
+                row.host(self, rect)
+                if row.selected: row.enter()
+                
+                with dc.create_compatible_bitmap(rect.width, rect.height) as bitmap:
+                    with dc.create_compatible() as mem_dc:
+                        with mem_dc.select_ex(bitmap):
+                            # fill the property grid item value background
+                            mem_dc.fill(Rect.create(0, 0, rect.width, rect.height), self.background_brush)
+                            row.paint(mem_dc)
+                            dc.bit_blt(rect.x, rect.y, 0, 0, rect.width, rect.height, mem_dc, SRCCOPY)
             else:
-                if i < i_min: continue
-                if i > i_max: continue
-                name, visible = row
-                dc.fill(Rect.create(0, y, self.width, 24), self.directory_brush)
+                # if row is not in view range, skip it
+                if i < self.minimal: 
+                    continue
+                if y > view_height:
+                    continue
+                name, selected, visible = row
+                
+                # fill the directory rectangle with color
+                dc.fill(Rect.create(0, y, self.width, 23), self.directory_brush)
+                
+                # get the element glyph icon for visible state
                 if not visible:
-                    element = VisualStyleElements.TreeView.Glyph.CLOSED
-                    for row in self.directories[name][1]:
-                        if row.buddy is not None: row.buddy.hide()
+                    element = VisualStyleElements.ExplorerTreeView.Glyph.CLOSED
+                    for row in self.directories[name][2]:
+                        row.hide()
                 else:
-                    element = VisualStyleElements.TreeView.Glyph.OPENED
-                dirbutton_rect = Rect.create(3, y+3, 16, 16)
+                    element = VisualStyleElements.ExplorerTreeView.Glyph.OPENED
+                
+                # calculate directory button rectangle, append into HT map and draw
+                dirbutton_rect = Rect.create(0 + 1, y+3, 16, 16)
                 self.ht_map.append((dirbutton_rect, PGVHT_DIRBUTTON, name))
                 element.draw_background(dc, dirbutton_rect)
+                
+                # draw the directory name
                 with dc.select_ex(self.logical_directory_font):
-                    dc.bk_color = self.directory_color
-                    dc.text_out(24, y+4, name)
-            y += 24
+                    # calculate the directory name rectangle
+                    cx = dc.get_text_extent_point(name).cx
+                    dir_rect = Rect.create(21, y, cx + 10, 23)
+                    self.ht_map.append((dir_rect, PGVHT_DIRECTORY, name))
+                    
+                    # draw the directory name with colors
+                    with DC.TransactSelect(dc, self.directory_color, dc.set_bk_color):
+                        with DC.TransactSelect(dc, self.directory_name_color, dc.set_text_color):
+                            dc.draw_text(name, Rect.create(21, y+4, self.width, 23 - 1 - 1), DT_LEFT)
+                    
+                # draw the selected directory rect state
+                if selected:
+                    with Pen.create(PS_DOT, 1, self.directory_name_color) as pen:
+                        with dc.select_ex(pen):
+                            with dc.select_ex(Brush.stock(NULL_BRUSH)):
+                                dc.rectangle(dir_rect)
+            y += 23
         return True
     
     def on_size(self, flags: int, width: int, height: int) -> bool:
         self.invalidate()
-        self.view_range = (self.view_range[0], height // 24)
         return True
     
     def row_count(self) -> int:
-        n = len(self.directories)
-        for v in self.directories.values():
-            visible, rows = v
-            if visible: n += len(rows)
-        return n
-    
-    def gridview_update_tick(self, *_):
-        self.invalidate()
+        if self.render_mode & PGVRM_DIRECTORIES:
+            n = len(self.directories)
+            for v in self.directories.values():
+                visible, _, rows = v
+                if visible: n += len(rows)
+            return n
+        else:
+            n = 0
+            for v in self.directories.values():
+                _v, _s, rows = v
+                n += len(rows)
+            return n
     
     def gridview_on_vscroll(self, code: int, position: int, _):
         if code == SB_LINEDOWN:
-            self.view_range = (self.view_range[0] + 1, self.view_range[1] + 1)
-            SetScrollPos(self, SB_VERT, GetScrollPos(self, SB_VERT)+1, TRUE)
+            count = self.row_count()
+            if self.minimal + self.SCROLL_Y_UNIT < count:
+                self.minimal += self.SCROLL_Y_UNIT
+                SetScrollPos(self, SB_VERT, GetScrollPos(self, SB_VERT)+1, TRUE)
         elif code == SB_LINEUP:
-            i_min = self.view_range[0] - 1
-            if i_min >= 0:
-                self.view_range = (i_min, self.view_range[1] - 1)
+            if self.minimal - self.SCROLL_Y_UNIT >= 0:
+                self.minimal -= self.SCROLL_Y_UNIT
                 SetScrollPos(self, SB_VERT, GetScrollPos(self, SB_VERT)-1, TRUE)
         elif code == SB_THUMBTRACK:
             diff = position - self.last_sb_position
             self.last_sb_position = position
-            self.view_range = (self.view_range[0]+diff, self.view_range[1]+diff)
+            self.minimal += (diff*self.SCROLL_Y_UNIT)
             SetScrollPos(self, SB_VERT, position, TRUE)
         self.invalidate()
-        
+    
+    def gridview_on_left_button_double_click(self, flags: int, x: int, y: int):
+        ht, n = self.hit_test(x, y)
+        if ht == PGVHT_NONE: return
+        elif ht == PGVHT_DIRECTORY:
+            for k, (_v, _s, rows) in self.directories.items():
+                for row in rows:
+                    if not row.abort(): return
+                    row.selected = False
+            for k, (visible, _, rows) in self.directories.items():
+                if k == n:
+                    self.directories[k] = (not visible, True, rows)
+                else:
+                    self.directories[k] = (visible, False, rows)
+            self.invalidate()
+        elif ht == PGVHT_ITEM or ht == PGVHT_BUDDY:
+            rows = self.rows()
+            for i, row in enumerate(rows):
+                if not isinstance(row, PropertyGridItem): continue
+                if i == n:
+                    row.operation(PGIO_DBLCLK)
+    
     def gridview_on_left_button_up(self, flags: int, x: int, y: int):
         ht, n = self.hit_test(x, y)
         if ht == PGVHT_NONE: return
         elif ht == PGVHT_DIRBUTTON:
-            visible, rows = self.directories[n]
-            self.directories[n] = (not visible, rows)
+            for k, (_v, _s, rows) in self.directories.items():
+                for row in rows:
+                    if not row.abort(): return
+                    row.selected = False
+            for k, (visible, _, rows) in self.directories.items():
+                if k == n:
+                    self.directories[k] = (not visible, True, rows)
+                else:
+                    self.directories[k] = (visible, False, rows)
             self.invalidate()
         elif ht == PGVHT_ITEM:
-            ...
+            rows = self.rows()
+            for i, row in enumerate(rows):
+                if isinstance(row, PropertyGridItem):
+                    if i != n: 
+                        if not row.abort(): return
+                        row.selected = False
+            for i, row in enumerate(rows):
+                if isinstance(row, PropertyGridItem):
+                    if i == n: 
+                        row.selected = True
+                        row.enter()
+            for name in self.directories.keys():
+                visible, _, directory_rows = self.directories[name]
+                self.directories[name] = (visible, False, directory_rows)
+            nmrc = PGVNMRC()
+            # NMHDR fields
+            nmrc.hwndFrom = self
+            nmrc.code = PGVN_ROWCLICK
+            # PGVNMRC fields
+            nmrc.flags = PGVNRC_ITEM
+            nmrc.iItem = n
+            self.parent.send(WM_NOTIFY, self.identifier, nmrc.ref())
+            self.invalidate()
+        elif ht == PGVHT_DIRECTORY:
+            for _v, _s, rows in self.directories.values():
+                for row in rows:
+                    row.selected = False
+                    if not row.abort(): return
+            for name in self.directories.keys():
+                visible, _, rows = self.directories[name]
+                if name != n:
+                    self.directories[name] = (visible, False, rows)
+                else:
+                    self.directories[name] = (visible, True, rows)
+            
+            nmrc = PGVNMRC()
+            # NMHDR fields
+            nmrc.hwndFrom = self
+            nmrc.code = PGVN_ROWCLICK
+            # PGVNMRC fields
+            nmrc.flags = PGVNRC_DIR
+            nmrc.lpDir = n
+            self.parent.send(WM_NOTIFY, self.identifier, nmrc.ref())
+            self.invalidate()
+        elif ht == PGVHT_BUDDY:
+            rows = self.rows()
+            one_of_failed = False
+            entered = None
+            for i, row in enumerate(rows):
+                if not isinstance(row, PropertyGridItem): continue
+                if i != n:
+                    if not row.abort():
+                        one_of_failed = True
+                    else:
+                        row.selected = False
+                else:
+                    entered = row
+            if not one_of_failed:
+                entered.selected = True
+                entered.enter()
+                entered.operation(PGIO_FOCUS)
+                nmrc = PGVNMRC()
+                # NMHDR fields
+                nmrc.hwndFrom = self
+                nmrc.code = PGVN_ROWCLICK
+                # PGVNMRC fields
+                nmrc.flags = PGVNRC_ITEM
+                nmrc.iItem = n
+                self.parent.send(WM_NOTIFY, self.identifier, nmrc.ref())
+                self.invalidate()
         
     def hit_test(self, x: int, y: int) -> tuple[int, int | None | str]:
         pt = Point(x, y)
@@ -201,7 +846,7 @@ class PropertyGridDescription(Window):
         self.edge_cy = GetSystemMetrics(SM_CYEDGE)
         
     def desc_on_create(self) -> bool:
-        self.logical_header_font = Font.create(self.header_font, 15, weight = FW_BOLD)
+        self.logical_header_font = Font.create(self.header_font, 15, weight = FW_ULTRABOLD)
         self.logical_text_font = Font.create(self.text_font, 13)
         return True
     
@@ -226,6 +871,9 @@ class PropertyGridDescription(Window):
                     dx += size.cx + dc.get_text_extent_point(' ').cx
         return True
     
+    def on_focus_lost(self, _):
+        self.grid_view.send(WM_KILLFOCUS)
+    
     def get_recommended_height(self, text: str, header: str):
         with DC.create_compatible(NULL) as dc:
             with dc.select_ex(self.logical_header_font):
@@ -244,26 +892,57 @@ class PropertyGridDescription(Window):
                             dy += size.cy
                             dx = self.edge_cx
                         dx += size.cx + dc.get_text_extent_point(' ').cx
-                return 4 + dy + height + 6 + self.edge_cy
+                return 4 + dy + height + 6 + self.edge_cy + 10
             
     def on_size(self, flags: int, width: int, height: int) -> bool:
         self.invalidate()
         return True
-        
+
+PGS_OWNERBUDDY = 0x1
+
 class PropertyGrid(Window):
+    ALPHABET_IMAGE = Bitmap.load(os.path.join(os.path.dirname(__file__), 'data/alphabet.bmp'))
+    DIRECTORIES_IMAGE = Bitmap.load(os.path.join(os.path.dirname(__file__), 'data/directories.bmp'))
     buddy: TUnion[Window, None]
     
     def __init__(self):
         super().__init__()
         self.on_create += self.grid_on_create
+        self.on_notify += self.grid_on_notify
+        self.on_command += self.grid_on_command
+        self.on_buddy_notify = MultiEvent()
+        self.on_buddy_command = MultiEvent()
         self.styles.remove(WS_MAXIMIZEBOX, WS_MINIMIZEBOX)
         self.styles.add_ex(WS_EX_TOOLWINDOW)
-        
-    def grid_on_create(self) -> bool:
         self.buddy = None
-        if self.buddy is not None:
+    
+    def toolbar_buddy_command(self, identifier: int, code: int, hwnd: int):
+        if identifier == Identifiers['PropertyGrid->Toolbar->Alphabet']:
+            self.grid_view.render_mode ^= PGVRM_ALPHABET
+            self.grid_view.invalidate()
+        elif identifier == Identifiers['PropertyGrid->Toolbar->Directories']:
+            self.grid_view.render_mode ^= (PGVRM_DIRECTORIES)
+            self.grid_view.invalidate()
+    
+    def grid_on_create(self) -> bool:
+        if self.buddy is None and not (self.style & PGS_OWNERBUDDY):
+            toolbar = Toolbar(self, Identifiers['PropertyGrid->Toolbar'])
+            toolbar.create()
+            self.toolbar_image_list = ImageList.create(16, 16, 2, ILC_COLOR24 | ILC_MASK)
+            magenta = Color.BGR.from_id(Color.ID.Magenta)
+            self.toolbar_image_list.add_masked(self.ALPHABET_IMAGE, magenta)
+            self.toolbar_image_list.add_masked(self.DIRECTORIES_IMAGE, magenta)
+            toolbar.image_list = self.toolbar_image_list
+            toolbar.add(0, Identifiers['PropertyGrid->Toolbar->Alphabet'], BTNS_CHECK)
+            toolbar.add(1, Identifiers['PropertyGrid->Toolbar->Directories'], BTNS_CHECK, TBSTATE_CHECKED|TBSTATE_ENABLED)
+            self.on_buddy_command += self.toolbar_buddy_command
+            self.buddy = toolbar
+            dy = toolbar.y
+        elif self.buddy is not None:
+            self.buddy.parent = self
             dy = self.buddy.y
-        else: dy = 0
+        else: 
+            dy = 0
         self.description = PropertyGridDescription()
         self.description.create(self.width, self.height - 60, 0, 60, parent=self)
         self.grid_view = PropertyGridView()
@@ -272,7 +951,8 @@ class PropertyGrid(Window):
     
     def on_size(self, flags: int, width: int, height: int) -> bool:
         if self.buddy is not None:
-            dy = self.buddy.y
+            dy = self.buddy.height
+            self.buddy.width = width
         else: dy = 0
         recommended = self.description.get_recommended_height(self.description.text, self.description.header)
         self.description.size = (width, recommended)
@@ -281,3 +961,23 @@ class PropertyGrid(Window):
         self.grid_view.position = (0, dy)
         
         return True
+    
+    def grid_on_command(self, identifier: int, code: int, hwnd: int):
+        if self.buddy is not None and hwnd == self.buddy.value:
+            self.on_buddy_command.execute(identifier, code, hwnd)
+    
+    def grid_on_notify(self, nm: NMHDR):
+        if self.buddy is not None and nm.hwndFrom == self.buddy.value:
+            self.on_buddy_notify.execute(nm)
+        if nm.hwndFrom != self.grid_view.value:
+            return
+        if nm.code == PGVN_ROWCLICK:
+            nmrc = i_cast_structure(nm, PGVNMRC)
+            if nmrc.flags & PGVNRC_DIR:
+                self.description.header = nmrc.lpDir.value
+                self.description.invalidate()
+            elif nmrc.flags & PGVNRC_ITEM:
+                item = self.grid_view.rows()[nmrc.iItem]
+                self.description.header = item.name
+                self.description.text = item.description
+                self.description.invalidate()

@@ -10,25 +10,20 @@ STG_E_INVALIDFUNCTION = 0x80030001
 STG_E_INVALIDPOINTER = 0x80030009
 STG_E_READFAULT = 0x8003001E
 
-class FileStream(CComObject, IStream, ILockBytes):
+class StreamOverIO(CComObject, IStream, ILockBytes):
     ILockBytes_virtual_table = COMVirtualTable.from_ancestor(ILockBytes).with_fieldname('ILockBytes_vtable')
     _com_map_ = [(ILockBytes, ILockBytes_virtual_table)]
     _fields_ = ILockBytes_virtual_table.build()
     
-    def __init__(self, file_path: str):
+    def __init__(self, io_base: io.IOBase):
         super().__init__()
-        
-        if not os.path.exists(file_path):
-            open(file_path, 'wb').close()
         
         self.initialize_vtable(self.ILockBytes_virtual_table)
         self.implement_interface(ISequentialStream)
         self.implement_interface(IStream)
         self.set_vtable_on_ctx(self.ILockBytes_virtual_table)
         self.implement_interface(ILockBytes)
-        
-        if file_path is not None:
-            self.file = open(file_path, 'r+b')
+        self.file = io_base
     
     def Cleanup(self):
         self.file.close()
@@ -154,3 +149,9 @@ class FileStream(CComObject, IStream, ILockBytes):
         if pcbWritten:
             pcbWritten.contents.value = cb
         return S_OK
+    
+class FileStream(StreamOverIO):
+    def __init__(self, file_path: str):
+        if not os.path.exists(file_path):
+            open(file_path, 'wb').close()
+        super().__init__(open(file_path, 'r+b'))

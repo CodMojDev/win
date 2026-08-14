@@ -52,6 +52,9 @@ class FileDialog:
         if initial_dir is not None:
             self.lpstrInitialDir = create_unicode_buffer(initial_dir)
             self.open_file.lpstrInitialDir = i_cast(self.lpstrInitialDir, LPWSTR)
+            
+        # event for dlgproc handling
+        self.on_message = SingleEvent()
     
     @property
     def file_title(self) -> str:
@@ -95,12 +98,6 @@ class FileDialog:
         
         return bool(GetSaveFileNameW(self.open_file.ref()))
     
-    def on_message(self, hWnd: int, uMsg: int, wParam: int, lParam: int) -> int:
-        """
-        This handler is called on dialog message.
-        """
-        
-        return FALSE
-    
     def hook_proc(self, hWnd: int, uMsg: int, wParam: int, lParam: int) -> int:
-        return self.on_message(hWnd, uMsg, wParam, lParam)
+        if self.on_message.empty(): return FALSE
+        return self.on_message.execute(hWnd, uMsg, wParam, lParam)

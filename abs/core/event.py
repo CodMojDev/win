@@ -2,12 +2,19 @@ from typing import Callable, Any
 
 import random
 
-class Priority(int):
-    Min = 0
-    Max = 0xffffffff
+class Priority:
+    _PrivateMinPriority = 0xfafafa_abcdef_fafafa
+    _PrivateMaxPriority = -0xbababa_abcabc_bababa
+    Min = 0xffffffff
+    One = 1
+    Two = 2
+    Three = 3
+    Four = 4
+    Five = 5
+    Max = 0
 
 class EventCallback:
-    def __init__(self, callback: Callable, priority: int | Priority = Priority.Min):
+    def __init__(self, callback: Callable, priority: int = Priority.Min):
         self._unique_id = hash(callback.__code__.co_code)
         self._callback = callback
         self._priority = priority
@@ -84,3 +91,6 @@ class SingleEvent:
         
     def clear(self):
         self._callback = None
+        
+    def empty(self) -> bool:
+        return self._callback is None

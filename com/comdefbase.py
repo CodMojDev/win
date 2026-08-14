@@ -138,8 +138,6 @@ else:
     HRESULT = LONG
     
 class COM_GLOBAL_STATE:
-    __slots__ = ['initialized']
-    
     initialized: bool
     
     def __init__(self):
@@ -147,17 +145,20 @@ class COM_GLOBAL_STATE:
 
 com_state = COM_GLOBAL_STATE()
 
-from .. import _defbase_ctypinit as _defb_ci
-
-# manually fix the CPython bug with "initialized is readonly object attribute"
-_defb_ci.PyType_CAST_DEREF(COM_GLOBAL_STATE).SetTPFLAG(_defb_ci.Py_TPFLAGS_MANAGED_DICT)
-
 def CheckCOMInitialized(flags: int=COINIT_APARTMENTTHREADED):
     if not com_state.initialized:
         if FAILED(CoInitializeEx(NULL, flags)):
             raise RuntimeError('COM cannot initialize')
 
 from .errors import _StdErrorInfoProvider
+
+def ComDefbInitialize():
+    """
+    Initialize the COM DefBase subsystem.
+    """
+    if not com_state.initialized:
+        register_error_info_provider(_StdErrorInfoProvider())
+    com_state.initialized = True
 
 # Initialize functions
 @ole_foreign(LPVOID, intermediate_method=True)

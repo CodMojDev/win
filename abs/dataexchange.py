@@ -8,6 +8,7 @@ from win.com.oleidl import *
 
 # WinAbs imports
 from .core.io import *
+from .core.handle import *
 
 # DataExchange HRESULTS
 DV_E_TYMED = HRESULT(0x80040069).value

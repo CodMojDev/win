@@ -3860,7 +3860,7 @@ if cpreproc.pragma_once("_WINNT_"):
             Characteristics: int
             VirtualAddress: int
             SizeOfRawData: int
-            Name: IArray[CHAR]
+            Name: ICharArray
             Misc: _Misc
             
         PIMAGE_SECTION_HEADER = POINTER(IMAGE_SECTION_HEADER)

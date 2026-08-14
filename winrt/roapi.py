@@ -25,7 +25,7 @@ def RoUninitialize():
     Closes the Windows Runtime on the current thread.
     """
     
-@combase_foreign(HSTRING, DOUBLE_PTR(IInspectable))
+@combase_foreign(HSTRING, PVOID)
 def RoActivateInstance(activatableClassId: HSTRING,
                        instance: IDoublePtr[IInspectable]) -> int:
     """

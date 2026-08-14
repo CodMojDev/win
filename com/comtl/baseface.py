@@ -260,6 +260,39 @@ class TL_OLESTR(LPOLESTR):
         if self and not self._external:
             CoTaskMemFree(self)
 
+def tl_override(f: Callable) -> Callable:
+    setattr(f, '_tl_override', True)
+    return f
+
+def tl_interfaces(*interfaces: type[IUnknown] | VirtualTable):
+    from win.com.comtl.unknown import CUnknown
+    def _tl_interfaces(cls: type[IUnknown]):
+        def _tl_init(self: IUnknown):
+            TlContext_Acquire()
+            for interface in interfaces:
+                if isinstance(interface, type) and issubclass(interface, IUnknown):
+                    vt = interface.virtual_table
+                else:
+                    vt = interface
+                TlContext_SetVtable(vt)
+                if interface is not IUnknown or not issubclass(cls, CUnknown):
+                    TlInitVtable(self)
+                names = []
+                for k in cls.__dict__.keys():
+                    v = getattr(self, k)
+                    if hasattr(v, '_tl_override'):
+                        setattr(self, k+'_Impl', v)
+                        setattr(self, k, getattr(super(cls, self), k).__get__(self, cls))
+                        names.append(k)
+                for name in names:
+                    TlOverride(getattr(self, name))
+            TlContext_Release()
+        if cls._init_callbacks_ is None:
+            cls._init_callbacks_ = []
+        cls._init_callbacks_.append(_tl_init)
+        return cls
+    return _tl_interfaces
+
 class _TL_ENUMERATOR(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     
@@ -622,7 +655,7 @@ def TlOverride(method: Callable):
     Override the method from local context.
     Naming contract: `<function name>`_Impl
     """
-    TlOverrideEx(_TlContext_GetLocalContext_Guarantee()._virtual_table_on_ctx)
+    TlOverrideEx(_TlContext_GetLocalContext_Guarantee()._virtual_table_on_ctx, method)
 
 def TlOverrideEx(vtable: VirtualTable, method: Callable):
     """

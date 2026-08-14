@@ -31,11 +31,143 @@ class Detail_WinRTInterfaceBase(COMInterface):
 
 #def detail_parameterized_iid(args)
 
-class WinRTInterfaceMeta(Detail_WinRTInterfaceBase.__class__):
-    def __getitem__(self, args):
+class TGENERIC:
+    i: int
+    
+    def __init__(self, i: int):
+        self.i = i
+
+class LP_TGENERIC: 
+    i: int
+    
+    def __init__(self, i: int):
+        self.i = i 
+
+class LP_LP_TGENERIC:
+    i: int
+    
+    def __init__(self, i: int):
+        self.i = i 
+
+class GENERIC_CLASS:
+    i: int
+    t: type
+    
+    def __init__(self, t: type, i: int):
+        self.t = t 
+        self.i = i
+
+class LP_GENERIC_CLASS:
+    i: int
+    t: type
+    
+    def __init__(self, t: type, i: int):
+        self.t = t 
+        self.i = i
+
+class LP_LP_GENERIC_CLASS:
+    i: int
+    t: type
+    
+    def __init__(self, t: type, i: int):
+        self.t = t 
+        self.i = i
+
+def detail_generic_method(*args: tuple[Any], **kwargs) -> Callable:
+    def _detail_generic_method(f: Callable) -> Callable:
+        setattr(f, '_detail_winrt_generic_args', args)
+        setattr(f, '_detail_winrt_kwargs', kwargs)
+        return f
+    return _detail_generic_method
+
+def detail_parameterized_iid(base: type[COMInterface], args: tuple[Any, ...]) -> IID:
+    namespace = uuid.UUID("{11f47ad5-7b73-42c0-abae-878b1e16adee}")
+    sig = detail_get_typesig(base, args)
+    print(sig)
+    return IID.from_buffer_copy(bytes(uuid.uuid5(namespace, sig)))
+
+def detail_get_typesig(base: type[COMInterface], V):
+    if V is IInspectable:
+        return 'cinterface(IInspectable)'
+    if isinstance(V, tuple):
+        arguments = ';'.join([detail_get_typesig(base, x) for x in V])
+        return f'pinterface({base._iid_};{arguments})'
+    elif PtrUtil.is_pointer_type(V):
+        T = PtrUtil.get_type(V)
+        if issubclass(T, WinRuntimeClass):
+            return detail_get_typesig(base, T)
+        elif issubclass(T, COMInterface):
+            return detail_get_typesig(base, T)
+    elif isinstance(V, type):
+        if issubclass(V, WinRuntimeClass):
+            return f'rc({V._clsid_};{V._base_iid_})'
+        elif issubclass(V, COMInterface):
+            return f'{V._iid_}'
+        elif issubclass(V, CStructure):
+            arguments = ';'.join([detail_get_typesig(base, t) for k, t, *_ in V._fields_])
+            return f'struct({V.__name__};{arguments})'
+        elif issubclass(V, HSTRING):
+            return 'string'
+        elif issubclass(V, CHAR):
+            return 'c1'
+        elif issubclass(V, WCHAR):
+            return 'c2'
+        elif issubclass(V, INT32):
+            return 'i4'
+        elif issubclass(V, INT64):
+            return 'i8'
+        elif issubclass(V, BYTE):
+            return 'u1'
+        elif issubclass(V, UINT32):
+            return 'u4'
+        elif issubclass(V, UINT64):
+            return 'u8'
+        elif issubclass(V, FLOAT):
+            return 'f4'
+        elif issubclass(V, DOUBLE):
+            return 'f8'
+        elif issubclass(V, GUID):
+            return 'g16'
+
+class WinRTInterfaceMeta(type(Detail_WinRTInterfaceBase)):
+    _winrt_interfaces_cache_: ClassVar[dict[tuple[type, ...], type]] = {}
+    def __getitem__(cls, args):
         if not isinstance(args, tuple):
             args = (args,)
-        self.args = args
+        if any([isinstance(x, type) and issubclass(x, IInterface) for x in args]):
+            return cls
+        winrt_interface = WinRTInterfaceMeta._winrt_interfaces_cache_.get(args, None)
+        if winrt_interface is not None:
+            return winrt_interface
+        try:
+            class winrt_interface(cls):
+                _iid_ = detail_parameterized_iid(cls, args)
+        except: return cls
+        WinRTInterfaceMeta._winrt_interfaces_cache_[args] = winrt_interface
+        for k, v in winrt_interface.__dict__.items():
+            generic_args = getattr(v, '_detail_winrt_generic_args', None)
+            if generic_args is not None:
+                fn_args = []
+                for arg in generic_args:
+                    if isinstance(arg, TGENERIC):
+                        fn_args.append(args[arg.i])
+                    elif isinstance(arg, LP_TGENERIC):
+                        fn_args.append(PTR(args[arg.i]))
+                    elif isinstance(arg, LP_LP_TGENERIC):
+                        fn_args.append(DOUBLE_PTR(args[arg.i]))
+                    elif isinstance(arg, GENERIC_CLASS):
+                        fn_args.append(arg.t[args[arg.i]])
+                    elif isinstance(arg, LP_GENERIC_CLASS):
+                        fn_args.append(PTR(arg.t[args[arg.i]]))
+                    elif isinstance(arg, LP_LP_GENERIC_CLASS):
+                        fn_args.append(DOUBLE_PTR(arg.t[args[arg.i]]))
+                    else:
+                        fn_args.append(arg)
+                f = winrt_interface.virtual_table.com_function(*fn_args, **getattr(v, '_detail_winrt_kwargs'))(v)
+                setattr(winrt_interface, k, f)
+        winrt_interface.virtual_table.build()
+                
+        return winrt_interface
 
 class WinRTInterface(Detail_WinRTInterfaceBase, IInspectable, metaclass=WinRTInterfaceMeta):
     def __str__(self):
@@ -70,6 +202,8 @@ class WinRuntimeClass(WinRTInterface):
     factory: ClassVar[IActivationFactory] = None
     qi_cache: dict[type[IT], IT]
     _name_: ClassVar[str]
+    _clsid_: ClassVar[CLSID]
+    _base_iid_: ClassVar[IID]
     
     def __init__(self):
         self.qi_cache = {}

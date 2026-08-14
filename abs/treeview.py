@@ -132,10 +132,10 @@ class TreeItem(HTREEITEM):
         """
         
         tviex = TVITEMEXW()
-        tviex.mask = TVIF_TEXT
-        if image_index is not None:
-            tviex.mask |= TVIF_IMAGE
-            tviex.iImage = image_index
+        tviex.mask = TVIF_TEXT | TVIF_IMAGE
+        if image_index is None:
+            image_index = -1
+        tviex.iImage = image_index
         if selected_image_index is not None:
             tviex.mask |= TVIF_SELECTEDIMAGE
             tviex.iSelectedImage = selected_image_index

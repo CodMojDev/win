@@ -32,3 +32,14 @@ class Combobox(Control):
     @current.setter
     def current(self, current: int):
         self.send(CB_SETCURSEL, current)
+        
+    def text(self, index: int) -> str | None:
+        """
+        Get text of the item.
+        """
+        length = self.send(CB_GETLBTEXTLEN, index)
+        if length == CB_ERR: return None
+        text = create_unicode_buffer(length)
+        if self.send(CB_GETLBTEXT, index, text) == CB_ERR:
+            return None
+        return text.value

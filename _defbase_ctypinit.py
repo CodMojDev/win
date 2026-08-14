@@ -224,8 +224,8 @@ def _wrap_flag(typ: type, name: str, flag: int, method_suffix: str = 'Flag'):
 class PyMemberDef(Structure):
     _fields_ = [
         ('name', c_char_p),
-        ('unusedInt', c_int),
-        ('unusedSizeT', c_ssize_t),
+        ('type', c_int),
+        ('offset', c_ssize_t),
         ('flags', c_int),
         ('unusedPtr', c_void_p)
     ]
@@ -684,16 +684,26 @@ class PyCMethodObject(Structure):
     
 PyCMethodObject_PTR = POINTER(PyCMethodObject)
 
-class PyDescrObject(PyObject[_CWT]):
-    _fields_ = [
-        ('d_type', PyTypeObject_PTR),
-        ('d_name', PyObject_PTR),
-        ('d_qualname', PyObject_PTR)
-    ]
-    
-    d_type: IPointer[PyTypeObject]
-    d_name: IPointer[PyObject]
-    d_qualname: IPointer[PyObject]
+if sys.version_info >= (3, 11):
+    class PyDescrObject(PyObject[_CWT]):
+        _fields_ = [
+            ('d_type', PyTypeObject_PTR),
+            ('d_name', PyObject_PTR),
+            ('d_qualname', PyObject_PTR)
+        ]
+        
+        d_type: IPointer[PyTypeObject]
+        d_name: IPointer[PyObject]
+        d_qualname: IPointer[PyObject]
+else:
+    class PyDescrObject(PyObject[_CWT]):
+        _fields_ = [
+            ('d_type', PyTypeObject_PTR),
+            ('d_name', PyObject_PTR)
+        ]
+        
+        d_type: IPointer[PyTypeObject]
+        d_name: IPointer[PyObject]
     
 PyDescrObject_PTR = POINTER(PyDescrObject)
 
@@ -707,6 +717,14 @@ class PyMethodDescrObject(PyDescrObject[_CWT]):
     vectorcall: int
     
 PyMethodDescrObject_PTR = POINTER(PyMethodDescrObject)
+
+class PyMemberDescrObject(PyDescrObject[_CWT]):
+    _fields_ = [
+        ('d_member', PyMemberDef_PTR)
+    ]
+    d_member: IPointer[PyMemberDef]
+    
+PyMemberDescrObject_PTR = POINTER(PyMemberDescrObject)
 
 def PyCFunctionObject_CAST(obj: _CWT) -> IPointer[PyCFunctionObject[_CWT]]:
     return cast(id(obj), PyCFunctionObject_PTR)
@@ -731,7 +749,13 @@ def PyMethodDescrObject_CAST(obj: _CWT) -> IPointer[PyMethodDescrObject[_CWT]]:
 
 def PyMethodDescrObject_CAST_DEREF(obj: _CWT) -> PyMethodDescrObject[_CWT]:
     return cast(id(obj), PyMethodDescrObject_PTR).contents
-        
+
+def PyMemberDescrObject_CAST(obj: _CWT) -> IPointer[PyMemberDescrObject[_CWT]]:
+    return cast(id(obj), PyMemberDescrObject_PTR)
+
+def PyMemberDescrObject_CAST_DEREF(obj: _CWT) -> PyMemberDescrObject[_CWT]:
+    return cast(id(obj), PyMemberDescrObject_PTR).contents
+
 class PyCArgObject(PyObject[_CWT]):
     class U(Union):
         _fields_ = [

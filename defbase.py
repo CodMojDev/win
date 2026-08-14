@@ -499,7 +499,7 @@ class DelayedMarshaller(IMarshaller):
     def __call__(self, *args) -> Any:
         return self.marshal_func(*args)
     
-    def marshal(self, value: Any) -> Any:
+    def marshal_value(self, value: Any) -> Any:
         return self.marshal_func(value)
 
 class DelayedTypeStorage(IUnpackable):
@@ -1035,8 +1035,7 @@ class VirtualTable:
         """
         Build the virtual table type.
         """
-        if self.VType is None:
-            self.VType = type(self.name + 'Vtbl', (CStructure,), {'_fields_': self.fields})
+        self.VType = type(self.name + 'Vtbl', (CStructure,), {'_fields_': self.fields})
         return [(self.field_name, c_void_p)]
     
     def __repr__(self) -> str:
@@ -1990,11 +1989,20 @@ class CStructure(Structure):
     
     _inter_process_version: ClassVar[Type[Self]]
     fields: ClassVar[List[tuple]]
+    _init_callbacks_: ClassVar[list[Callable[[Self], None]]] = []
     
     def __init_subclass__(cls, *args, **kwargs):
         if not hasattr(cls, '_pack_'):
             cls._pack_ = _CPreprocState._cur_pack
+        if cls._init_callbacks_ is getattr(cls.__base__, '_init_callbacks_', None):
+            cls._init_callbacks_ = None
         
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self._init_callbacks_ is not None:
+            for init_callback in self._init_callbacks_:
+                init_callback(self)
+
     @classmethod
     def size(cls):
         """
@@ -2258,8 +2266,8 @@ from ctypes import (py_object, c_short, c_ushort,
                     c_bool, c_wchar_p, c_wchar, c_char_p, memmove)
 
 # Typing interfaces to describe LPSTR/LPWSTR in-python type representations.
-WT_LPSTR: TypeAlias = TUnion[bytes, c_char_p, c_char]
-WT_LPWSTR: TypeAlias = TUnion[str, c_wchar_p, c_wchar]
+WT_LPSTR: TypeAlias = TUnion[bytes, c_char_p, c_char, None]
+WT_LPWSTR: TypeAlias = TUnion[str, c_wchar_p, c_wchar, None]
 
 class IAliasable(IInterface): 
     """
@@ -2816,11 +2824,14 @@ from typing import overload
 WT_SIMPLESTRUCTURE = TypeVar('_WT_SIMPLESTRUCTURE', bound=Structure)
 WT_STRUCTURE = TypeVar('_WT_STRUCTURE', bound=CStructure)
 
-def i_getattr(obj: object, attr: str) -> object:
+def i_getattr(obj: object, attr: str, default: Any=None) -> object:
     """
     Get attribute of object bypassing all `__getattribute__` interceptors.
     """
-    return object.__getattribute__(obj, attr)
+    try:
+        return object.__getattribute__(obj, attr)
+    except Exception as e:
+        return default
 
 def i_setattr(obj: object, attr: str, value: object) -> object:
     """

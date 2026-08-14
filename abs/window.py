@@ -18,6 +18,12 @@ from win.com.comdefbase import HRESULT, COMError, FAILED
 # random module for class name generation
 import random
 
+# imports from typing module
+from typing import Iterator
+
+# # # # # # # # # # # # # # # # # # # #
+# Win Abstractions Layer code Begins
+
 # WinAbs initialization procedure
 def init_common_controls():
     # initialize the INITCOMMONCONTROLSEX structure
@@ -29,6 +35,164 @@ def init_common_controls():
     if not InitCommonControlsEx(icex.ref()):
         raise WinException()
 
+class Scrollbar:
+    """
+    The window scrollbar, vertical, horizontal or custom.
+    """
+    
+    class Button:
+        # parent scrollbar
+        scrollbar: 'Scrollbar'
+        
+        # self button disable switch
+        switch: int
+        
+        # antagonist button disable switch
+        antagonist_switch: int
+        # antagonist button state index
+        antagonist_state_index: int
+        
+        def __init__(self, scrollbar: 'Scrollbar', switch: int, antagonist_switch: int, antagonist_state_index: int):
+            self.scrollbar = scrollbar
+            self.switch = switch
+            
+            self.antagonist_switch = antagonist_switch
+            self.antagonist_state_index = antagonist_state_index
+        
+        def enable(self):
+            """
+            Enable the scrollbar button.
+            """
+            sbi = self.scrollbar.info()
+            antagonist_enabled = (sbi.rgstate[self.antagonist_state_index] & 1) == 0
+            EnableScrollBar(self.scrollbar.window, self.scrollbar.type, ESB_ENABLE_BOTH)
+            if not antagonist_enabled:
+                EnableScrollBar(self.scrollbar.window, self.scrollbar.type, self.antagonist_switch)
+        
+        def disable(self):
+            """
+            Disable the scrollbar button.
+            """
+            EnableScrollBar(self.scrollbar.window, self.scrollbar.type, self.switch)
+        
+    # scrollbar HWND and type (SB_VERT, SB_HORZ, SB_CTL)
+    window: int | HWND
+    type: int
+    
+    # scrollbar buttons
+    left: Button
+    right: Button
+    up: Button
+    down: Button
+    
+    def __init__(self, window: int | HWND, type: int):
+        self.window = window
+        self.type = type
+        
+        self.left = self.up = self.Button(self, ESB_DISABLE_LEFT, ESB_DISABLE_RIGHT, 1)
+        self.right = self.down = self.Button(self, ESB_DISABLE_RIGHT, ESB_DISABLE_LEFT, 5)
+        
+    def info(self) -> SCROLLBARINFO:
+        """
+        Get the scrollbar information.
+        """
+        sbi = SCROLLBARINFO()
+        sbi.cbSize = sbi.size()
+        if self.type == SB_VERT:
+            l = GetScrollBarInfo(self.window, OBJID_VSCROLL, sbi.ref())
+        elif self.type == SB_HORZ:
+            l = GetScrollBarInfo(self.window, OBJID_HSCROLL, sbi.ref())
+        elif self.type == SB_CTL:
+            l = SendMessageW(self.window, SBM_GETSCROLLBARINFO, 0, l.addressof())
+        if not l:
+            raise WinException()
+        return sbi
+    
+    @property
+    def range(self) -> tuple[int, int]:
+        iMax, iMin = UINT(), UINT()
+        if not GetScrollRange(self.window, self.type, byref(iMax), byref(iMin)):
+            raise WinException()
+        return iMax.value, iMin.value
+    
+    @range.setter
+    def range(self, range: tuple[int, int]):
+        if not SetScrollRange(self.window, self.type, range[0], range[1]):
+            raise WinException()
+        
+    @property
+    def position(self) -> int:
+        SetLastError(0)
+        i = GetScrollPos(self.window, self.type)
+        code = GetLastError()
+        if i == 0 and code != 0:
+            raise WinException(code)
+        return i
+    
+    @position.setter
+    def position(self, position: int):
+        if not SetScrollPos(self.window, self.type, position, TRUE):
+            raise WinException()
+    
+    def get_scroll_info(self, mask: int) -> SCROLLINFO:
+        """
+        Get the scroll info of scrollbar.
+        """
+        si = SCROLLINFO()
+        si.cbSize = si.size()
+        si.fMask = mask
+        if not GetScrollInfo(self.window, self.type, si.ref()):
+            raise WinException()
+        return si
+    
+    def set_scroll_info(self, mask: int, si: SCROLLINFO):
+        """
+        Set the scroll info of scrollbar.
+        """
+        si.cbSize = si.size()
+        si.fMask = mask
+        SetLastError(0)
+        SetScrollInfo(self.window, self.type, si.ref())
+        code = GetLastError()
+        if code != 0:
+            raise WinException(code)
+    
+    @property
+    def track_position(self) -> int:
+        return self.get_scroll_info(SIF_TRACKPOS).nTrackPos
+    
+    @track_position.setter
+    def track_position(self, track_position: int):
+        si = SCROLLINFO()
+        si.nTrackPos = track_position
+        self.set_scroll_info(SIF_TRACKPOS, si)
+        
+    @property
+    def page(self) -> int:
+        return self.get_scroll_info(SIF_PAGE).nPage
+    
+    @page.setter
+    def page(self, page: int):
+        si = SCROLLINFO()
+        si.nPage = page
+        self.set_scroll_info(SIF_PAGE, si)
+        
+    @property
+    def minimal(self) -> int:
+        return self.range[0]
+    
+    @minimal.setter
+    def minimal(self, minimal: int):
+        self.range = (minimal, self.maximal)
+        
+    @property
+    def maximal(self) -> int:
+        return self.range[1]
+    
+    @maximal.setter
+    def maximal(self, maximal: int):
+        self.range = (self.minimal, maximal)
+
 # menu APIs
 class Menu(Handle):
     """
@@ -38,6 +202,10 @@ class Menu(Handle):
     def close(self):
         DestroyMenu(self)
         self._closed = True
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._buffer = create_unicode_buffer(256)
     
     @classmethod
     def create(cls):
@@ -50,7 +218,6 @@ class Menu(Handle):
         """
         Append the item to menu.
         """
-        
         if isinstance(lp, str):
             lp = create_unicode_buffer(lp)
         if not AppendMenuW(self, flags, PtrUtil.get_address(item), i_cast(lp, LPCWSTR)):
@@ -60,7 +227,6 @@ class Menu(Handle):
         """
         Modify the menu.
         """
-        
         if isinstance(lp, str):
             lp = create_unicode_buffer(lp)
         if not ModifyMenuW(self, position, flags, PtrUtil.get_address(item), i_cast(lp, LPWSTR)):
@@ -110,7 +276,6 @@ class Menu(Handle):
                     MIIM_FTYPE | MIIM_STRING | MIIM_DATA | MIIM_STRING |
                     MIIM_TYPE | MIIM_SUBMENU)
         if mask & MIIM_STRING:
-            self._buffer = create_unicode_buffer(256)
             mii.dwTypeData = i_cast(self._buffer, LPWSTR)
             mii.cch = 256
         mii.fMask = mask
@@ -130,11 +295,13 @@ class PopupMenu(Menu):
             raise WinException()
         return menu
         
-    def track(self, x: int, y: int, hWnd: int | HANDLE, flags: int=0):
+    def track(self, x: int, y: int, hWnd: int | HANDLE, flags: int=0, parameters: TPMPARAMS | None = None):
         """
         Track the popup menu in given coordinates of window.
         """
-        if not TrackPopupMenu(self, flags, x, y, 0, hWnd, NULL):
+        if parameters is not None:
+            parameters = parameters.ref()
+        if not TrackPopupMenuEx(self, flags, x, y, hWnd, parameters):
             raise WinException()
         
     def information(self, mask: int | None = None) -> MENUITEMINFOW:
@@ -143,6 +310,7 @@ class PopupMenu(Menu):
         """
         return self.item_info(self.value, mask, False)
 
+# DWM & Compositor infrastructure
 dwmapi = get_win_library('dwmapi.dll')
 
 WINDOWCOMPOSITIONATTRIB = INT
@@ -159,15 +327,26 @@ class WINDOWCOMPOSITIONATTRIBDATA(CStructure):
 
 LPWINDOWCOMPOSITIONATTRIBDATA = PTR(WINDOWCOMPOSITIONATTRIBDATA)
 
+# the compositor attributes methods Infrastructure
 @user32.foreign(BOOL, HWND, LPWINDOWCOMPOSITIONATTRIBDATA)
 def SetWindowCompositionAttribute(hwnd: int, pwcad: IPointer[WINDOWCOMPOSITIONATTRIBDATA]) -> int: pass
 
 @dwmapi.foreign(HRESULT, HWND, DWORD, LPCVOID, DWORD)
 def DwmSetWindowAttribute(hwnd: int, dwAttribute: int, pvAtribute: int, cbAttribute: int): pass
 
+# the DWM infrastructure
+@dwmapi.foreign(BOOL, HWND, UINT, WPARAM, LPARAM, PTR(LRESULT))
+def DwmDefWindowProc(hWnd: int, msg: int, wParam: int, lParam: int, plResult: IPointer[LRESULT]) -> int: ...
+
+@dwmapi.foreign(HRESULT, HWND, PTR(MARGINS))
+def DwmExtendFrameIntoClientArea(hWnd: int, pMarInset: IPointer[MARGINS]) -> int: ...
+
+# DWM window attributes
 DWMWA_USE_IMMERSIVE_DARK_MODE = 20
 DWMWA_USE_HOSTBACKDROPBRUSH = 17
 DWMWA_SYSTEMBACKDROP_TYPE = 38
+
+# System Backdrop Type
 DWMSBT_AUTO = 0
 DWMSBT_NONE = 1
 DWMSBT_MAINWINDOW = 2
@@ -187,6 +366,7 @@ WCA_ACCENT_POLICY = 19
 WCA_EXCLUDED_FROM_DDA = 24
 WCA_USEDARKMODECOLORS = 26
 
+# accent state enumeration
 ACCENT_DISABLED = 0
 ACCENT_ENABLE_GRADIENT = 1
 ACCENT_ENABLE_TRANSPARENTGRADIENT = 2
@@ -194,10 +374,7 @@ ACCENT_ENABLE_BLURBEHIND = 3
 ACCENT_ENABLE_SLOWMOVE = 4
 ACCENT_STATE = INT
 
-# document "undocumented" window band infrastructure
-@user32.foreign(BOOL, HWND, PDWORD)
-def GetWindowBand(hwnd: int, pdwBand: IPointer[DWORD]) -> int: ...
-
+# ToUnicodeEx infrastructure
 _to_unicode_keyboard_state = (BYTE * 256)()
 
 def to_unicode(vk: int, scan_code: int) -> tuple[str, int]:
@@ -209,6 +386,10 @@ def to_unicode(vk: int, scan_code: int) -> tuple[str, int]:
     buffer = (WCHAR * 10)()
     result = ToUnicodeEx(vk, scan_code, _to_unicode_keyboard_state, buffer, 10, 0, GetKeyboardLayout(0))
     return buffer.value, result
+
+# document "undocumented" window band infrastructure
+@user32.foreign(BOOL, HWND, PDWORD)
+def GetWindowBand(hwnd: int, pdwBand: IPointer[DWORD]) -> int: ...
 
 ZBID_DEFAULT = 0
 ZBID_DESKTOP = 1
@@ -416,9 +597,13 @@ GCLP_HICONSM = (-34)
 @user32.foreign(BOOL, HWND, LONG, LONG, PMENUBARINFO)
 def GetMenuBarInfo(hwnd: int, idObject: int, idItem: int, pmbi: IPointer[MENUBARINFO]) -> int: ...
 
+# Window send message type enumeration
 WSMT_SEND = 0
 WSMT_POST = 1
 WSMT_DEFAULT = 2
+WSMT_NOTIFY = 3
+WSMT_WPARAMFORMAT = 4
+WSMT_LPARAMFORMAT = 5
 
 class Window(Abs.Object, HWND):
     """
@@ -475,23 +660,151 @@ class Window(Abs.Object, HWND):
             for i in styles:
                 style |= i
             return (self.window.extended_style & style) != 0
+        
+    class Props:
+        window: 'Window'
+        
+        def __init__(self, window: 'Window'):
+            self.window = window
+            
+        def __getitem__(self, prop: str | int | Atom) -> int:
+            return self.window.get_prop(prop)
+        
+        def __setitem__(self, prop: str | int | Atom, value: WT_ADDRLIKE):
+            self.window.set_prop(prop, value)
+            
+        def pop(self, prop: str | int | Atom) -> int:
+            """
+            Pop the property from property set of the window
+            """
+            return self.window.remove_prop(prop)
+        
+        def remove(self, prop: str | int | Atom):
+            """
+            Remove the property from property set of the window.
+            """
+            self.window.remove_prop(prop)
+            
+        def __iter__(self) -> Iterator[Atom | str]:
+            props = []
+            def enum(k: Atom | str, *_) -> bool:
+                props.append(k)
+                return True
+            self.window.enum_props(enum)
+            return iter(props)
+        
+        def keys(self) -> Iterator[Atom | str]:
+            """
+            Get keys of property set of the window.
+            """
+            return iter(self)
+        
+        def values(self) -> Iterator[int]:
+            """
+            Get values of property set of the window.
+            """
+            values = []
+            def enum(_, v: int, l: int) -> bool:
+                values.append(v)
+                return True
+            self.window.enum_props(enum)
+            return iter(values)
+        
+        def items(self) -> Iterator[tuple[Atom | str, int]]:
+            """
+            Get items of property set of the window.
+            """
+            items = []
+            def enum(k: Atom | str, v: int, _) -> bool:
+                items.append((k, v))
+                return True
+            self.window.enum_props(enum)
+            return iter(items)
+        
+        def update(self, value: Iterable[tuple[str | int | Atom, WT_ADDRLIKE]] | dict[str | int | Atom, WT_ADDRLIKE]):
+            """
+            Update the window property set with dictionary-like property update structure.
+            """
+            value = dict(value)
+            for k, v in value.items():
+                self.window.set_prop(k, v)
+                
+        def get(self, prop: str | int | Atom, default: WT = None) -> WT | int:
+            """
+            Get the window property value with default argument fallback.
+            """
+            try:
+                return self.window.get_prop(prop)
+            except WinException:
+                return default
+            
+        def __contains__(self, prop: str | int | Atom) -> bool:
+            try:
+                self.window.get_prop(prop)
+            except WinException:
+                return False
+            return True
+        
+        def __delitem__(self, prop: str | int | Atom):
+            self.window.remove_prop(prop)
+            
+    class Children:
+        window: 'Window'
+        children: list['Window']
+        
+        def __init__(self, window: 'Window', children: list['Window']):
+            self.window = window
+            self.children = children
+            
+        def __iter__(self) -> Iterator['Window']:
+            return iter(self.children)
+        
+        def append(self, window: 'Window'):
+            """
+            Add the new window to window children.
+            """
+            window.parent = self.window
+            self.children.append(window)
+        
+        def add(self, window: 'Window'):
+            """
+            Add the new window to window children.
+            """
+            window.parent = self.window
+            self.children.append(window)
+            
+        def __getitem__(self, index: int) -> 'Window':
+            return self.children[index]
+        
+        def __contains__(self, window: 'Window') -> bool:
+            return window in self.children
     
     _foreign_cache: dict[int, 'Window'] = {}
     styles: Styles
+    props: Props
+    vscroll: Scrollbar
+    hscroll: Scrollbar
     on_create: MultiEvent
+    
     on_left_button_down: MultiEvent
     on_left_button_up: MultiEvent
     on_left_button_double_click: MultiEvent
     on_right_button_down: MultiEvent
     on_right_button_up: MultiEvent
     on_right_button_double_click: MultiEvent
+    on_x_button_down: MultiEvent
+    on_x_button_up: MultiEvent
+    on_x_button_double_click: MultiEvent
+    on_middle_button_down: MultiEvent
+    on_middle_button_up: MultiEvent
+    on_middle_button_double_click: MultiEvent
+    
     on_close: MultiEvent
     on_destroy: MultiEvent
     on_key_down: MultiEvent
     on_key_up: MultiEvent
     on_move: MultiEvent
     on_show: MultiEvent
-    on_style_changed: MultiEvent
     on_theme_changed: MultiEvent
     on_user_changed: MultiEvent
     on_unknown_message: MultiEvent
@@ -519,10 +832,19 @@ class Window(Abs.Object, HWND):
     on_exit_menu_loop: MultiEvent
     on_enter_idle: MultiEvent
     on_sys_command: MultiEvent
-    class_name: str | None
+    on_activate: MultiEvent
+    on_activate_app: MultiEvent
+    on_child_activate: MultiEvent
+    on_compacting: MultiEvent
+    on_style_changed: MultiEvent
+    on_style_changing: MultiEvent
+    on_extended_style_changed: MultiEvent
+    on_extended_style_changing: MultiEvent
+    on_window_position_changed: MultiEvent
+    on_window_position_changing: MultiEvent
+    
     class_style: int
     last_message: MSG
-    hbrBackground: int
     pending_messages: list[tuple[int, int, int, int]]
     
     def __hash__(self):
@@ -550,6 +872,9 @@ class Window(Abs.Object, HWND):
         super().__init__(*args)
         self._abs_managed = 'headless' not in kwargs
         self.styles = self.Styles(self)
+        self.props = self.Props(self)
+        self.vscroll = Scrollbar(self, SB_VERT)
+        self.hscroll = Scrollbar(self, SB_HORZ)
         
         # subclass procedure
         self.pfnSubclassThunkProc = SUBCLASSPROC(self.window_subclass_thunk_proc)
@@ -562,6 +887,12 @@ class Window(Abs.Object, HWND):
         self.on_right_button_down = MultiEvent()
         self.on_right_button_up = MultiEvent()
         self.on_right_button_double_click = MultiEvent()
+        self.on_x_button_down = MultiEvent()
+        self.on_x_button_up = MultiEvent()
+        self.on_x_button_double_click = MultiEvent()
+        self.on_middle_button_down = MultiEvent()
+        self.on_middle_button_up = MultiEvent()
+        self.on_middle_button_double_click = MultiEvent()
         self.on_close = MultiEvent()
         self.on_destroy = MultiEvent()
         self.on_key_down = MultiEvent()
@@ -576,7 +907,6 @@ class Window(Abs.Object, HWND):
         self.on_set_font = MultiEvent()
         self.on_mouse_wheel = MultiEvent()
         self.on_timer = MultiEvent()
-        self.after_message = MultiEvent()
         self.on_notify = MultiEvent()
         self.on_message = MultiEvent()
         self.on_mouse_move = MultiEvent()
@@ -595,22 +925,31 @@ class Window(Abs.Object, HWND):
         self.on_enter_menu_loop = MultiEvent()
         self.on_exit_menu_loop = MultiEvent()
         self.on_enter_idle = MultiEvent()
-        self.on_sys_command = MultiEvent()
+        self.on_activate = MultiEvent()
+        self.on_activate_app = MultiEvent()
+        self.on_style_changed = MultiEvent()
+        self.on_style_changing = MultiEvent()
+        self.on_extended_style_changed = MultiEvent()
+        self.on_extended_style_changing = MultiEvent()
+        self.on_window_position_changed = MultiEvent()
+        self.on_window_position_changing = MultiEvent()
+        self.on_child_activate = MultiEvent()
             
         # bind the standard handler for destroy: application cycle notifier
-        self.on_nc_destroy += self.Window_on_nc_destroy
+        self.on_nc_destroy += EventCallback(self.Window_on_nc_destroy, Priority._PrivateMinPriority)
         
         # bind the standard handler for creation: application cycle notifier
-        self.on_create += self.Window_on_create
+        self.on_create += EventCallback(self.Window_on_create, Priority._PrivateMaxPriority)
         
         # headless construct = construct `Window` object from HWND
         if 'headless' not in kwargs:
             # fields for class registering
-            self.class_name = None
+            self._class_name = None
             self.class_style = 0
-            self.hbrBackground = (COLOR_WINDOW + 1)
+            self._background_brush = (COLOR_WINDOW + 1)
             self._cursor = None
             self._icon = None
+            self._small_icon = None
             self.last_message = MSG()
             self.pending_messages = []
             
@@ -626,14 +965,27 @@ class Window(Abs.Object, HWND):
     
     def Window_on_nc_destroy(self):
         # notify the application cycle what one of application-hosted windows is destroyed
-        app = Application()
+        app = WindowLoopUnit.current(running=False)
         app.windows -= 1
         app.notify()
         
     def Window_on_create(self):
-        app = Application()
+        app = WindowLoopUnit.current(running=False)
         app.windows += 1 # add the application cycle windows count
         return True
+    
+    @property
+    def class_name(self) -> str | None:
+        if not self:
+            return self._class_name
+        class_name = create_unicode_buffer(256)
+        if not GetClassNameW(self, class_name, 256):
+            raise WinException()
+        return class_name.value
+    
+    @class_name.setter
+    def class_name(self, class_name: str | None):
+        self._class_name = class_name
     
     @property
     def style(self) -> int:
@@ -660,7 +1012,7 @@ class Window(Abs.Object, HWND):
             SetWindowLongW(self, GWL_EXSTYLE, extended_style)
     
     @property
-    def icon(self) -> Icon:
+    def icon(self) -> Cursor | None:
         if self.value:
             return Icon.foreign_owner(GetClassLongPtrW(self, GCLP_HICON))
         return self._icon
@@ -668,11 +1020,11 @@ class Window(Abs.Object, HWND):
     @icon.setter
     def icon(self, icon: int | HANDLE):
         if self.value:
-            SetClassLongPtrW(self, GCLP_HICON, icon)
+            SetClassLongPtrW(self, GCLP_HICON, PtrUtil.get_address(icon))
         self._icon = icon
     
     @property
-    def cursor(self) -> Icon:
+    def cursor(self) -> Cursor | None:
         if self.value:
             return Cursor.foreign_owner(GetClassLongPtrW(self, GCLP_HCURSOR))
         return self._cursor
@@ -682,6 +1034,45 @@ class Window(Abs.Object, HWND):
         if self.value:
             SetClassLongPtrW(self, GCLP_HCURSOR, cursor)
         self._cursor = cursor
+        
+    @property
+    def background_brush(self) -> Brush | None:
+        if self.value:
+            x = GetClassLongPtrW(self, GCLP_HBRBACKGROUND)
+        else:
+            x = self._background_brush
+        if x <= 31:
+            brush = Brush.stock(x)
+        else:
+            brush = Brush.foreign_owner(x)
+        return brush
+    
+    @background_brush.setter
+    def background_brush(self, background_brush: int | HANDLE | None = None):
+        if background_brush is None:
+            background_brush = 0
+        else:
+            if isinstance(background_brush, HANDLE):
+                background_brush = background_brush.value
+            if background_brush <= 31:
+                background_brush += 1
+        if self.value:
+            SetClassLongPtrW(self, GCLP_HBRBACKGROUND, background_brush)
+        else:
+            self._background_brush = background_brush
+            
+    @property
+    def small_icon(self) -> Icon | None:
+        if self.value:
+            return Icon.foreign_owner(GetClassLongPtrW(self, GCLP_HICONSM))
+        return self._small_icon
+    
+    @small_icon.setter
+    def small_icon(self, small_icon: int | HANDLE | None):
+        if self.value:
+            SetClassLongPtrW(self, GCLP_HICONSM, small_icon)
+        else:
+            self._small_icon = small_icon
     
     def get_class_word(self, index: int) -> int:
         """
@@ -738,21 +1129,18 @@ class Window(Abs.Object, HWND):
         """
         Enable the window.
         """
-        
         EnableWindow(self, enable)
         
     def disable(self):
         """
         Disable the window.
         """
-        
         EnableWindow(self, False)
     
-    def register(self) -> int:
+    def register(self) -> Atom | None:
         """
         Register the window class.
         """
-        
         wcex = WNDCLASSEXW()
         wcex.cbSize = wcex.size()
         # standard icon/cursor loading
@@ -761,10 +1149,11 @@ class Window(Abs.Object, HWND):
         if self._cursor is None:
             self._cursor = Cursor.load(IDC_ARROW)
         # visual setting
-        wcex.hbrBackground = self.hbrBackground
+        wcex.hbrBackground = self._background_brush
         wcex.hIcon = self._icon
         wcex.hCursor = self._cursor
         wcex.style = self.class_style
+        wcex.hIconSm = self._small_icon
         
         # the base handle of executable module (commonly python.exe)
         wcex.hInstance = GetModuleHandleW(NULL)
@@ -772,7 +1161,7 @@ class Window(Abs.Object, HWND):
         # install the class window procedure
         self.pfnWndProc = wcex.lpfnWndProc = WNDPROC(self.window_proc)
         # construct the unique class name
-        class_name = f'Win-Abs/Class:{wcex.style}:{wcex.hIcon}:{wcex.hCursor}:{wcex.hbrBackground}:{PtrUtil.get_address(wcex.lpfnWndProc)}:{wcex.cbClsExtra}:{wcex.cbWndExtra}:{wcex.hInstance}'
+        class_name = f'Win-Abs/Class:{wcex.style}:{wcex.hIcon}:{wcex.hIconSm}:{wcex.hCursor}:{wcex.hbrBackground}:{PtrUtil.get_address(wcex.lpfnWndProc)}:{wcex.cbClsExtra}:{wcex.cbWndExtra}:{wcex.hInstance}'
         wcex.lpszClassName = class_name
         # check the registration result
         atom = RegisterClassEx(wcex.ref())
@@ -780,9 +1169,20 @@ class Window(Abs.Object, HWND):
             code = GetLastError()
             if code != ERROR_CLASS_ALREADY_EXISTS:
                 raise WinException(code)
+            atom = None
+        else:
+            atom = Atom.foreign_owner(atom, local=True)
         
-        self.class_name = class_name
+        self._class_name = class_name
         return atom
+    
+    def unregister(self):
+        """
+        Unregister the window class.
+        """
+        if self._class_name is not None:
+            if not UnregisterClassW(self._class_name, GetModuleHandleW(NULL)):
+                raise WinException()
     
     def create(self, width: int = CW_USEDEFAULT, height: int = CW_USEDEFAULT,
                x: int = CW_USEDEFAULT, y: int = CW_USEDEFAULT,
@@ -791,10 +1191,9 @@ class Window(Abs.Object, HWND):
         """
         Create the window.
         """
-        
-        if self.class_name is None:
+        if self._class_name is None:
             self.register()
-        self.value = CreateWindowExW(self._extended_style, self.class_name, window_name, self._style, 
+        self.value = CreateWindowExW(self._extended_style, self._class_name, window_name, self._style, 
                                      x, y, width, height, parent, identifier, GetModuleHandle(NULL), PtrUtil.get_address(parameter))
         if not self.value:
             error = GetLastError()
@@ -851,54 +1250,117 @@ class Window(Abs.Object, HWND):
     def on_nc_activate(self, active: bool, window: TUnion['Window', None]) -> bool:
         return False
     
+    def on_get_minmax_info(self, info: MINMAXINFO) -> bool:
+        return False
+    
+    def on_sys_command(self, code: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_left_button_down(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_left_button_up(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_left_button_double_click(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_right_button_down(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_right_button_up(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_right_button_double_click(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_x_button_down(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_x_button_up(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_x_button_double_click(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_middle_button_down(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_middle_button_up(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_middle_button_double_click(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
+    def on_nc_mouse_leave(self) -> bool:
+        return False
+    
     # ** Main window procedure ** #
     def window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         # setup last message structure for access
-        self.last_message.hWnd = hwnd
-        self.last_message.message = msg
-        self.last_message.wParam = wParam
-        self.last_message.lParam = lParam
+        self.last_message.hWnd = hwnd # handle to the window
+        self.last_message.message = msg # message code
+        self.last_message.wParam = wParam # wParam
+        self.last_message.lParam = lParam # lParam
         if msg == WM_CREATE: # window created
-            self.value = hwnd
+            self.value = hwnd # setup the HWND value to newly created window handle
             if not all(self.on_create.execute()): # check the all window.on_create returned True
-                return -1
-            self.unpend_all_messages()
-            return 0
+                return -1 # the one of WM_CREATE handlers returned False, when abort the window creation
+            self.unpend_all_messages() # if success, then unpend all pending messages queue to window
+            return 0 # the message is handled, so return 0
         elif msg == WM_PAINT: # window paint request
             with PaintDC(self) as dc: # begin the paint and return dc into handler
                 if self.on_paint(dc): # execute handler
-                    return 0
+                    return 0 # the message is handled, so return 0
         elif msg == WM_LBUTTONDOWN: # left mouse button down
             self.on_left_button_down.execute(wParam, LOWORD(lParam), HIWORD(lParam))
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_LBUTTONUP: # left mouse button up
             self.on_left_button_up.execute(wParam, LOWORD(lParam), HIWORD(lParam))
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_LBUTTONDBLCLK: # left mouse button double-clicked
             self.on_left_button_double_click.execute(wParam, LOWORD(lParam), HIWORD(lParam))
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_RBUTTONDOWN: # right mouse button down
             self.on_right_button_down.execute(wParam, LOWORD(lParam), HIWORD(lParam))
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_RBUTTONUP: # right mouse button up
             self.on_right_button_up.execute(wParam, LOWORD(lParam), HIWORD(lParam))
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_RBUTTONDBLCLK: # right mouse button double-clicked
             self.on_right_button_double_click.execute(wParam, LOWORD(lParam), HIWORD(lParam))
-            return 0
+            return 0 # the message is handled, so return 0
+        elif msg == WM_MBUTTONDOWN: # middle mouse button down
+            self.on_middle_button_down.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0 # the message is handled, so return 0
+        elif msg == WM_MBUTTONUP: # middle mouse button up
+            self.on_middle_button_up.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0 # the message is handled, so return 0
+        elif msg == WM_MBUTTONDBLCLK: # middle mouse button double-clicked
+            self.on_middle_button_double_click.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0 # the message is handled, so return 0
+        elif msg == WM_XBUTTONDOWN: # X mouse button down
+            self.on_x_button_down.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0 # the message is handled, so return 0
+        elif msg == WM_XBUTTONUP: # X mouse button up
+            self.on_x_button_up.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0 # the message is handled, so return 0
+        elif msg == WM_XBUTTONDBLCLK: # X mouse button double-clicked
+            self.on_x_button_double_click.execute(wParam, LOWORD(lParam), HIWORD(lParam))
+            return 0 # the message is handled, so return 0
         elif msg == WM_CLOSE: # window closed
             if all(self.on_close.execute()):
                 self.destroy()
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_DESTROY: # window destroyed
             self.on_destroy.execute()
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_COMMAND: # command send from child to window
             self.on_command.execute(LOWORD(wParam), HIWORD(wParam), lParam)
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_SIZE: # window sized
             if self.on_size(wParam, LOWORD(lParam), HIWORD(lParam)):
-                return 0
+                return 0 # the message is handled, so return 0
         elif msg == WM_KEYDOWN: # key down
             wVK = LOWORD(wParam) # virtual key code
             fKeyFlags = HIWORD(lParam) # key flags
@@ -906,7 +1368,7 @@ class Window(Abs.Object, HWND):
             if (fKeyFlags & KF_EXTENDED) == KF_EXTENDED: # if extended scan code
                 wScanCode = MAKEWORD(wScanCode, 0xE0) # when manually extend
             self.on_key_down.execute(wVK, fKeyFlags, wScanCode) # execute handler
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_KEYUP: # key up
             wVK = LOWORD(wParam) # virtual key code
             fKeyFlags = HIWORD(lParam) # key flags
@@ -914,25 +1376,22 @@ class Window(Abs.Object, HWND):
             if (fKeyFlags & KF_EXTENDED) == KF_EXTENDED: # if extended scan code
                 wScanCode = MAKEWORD(wScanCode, 0xE0) # when manually extend
             self.on_key_up.execute(wVK, fKeyFlags, wScanCode) # execute handler
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_MOVE: # window moved
             self.on_move.execute(LOWORD(lParam), HIWORD(lParam))
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_SHOWWINDOW: # window showed
             self.on_show.execute(wParam == TRUE, lParam)
-            return 0
-        elif msg == WM_STYLECHANGED: # window styles changed
-            self.on_style_changed.execute(i_cast(lParam, LPSTYLESTRUCT).contents, wParam == GWL_EXSTYLE)
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_THEMECHANGED: # window theme changed
             self.on_theme_changed.execute()
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_USERCHANGED: # user changed in system
             self.on_user_changed.execute()
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_ENABLE: # window enabled
             self.on_enable.execute(wParam == TRUE)
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_ERASEBKGND: # erase background request
             dc = DC.foreign_owner(wParam) # pack the hDC into DC wrapper
             if self.on_erase_background(dc): # the background was erased
@@ -940,20 +1399,20 @@ class Window(Abs.Object, HWND):
             return self.default_window_proc(hwnd, msg, wParam, lParam) # the background wasn't erased
         elif msg == WM_SETFONT: # set window font request
             self.on_set_font.execute(Font.foreign_owner(wParam), LOWORD(lParam) == TRUE)
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_MOUSEWHEEL:
             self.on_mouse_wheel.execute(SHORT(HIWORD(wParam)).value, LOWORD(wParam), LOWORD(lParam), HIWORD(lParam))
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_TIMER: # timer message
             self.on_timer.execute(wParam, i_cast(lParam, TIMERPROC))
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_NOTIFY: # notify message from child control
             nmhdr = i_cast(lParam, LPNMHDR).contents
             self.on_notify.execute(nmhdr)
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_MOUSEMOVE: # mouse moved
             self.on_mouse_move.execute(wParam, LOWORD(lParam), HIWORD(lParam))
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_DRAWITEM: # draw the item (by style *_OWNERDRAW)
             if not self.on_draw_item.empty(): # if has draw item handlers
                 self.on_draw_item.execute(wParam, i_cast_value(lParam, DRAWITEMSTRUCT))
@@ -961,13 +1420,13 @@ class Window(Abs.Object, HWND):
             return FALSE # not handled
         elif msg == WM_SETFOCUS: # the window got focus
             self.on_focus_changed(Window.foreign(wParam)) # pack the previous focus window into Window and execute event
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_KILLFOCUS: # the window lost focus
             self.on_focus_lost(Window.foreign(wParam)) # pack the new focus window into Window and execute event
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_PALETTECHANGED: # window palette changed
             self.on_palette_changed.execute(Palette.foreign_owner(wParam))
-            return 0
+            return 0 # the message is handled, so return 0
         elif msg == WM_SETCURSOR: # set window cursor request
             result = self.on_set_cursor(Window.foreign(wParam), LOWORD(lParam), HIWORD(lParam))
             if result is not None: # return True/False
@@ -982,9 +1441,10 @@ class Window(Abs.Object, HWND):
                 self.on_compare_item.execute(wParam, i_cast_value(lParam, COMPAREITEMSTRUCT))
                 return TRUE # WM_COMPAREITEM handled
             return FALSE # not handled
-        elif msg == WM_CHAR:
+        elif msg == WM_CHAR: # the character is pressed
+            # convert character code to unicode and call handler
             self.on_char.execute(chr(wParam))
-            return FALSE
+            return 0 # the message is handled, so return 0
         elif msg == WM_HSCROLL: # horizontal scroll message
             self.on_hscroll.execute(LOWORD(wParam), HIWORD(wParam), Window.foreign(lParam))
             return 0
@@ -997,17 +1457,21 @@ class Window(Abs.Object, HWND):
         elif msg == WM_NCPAINT: # non-client area paint
             region = Region.foreign_owner(wParam) # create Region from wParam
             if wParam == 1:
-                with DC.get(self) as dc:
+                with DC.window(self) as dc: # get the window DC
+                    # call the handler
                     result = self.on_nc_paint(dc, None)
             else:
-                with DC.get(self) as dc: # call GetDCEx
-                    result = self.on_nc_paint(dc, region) # call handler
+                # todo: GetDCEx with region is breaking non-client display
+                with DC.window(self) as dc: # get the window DC
+                    # call the handler
+                    result = self.on_nc_paint(dc, region)
             # if sentinel value matches, we are falling back to default procedure
             if result is not self:
                 return 0 # otherwise we are handled the message
         elif msg == WM_NCHITTEST: # non-client area hit test message
             result = self.on_nc_hittest(LOWORD(wParam), HIWORD(wParam)) # call message handler
-            if result is not None: return result # if message is handled, when return hit test result
+            # if message is handled, when return hit test result
+            if result is not None: return result
         elif msg == WM_NCCALCSIZE: # non-client area calculate size
             if wParam: # if need to indicate valid client area size
                 # marshal WM_NCCALCSIZE lParam parameters pointer to structure
@@ -1031,27 +1495,30 @@ class Window(Abs.Object, HWND):
             return 0 # message handled
         elif msg == WM_POWERBROADCAST: # power broadcast message received
             n = None # additional argument
-            if wParam == PBT_POWERSETTINGCHANGE: # if wParam == PBT_POWERSETTINGCHANGE then lParam contains
+            # if wParam == PBT_POWERSETTINGCHANGE,
+            if wParam == PBT_POWERSETTINGCHANGE: # then lParam contains
                 n = i_cast_value(lParam, POWERBROADCAST_SETTING) # PPOWERBROADCAST_SETTING
             self.on_power_broadcast.execute(wParam, n) # execute the handler
             return TRUE # message handled
         elif msg == WM_SIZING: # window is being sized
-            self.on_sizing.execute(wParam, i_cast_value(lParam, Rect)) # unpack edge and rectangle, call handler
+            # unpack edge and rectangle, call handler
+            self.on_sizing.execute(wParam, i_cast_value(lParam, Rect))
             return TRUE # message handled
         elif msg == WM_ENTERIDLE: # window is entering idle state
-            self.on_enter_idle.execute(wParam, Window.foreign(lParam)) # unpack state and window and call handler
-            return 0 # message handled
+            # unpack state and window and call handler
+            self.on_enter_idle.execute(wParam, Window.foreign(lParam))
+            return 0 # the message is handled, so return 0d
         elif msg == WM_SYSCOMMAND: # on system command received
-            result = self.on_sys_command.execute(wParam, LOWORD(lParam), HIWORD(lParam)) # unpack SC_* code and x,y coords and call handler
-            if result:
-                for i in result:
-                    if i: return 0
+            # unpack SC_* code and x,y coords and call handler, check boolean return
+            if self.on_sys_command(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # the message is handled so return 0
+            # otherwise, let it fallback
         elif msg == WM_ENTERMENULOOP: # window is entered menu loop
             self.on_enter_menu_loop.execute(wParam != 0) # unpack boolean from wParam and call handler
-            return 0 # message handled
+            return 0 # the message is handled, so return 0
         elif msg == WM_EXITMENULOOP: # window is exited menu loop
             self.on_exit_menu_loop.execute(wParam != 0) # unpack boolean from wParam and call handler
-            return 0 # message handled
+            return 0 # the message is handled, so return 0
         # undocumented UAH messages handling
         elif msg == WM_UAHDESTROYWINDOW:
             # UAH: window destroying notification
@@ -1081,6 +1548,122 @@ class Window(Abs.Object, HWND):
             # non-client area is being activated
             if self.on_nc_activate(wParam != FALSE, Window.foreign(lParam) if lParam != MAXULONG_PTR else None):
                 return TRUE # if handled return TRUE, otherwise let it fallback
+        elif msg == WM_ACTIVATEAPP:
+            # the different application window is being activated
+            self.on_activate_app.execute(wParam != FALSE, lParam)
+            return 0 # the message is handled so return 0
+        elif msg == WM_ACTIVATE:
+            # the window is being activated or deactivated
+            self.on_activate.execute(wParam, Window.foreign(lParam))
+            return 0 # the message is handled so return 0
+        elif msg == WM_CHILDACTIVATE:
+            # sent to the child window when the window's title bar clicked or over activation operation performed
+            self.on_child_activate.execute()
+            return 0
+        elif msg == WM_COMPACTING:
+            # system memory is low and WM_COMPACTING is sent
+            self.on_compacting.execute(round(wParam / 65535 * 100))
+            return 0 # the message is handled so return 0
+        elif msg == WM_GETMINMAXINFO:
+            # the system is needed in min and max window sizes
+            # cast lParam to MINMAXINFO and call handler
+            if self.on_get_minmax_info(i_cast_value(lParam, MINMAXINFO)):
+                return 0 # the message is handled so return 0
+            # otherwise let it fallback
+        elif msg == WM_STYLECHANGED:
+            # the one of window's styles has been changed
+            ss = i_cast_value(lParam, STYLESTRUCT) # cast the lParam to STYLESTRUCT
+            if wParam == GWL_STYLE: # if change is a simple style,
+                self.on_style_changed.execute(ss) # when call its handler
+            elif wParam == GWL_EXSTYLE: # otherwise, if change is extended style
+                self.on_extended_style_changed.execute(ss) # when call its handle
+            return 0 # the message is handled so return 0
+        elif msg == WM_STYLECHANGING:
+            # the one of window's styles is being to be changed
+            ss = i_cast_value(lParam, STYLESTRUCT) # cast the lParam to STYLESTRUCT
+            if wParam == GWL_STYLE: # if change is a simple style,
+                self.on_style_changing.execute(ss) # when call its handler
+            elif wParam == GWL_EXSTYLE: # otherwise, if change is extended style
+                self.on_extended_style_changing.execute(ss) # when call its handle
+            return 0 # the message is handled so return 0
+        elif msg == WM_WINDOWPOSCHANGED:
+            # the window position is has been changed
+            pos = i_cast_value(lParam, WINDOWPOS) # cast the lParam to WINDOWPOS
+            self.on_window_position_changed.execute(pos) # call handler
+        elif msg == WM_WINDOWPOSCHANGING:
+            # the window position is being to be changed
+            pos = i_cast_value(lParam, WINDOWPOS) # cast the lParam to WINDOWPOS
+            self.on_window_position_changing.execute(pos) # call handler
+        elif msg == WM_NCMOUSELEAVE: # the mouse leaving non-client area
+            # call the handler and check result
+            if not self.on_nc_mouse_leave():
+                result = LRESULT()
+                # get the result from DWM default window procedure
+                if DwmDefWindowProc(hwnd, msg, wParam, lParam, byref(result)):
+                    return result.value # if succeeded, then return LRESULT
+                # otherwise let it fallback
+            else: # otherwise the message is handled
+                return 0
+        elif msg == WM_NCLBUTTONDOWN: # the left mouse button was pressed over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_left_button_down(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
+        elif msg == WM_NCLBUTTONUP: # the left mouse button was released over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_left_button_up(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
+        elif msg == WM_NCLBUTTONDBLCLK: # the left mouse button was double-clicked over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_left_button_double_click(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
+        elif msg == WM_NCRBUTTONDOWN: # the right mouse button was pressed over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_right_button_down(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
+        elif msg == WM_NCRBUTTONUP: # the right mouse button was released over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_right_button_up(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
+        elif msg == WM_NCRBUTTONDBLCLK: # the right mouse button was double-clicked over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_right_button_double_click(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
+        elif msg == WM_NCXBUTTONDOWN: # the X mouse button was pressed over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_x_button_down(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
+        elif msg == WM_NCXBUTTONUP: # the X mouse button was released over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_x_button_up(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
+        elif msg == WM_NCXBUTTONDBLCLK: # the X mouse button was double-clicked over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_x_button_double_click(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
+        elif msg == WM_NCMBUTTONDOWN: # the middle mouse button was pressed over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_middle_button_down(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
+        elif msg == WM_NCMBUTTONUP: # the middle mouse button was released over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_middle_button_up(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
+        elif msg == WM_NCMBUTTONDBLCLK: # the middle mouse button was double-clicked over non-client area
+            # call the handler and check the boolean result
+            if self.on_nc_middle_button_double_click(wParam, LOWORD(lParam), HIWORD(lParam)):
+                return 0 # if the message is handled then return 0
+            # otherwise let it fallback
         else:
             # unknown window message received
             result = self.on_unknown_message.execute(hwnd, msg, wParam, lParam) # trying to call all unknown message handlers
@@ -1120,6 +1703,10 @@ class Window(Abs.Object, HWND):
     @property
     def focused(self) -> bool:
         return GetFocus() == self.value
+    
+    @property
+    def visible(self) -> bool:
+        return IsWindowVisible(self) != FALSE
     
     def capture(self):
         """
@@ -1232,15 +1819,18 @@ class Window(Abs.Object, HWND):
         """
         if isinstance(wParam, str):
             wParam = create_unicode_buffer(wParam)
-        
         if isinstance(lParam, str):
             lParam = create_unicode_buffer(lParam)
         
         if wParam != 0: 
             wParam = PtrUtil.get_address(wParam)
-            
         if lParam != 0:
             lParam = PtrUtil.get_address(lParam)
+        
+        if smt == WSMT_WPARAMFORMAT:
+            return wParam
+        elif smt == WSMT_LPARAMFORMAT:
+            return lParam
             
         if not self.value and hasattr(self, 'pending_messages'):
             self.pending_messages.append((smt, message, wParam, lParam))
@@ -1253,15 +1843,37 @@ class Window(Abs.Object, HWND):
             return SendMessageW(self, message, wParam, lParam)
         elif smt == WSMT_DEFAULT:
             return self.default_window_proc(self, message, wParam, lParam)
+        elif smt == WSMT_NOTIFY:
+            return SendNotifyMessageW(self, message, wParam, lParam)
         return 0
     
-    def send(self, message: int, wParam: int = 0, lParam: int = 0) -> int:
+    def send(self, message: int, wParam: WT_ADDRLIKE | str = 0, lParam: WT_ADDRLIKE | str = 0) -> int:
         """
         Send the message to window.
         """
         return self.send_message(WSMT_SEND, message, wParam, lParam)
     
-    def post(self, message: int, wParam: int = 0, lParam: int = 0):
+    def send_timeout(self, message: int, wParam: WT_ADDRLIKE | str = 0, lParam: WT_ADDRLIKE | str = 0, flags: int = SMTO_NORMAL, timeout: int = 0) -> int:
+        """
+        Send the message to window with timeout and flags.
+        """
+        wParam = self.send_message(WSMT_WPARAMFORMAT, 0, wParam, 0)
+        lParam = self.send_message(WSMT_LPARAMFORMAT, 0, 0, lParam)
+        lResult = DWORD_PTR()
+        SetLastError(0)
+        if not SendMessageTimeoutW(self, message, wParam, lParam, flags, timeout, byref(lResult)):
+            code = GetLastError()
+            if code != 0:
+                raise WinException(code)
+        return lResult.value
+    
+    def send_timeout_indirect(self, msg: MSG, flags: int = SMTO_NORMAL, timeout: int = 0) -> int:
+        """
+        Indirectly send the message to window with timeout and flags.
+        """
+        return self.send_timeout(msg.message, msg.wParam, msg.lParam, flags, timeout)
+    
+    def post(self, message: int, wParam: WT_ADDRLIKE | str = 0, lParam: WT_ADDRLIKE | str = 0):
         """
         Post the message to window (asynchronous send).
         """
@@ -1311,8 +1923,7 @@ class Window(Abs.Object, HWND):
     
     @property
     def menu(self) -> Menu | None:
-        hMenu = GetMenu(self)
-        return Menu.foreign_owner(hMenu)
+        return Menu.foreign_owner(GetMenu(self))
     
     @menu.setter
     def menu(self, menu: int | HANDLE):
@@ -1380,17 +1991,14 @@ class Window(Abs.Object, HWND):
         """
         Get the foreground window.
         """
-        
-        hwnd = GetForegroundWindow()
-        return Window.foreign(hwnd)
+        return Window.foreign(GetForegroundWindow())
     
     @classmethod
     def desktop(self) -> 'Window':
         """
         Get the desktop window.
         """
-        hwnd = GetDesktopWindow()
-        return Window.foreign(hwnd)
+        return Window.foreign(GetDesktopWindow())
     
     def set_foreground(self):
         """
@@ -1429,7 +2037,7 @@ class Window(Abs.Object, HWND):
         
     @property
     def valid(self):
-        return IsWindow(self)
+        return IsWindow(self) != 0
     
     @property
     def width(self) -> int:
@@ -1490,7 +2098,6 @@ class Window(Abs.Object, HWND):
         """
         Invalidate the given rectangle/region (or NULL) of window.
         """
-        
         if region is NULL:
             InvalidateRect(self, NULL, erase)
         elif isinstance(region, Region):
@@ -1502,7 +2109,6 @@ class Window(Abs.Object, HWND):
         """
         Update the window view.
         """
-        
         if not UpdateWindow(self):
             raise WinException()
         
@@ -1645,25 +2251,46 @@ class Window(Abs.Object, HWND):
         else:
             parent.tile_windows(how, [self], rect)
         
-    def get_prop(self, prop: str | int) -> int:
+    def get_prop(self, prop: str | int | Atom) -> int:
         """
         Get the property value in window property list.
         """
         if isinstance(prop, str):
             prop = create_unicode_buffer(prop)
         prop = i_cast(PtrUtil.get_address(prop), LPCWSTR)
-        return GetPropW(self, prop)
+        SetLastError(0)
+        data = GetPropW(self, prop)
+        if not data:
+            code = GetLastError()
+            if code != 0:
+                raise WinException(code)
+        return data
         
-    def set_prop(self, prop: str | int, data: int):
+    def set_prop(self, prop: str | int | Atom, data: WT_ADDRLIKE):
         """
         Set the property value in window property list.
         """
         if isinstance(prop, str):
             prop = create_unicode_buffer(prop)
-        prop = i_cast(PtrUtil.get_address(prop), LPCWSTR)
+        prop = i_cast(prop, LPCWSTR)
         data = PtrUtil.get_address(data)
         if not SetPropW(self, prop, data):
             raise WinException()
+    
+    def remove_prop(self, prop: str | int) -> int:
+        """
+        Remove the property from window property list.
+        """
+        if isinstance(prop, str):
+            prop = create_unicode_buffer(prop)
+        prop = i_cast(prop, LPCWSTR)
+        SetLastError(0)
+        data = RemovePropW(self, prop)
+        if not data:
+            code = GetLastError()
+            if code != 0:
+                raise WinException(code)
+        return data
         
     def draw_theme_parent_bk(self, dc: int | HANDLE, rect: RECT = NULL):
         """
@@ -1692,6 +2319,7 @@ class Window(Abs.Object, HWND):
         """
         Enumerate properties of a window.
         """
+        @PROPENUMPROCEXW
         def callback_thunk(hwndUnused: int, lpwszProp: LPCWSTR, hData: int, lParam: int) -> bool:
             pvProp = PtrUtil.get_address(lpwszProp)
             if pvProp <= MAXWORD:
@@ -1700,8 +2328,7 @@ class Window(Abs.Object, HWND):
                 prop = lpwszProp.value
             return callback(prop, hData, lParam)
         
-        pfnEnumProc = PROPENUMPROCEXW(callback_thunk)
-        iResult = EnumPropsExW(self, pfnEnumProc, PtrUtil.get_address(parameter))
+        iResult = EnumPropsExW(self, callback_thunk, PtrUtil.get_address(parameter))
         
         return iResult != -1
     
@@ -1716,12 +2343,12 @@ class Window(Abs.Object, HWND):
         """
         Enumerate all top-level windows.
         """
+        @WNDENUMPROC
         def callback_thunk(hwnd: int, lParam: int) -> bool:
             return callback(Window.foreign(hwnd), lParam)
         
-        pfnEnumProc = WNDENUMPROC(callback_thunk)
         SetLastError(0)
-        iResult = EnumWindows(pfnEnumProc, parameter)
+        iResult = EnumWindows(callback_thunk, parameter)
         dwError = GetLastError()
         
         if not iResult and dwError != 0: 
@@ -1746,28 +2373,28 @@ class Window(Abs.Object, HWND):
         EnumChildWindows(self, thunk, parameter)
     
     @property
-    def children(self) -> list['Window']:
+    def children(self) -> Children:
         result = []
-        def cb(window: 'Window', _) -> bool:
+        def enum(window: 'Window', _) -> bool:
             parent = window.parent
             if parent is not None:
                 parent = parent.value
             if parent == self.value:
                 result.append(window)
             return True
-        self.enum_child_windows(cb)
-        return result
+        self.enum_child_windows(enum)
+        return self.Children(self, result)
     
     @property
     def descendants(self) -> list['Window']:
         result = []
-        def cb(window: 'Window', _) -> bool:
+        def enum(window: 'Window', _) -> bool:
             result.append(window)
             return True
-        self.enum_child_windows(cb)
+        self.enum_child_windows(enum)
         return result
     
-    def item(self, identifier: int) -> int:
+    def item(self, identifier: int) -> 'Window':
         """
         Get item in window/dialog by identifier.
         """
@@ -1786,6 +2413,41 @@ class Window(Abs.Object, HWND):
         if not GetMenuBarInfo(self, object_id, identifier, mbi.ref()):
             raise WinException()
         return mbi
+    
+    @property
+    def thread_id(self) -> int:
+        thread_id = GetWindowThreadProcessId(self, NULL)
+        if not thread_id: raise WinException()
+        return thread_id
+    
+    @property
+    def process_id(self) -> int:
+        process_id = DWORD()
+        _ = GetWindowThreadProcessId(self, byref(process_id))
+        if not _: raise WinException()
+        return process_id
+    
+    @property
+    def zoomed(self) -> bool:
+        return IsZoomed(self) != FALSE
+    
+    @property
+    def maximized(self) -> bool:
+        return IsZoomed(self) != FALSE
+    
+    @property
+    def iconic(self) -> bool:
+        return IsIconic(self) != FALSE
+    
+    @property
+    def minimized(self) -> bool:
+        return IsIconic(self) != FALSE
+    
+    @property
+    def frozen(self) -> bool:
+        return IsHungAppWindow(self) != FALSE
+    
+    
 
 class MDIMenu(Menu):
     """
@@ -1834,6 +2496,7 @@ class MDIWindow(Window):
     def default_window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         return DefFrameProcW(hwnd, self.client, msg, wParam, lParam)
 
+# MDI child ID base for CLIENTCREATESTRUCT
 MDI_CHILDID_BASE = 0x8080
 
 class MDIClientWindow(Window):
@@ -1858,7 +2521,6 @@ class MDIClientWindow(Window):
             self.on_mdi_maximize = MultiEvent()
             self.on_mdi_set_menu = MultiEvent()
             self.on_unknown_message += self.mdi_message_procedure
-            self.subclass()
             
     def create(self, width: int = CW_USEDEFAULT, height: int = CW_USEDEFAULT,
                x: int = CW_USEDEFAULT, y: int = CW_USEDEFAULT,
@@ -1868,6 +2530,7 @@ class MDIClientWindow(Window):
         ccs.hWindowMenu = menu
         ccs.idFirstChild = MDI_CHILDID_BASE
         super().create(width, height, x, y, window_name, parent, parameter=ccs.ref())
+        self.subclass()
         
     def cascade(self, behavior: int = 0):
         """
@@ -1949,6 +2612,10 @@ class MDIClientWindow(Window):
         return None
 
 class MDIChildWindow(Window):
+    """
+    The MDI Child window.
+    """
+    
     def __init__(self, *args, **kwargs):
         super().__init__(*args)
         if 'headless' not in kwargs:
@@ -1992,79 +2659,182 @@ class MDIChildWindow(Window):
     def default_window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         return DefMDIChildProcW(hwnd, msg, wParam, lParam)
 
-class Application:
+class AcceleratorTable(Handle):
     """
-    Main application class. 
+    The Win32 accelerator table.
     """
     
-    INSTANCE: 'Application' = None
+    entries: list[ACCEL]
+    window: int | HANDLE
     
-    modeless_dialogs: list[int | HWND]
-    windows: int
+    @classmethod
+    def create(cls, entries: list[ACCEL], window: int | HANDLE | None = None) -> 'AcceleratorTable':
+        pEntries = (ACCEL * len(entries))(*entries)
+        hAccel = CreateAcceleratorTableW(pEntries, len(entries))
+        if not hAccel: raise WinException()
+        table = AcceleratorTable(hAccel)
+        table.window = window
+        table.entries = entries
+        return table
     
-    def __new__(cls):
-        if Application.INSTANCE is None:
-            return super().__new__(cls)
-            
-        return Application.INSTANCE
+    def close(self):
+        if not DestroyAcceleratorTable(self):
+            raise WinException()
+        self._closed = True
+
+TLUX_PASS = 0
+TLUX_STOP = 1
+TLUX_RAISE = 2
+
+class ThreadLoopUnit:
+    """
+    The thread loop unit class.
+    """
     
-    def __init__(self):
-        if Application.INSTANCE is None:
-            # application events
-            self.after_message = MultiEvent()
-            self.on_destroy = MultiEvent()
-            self.on_message = MultiEvent()
-            
-            # application instance data
-            self.modeless_dialogs = []
-            self.running = False
-            self.windows = 0
-            
-            # set application singleton
-            Application.INSTANCE = self
-            
-    def notify(self):
-        """
-        Notify the application about windows count changed.
-        """
+    RUNNING_LOOPS: dict[int, Self] = {}
+    ALL_LOOPS: dict[int, Self] = {}
+    
+    @classmethod
+    def current(cls, running: bool = True) -> TUnion[Self, None]:
+        loops = cls.RUNNING_LOOPS if running else cls.ALL_LOOPS
+        return loops.get(GetCurrentThreadId(), None)
+    
+    @classmethod
+    def identified(cls, thread_id: int, running: bool = True) -> TUnion[Self, None]:
+        loops = cls.RUNNING_LOOPS if running else cls.ALL_LOOPS
+        return loops.get(thread_id, None)
+    
+    after_message: MultiEvent
+    on_destroy: MultiEvent
+    on_message: MultiEvent
+    
+    block_timeout: int
+    thread_id: int
+    running: bool
+    foreign: bool
+    
+    def __init__(self, thread_id: int | None = None):
+        # thread loop events
+        self.after_message = MultiEvent()
+        self.on_destroy = MultiEvent()
+        self.on_message = MultiEvent()
         
-        if not self.windows:
-            self.running = False
+        # thread loop instance data
+        self.running = False
+        self.block_timeout = 10
+        if thread_id is not None:
+            self.thread_id = thread_id
+            self.foreign = True
+        else:
+            self.thread_id = GetCurrentThreadId()
+            self.foreign = False
+        self.ALL_LOOPS[self.thread_id] = self
+    
+    def post(self, message: int, wParam: int, lParam: int):
+        """
+        Post the message into thread loop.
+        """
+        if isinstance(wParam, str):
+            wParam = create_unicode_buffer(wParam)
+        if isinstance(lParam, str):
+            lParam = create_unicode_buffer(lParam)
+        
+        if wParam != 0: 
+            wParam = PtrUtil.get_address(wParam)
+        if lParam != 0:
+            lParam = PtrUtil.get_address(lParam)
+            
+        if not PostThreadMessageW(self.thread_id, message, wParam, lParam):
+            raise WinException()
     
     def launch(self, window: int | HANDLE = NULL):
         """
-        Launch the application event cycle.
+        Launch the thread loop event cycle.
         """
+        # check if window is foreign, when it is not allowed to "launch" its event loop
+        if self.foreign:
+            raise RuntimeError('Not allowed to run event cycle on foreign thread loop.')
         
         # set the MSG structure and running state
         self.running = True
         msg = MSG()
         pMsg = byref(msg)
+        self.RUNNING_LOOPS[self.thread_id] = self
         
         while self.running:
             try:
-                if PeekMessage(pMsg, window, 0, 0, PM_REMOVE): # asynchronous PeekMessage
-                    if msg.message == WM_QUIT: break
-                    dispatch = True
-                    # check if window belongs to one of modeless dialogs
-                    for modeless_dialog in self.modeless_dialogs:
-                        if IsDialogMessage(modeless_dialog, pMsg):
-                            dispatch = False # if true, don't dispatch the message into main cycle
-                            break
-                    if dispatch: # if we can dispatch message, do it
+                if PeekMessageW(pMsg, window, 0, 0, PM_REMOVE): # asynchronous PeekMessage
+                    if msg.message == WM_QUIT:
+                        self.running = False
+                        break
+                    
+                    if self.on_dispatch_message(msg, pMsg): # if we can dispatch message, do it
                         TranslateMessage(pMsg)
                         self.on_message.execute(msg) # execute the application.on_message handler before dispatching
                         DispatchMessageW(pMsg)
                 
                 self.after_message.execute() # execute the application.after_message handler for after-message handling
-                MsgWaitForMultipleObjects(0, NULL, FALSE, 10, QS_ALLEVENTS) # block the event cycle for 10 ms while waiting new messages into queue
-            except KeyboardInterrupt:
-                break
+                MsgWaitForMultipleObjects(0, NULL, FALSE, self.block_timeout, QS_ALLEVENTS) # block the event cycle for 10 ms while waiting new messages into queue
+            except BaseException as exception:
+                tlux = self.on_exception(exception)
+                if tlux == TLUX_STOP:
+                    self.running = False
+                    break
+                elif tlux == TLUX_RAISE:
+                    raise exception from None
+                elif tlux == TLUX_PASS:
+                    continue
         
+        del self.RUNNING_LOOPS[self.thread_id]
         self.on_destroy.execute() # execute the application.on_destroy because application event loop was destroyed
+
+    def on_dispatch_message(self) -> bool:
+        """
+        The dispatch event callback.
+        Return `False` if message should not be processed, otherwise `True`.
+        """
+        return True
     
-    def hook(self, hwnd: int | HANDLE, procedure: Callable[[MSG], None], message: int=None):
-        if isinstance(hwnd, HANDLE): hwnd = hwnd.value
+    def on_exception(self, exception: BaseException) -> int:
+        """
+        The exception event callback.
+        Return `TLUX_STOP` if loop must be stopped, `TLUX_PASS` if loop
+        must be remain run state, otherwise return `TLUX_RAISE` for re-raise.
+        """
+        if isinstance(exception, KeyboardInterrupt):
+            return TLUX_STOP
+        return TLUX_RAISE
+
+class WindowLoopUnit(ThreadLoopUnit):
+    """
+    The window loop unit class.
+    """
+    
+    modeless_dialogs: list[int | HWND]
+    accelerator_tables: list[AcceleratorTable]
+    windows: int
+    
+    def __init__(self, thread_id: int | None = None):
+        # call ThreadLoopUnit constructor
+        super().__init__(thread_id)
+        
+        # window loop instance data
+        self.modeless_dialogs = []
+        self.accelerator_tables = []
+        self.windows = 0
+            
+    def notify(self):
+        """
+        Notify the window loop about windows count changed.
+        """
+        if not self.windows:
+            self.running = False
+    
+    def hook(self, hwnd: int | HWND, procedure: Callable[[MSG], None], message: int=None):
+        """
+        Hook the message (or all messages) from the providen window.
+        """
+        if isinstance(hwnd, HWND): hwnd = hwnd.value
         
         if message is not None:
             def on_message_handler(msg: MSG):
@@ -2076,6 +2846,43 @@ class Application:
                     procedure(msg)
                     
         self.on_message += on_message_handler
+        
+    def on_dispatch_message(self, msg: MSG, pMsg: IPointer[MSG]) -> bool:
+        dispatch = True
+        # check if message processes through HACCELs list
+        for accelerator_table in self.accelerator_tables:
+            if accelerator_table.window is None:
+                hwnd = msg.hWnd
+            else:
+                hwnd = accelerator_table.window
+            if TranslateAcceleratorW(hwnd, accelerator_table, pMsg):
+                dispatch = False
+                break
+        if dispatch:
+            # check if message belongs to one of modeless dialogs
+            for modeless_dialog in self.modeless_dialogs:
+                if IsDialogMessage(modeless_dialog, pMsg):
+                    dispatch = False # if true, don't dispatch the message into main cycle
+                    break
+        return dispatch
+
+class Application(WindowLoopUnit):
+    """
+    Main application class. 
+    """
+    CURRENT: 'Application' = None
+    
+    def __new__(cls):
+        if Application.CURRENT is None:
+            return super().__new__(cls)
+        return Application.CURRENT
+    
+    def __init__(self):
+        if Application.CURRENT is None:
+            # call super constructor
+            super().__init__()
+            # set application singleton
+            Application.CURRENT = self
     
 class IdentifiersT:
     """
@@ -2152,6 +2959,38 @@ class AutoIncrementMap:
         return value
     
 SubclassIdentifiers = AutoIncrementMap(0)
+
+class ICacheAccessor(IInterface, Generic[WT]):
+    @interface_abstract_method
+    def cache(self, v: WT):
+        pass
+
+class AutoCacheMap(Generic[WT]):
+    """
+    Class for specifically key-value caching.
+    """
+    
+    class Accessor(ICacheAccessor):
+        _map: 'AutoCacheMap'
+        _name: str
+        def __init__(self, map: 'AutoCacheMap', name: str):
+            self._map = map
+            self._name = name
+        def cache(self, v: Any):
+            self._map[self._name] = v
+    _map: dict[str, WT]
+    
+    def __init__(self):
+        self._map = {}
+        
+    def __getitem__(self, k: str) -> WT | None:
+        return self._map.get(k, None)
+    
+    def __setitem__(self, k: str, v: Any):
+        self._map[k] = v
+        
+    def access(self, name: str) -> ICacheAccessor:
+        return self.Accessor(self, name)
 
 class Control(Window):
     """
@@ -2233,7 +3072,7 @@ class GLWindow(Window):
         self.manual_initialize = False # let you manually initialize the OpenGL context. by default it is OFF
         
         # OpenGL-specific window event subscribing
-        Application().after_message += self.GL_after_message
+        ThreadLoopUnit.current().after_message += self.GL_after_message
         self.on_close += self.GL_close
         
         # setup the OpenGL pixel format
@@ -2260,7 +3099,7 @@ class GLWindow(Window):
         """
         
         self.enable_after_message_render = False
-        Application().after_message -= self.GL_after_message
+        ThreadLoopUnit.current().after_message -= self.GL_after_message
     
     def GL_after_message(self):
         # standard after-message handler, execute OpenGL tick event and swap the buffers
@@ -2270,7 +3109,7 @@ class GLWindow(Window):
     def GL_close(self):
         # OpenGL window closed, if enabled after-message render when unbind it from application
         if self.enable_after_message_render:
-            Application().after_message -= self.GL_after_message
+            ThreadLoopUnit.current().after_message -= self.GL_after_message
         return True
     
     def initialize_gl(self):
@@ -2383,3 +3222,6 @@ class ExtendedGLWindow(GLWindow):
         # set the WGL attributes of version
         self.attributes[WGL_CONTEXT_MAJOR_VERSION_ARB] = major
         self.attributes[WGL_CONTEXT_MINOR_VERSION_ARB] = minor
+        
+# Win Abstractions Layer code Ends
+# # # # # # # # # # # # # # # # # # # #

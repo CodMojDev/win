@@ -2063,12 +2063,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         LPRBHITTESTINFO = POINTER(RBHITTESTINFO)
     #====== TOOLTIPS CONTROL =====================================================
     if cpreproc.ifndef("NOTOOLTIPS"):
-        if cpreproc.ifdef("_WIN32"):
-            TOOLTIPS_CLASSW = u"tooltips_class32"
-            TOOLTIPS_CLASSA = "tooltips_class32"
-            TOOLTIPS_CLASS = unicode(TOOLTIPS_CLASSW, TOOLTIPS_CLASSA)
-        else:
-            TOOLTIPS_CLASS = "tooltips_class"
+        TOOLTIPS_CLASSW = u"tooltips_class32"
+        TOOLTIPS_CLASSA = "tooltips_class32"
+        TOOLTIPS_CLASS = unicode(TOOLTIPS_CLASSW, TOOLTIPS_CLASSA)
 
         class tagTOOLINFOA(CStructure):
             _fields_ = [

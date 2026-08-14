@@ -12,7 +12,7 @@ class ControllableValue:
         self._closed = False
     
     @classmethod
-    def foreign_owner(cls, val: int | HANDLE, *args, **kwargs) -> defb_t.Self:
+    def foreign_owner(cls, val: int | HANDLE, *args, **kwargs) -> defb_t.Self | None:
         """
         Create the handle instance from foreign handle.
         """

@@ -139,7 +139,7 @@ class WRPCUDPHost(IWRPCHost):
             elif message.MessageID == WRPC_M_RESPONSE:
                 if message.nExceptions != 0:
                     marshal_data = WRPCUtils.get_marshal_data(data, message)
-                    stm = Stream(marshal_data)
+                    stm = WRPCStream(marshal_data)
                     for type_name, text in WRPC.unmarshal_exceptions(stm, message.nExceptions):
                         dbg_trace(wudp, f'[WRPC Expection] {type_name}: {text}')
                     continue
@@ -159,7 +159,7 @@ class WRPCUDPHost(IWRPCHost):
                 
                 marshal_data = WRPCUtils.get_marshal_data(data, message)
                 
-                stm = Stream(marshal_data)
+                stm = WRPCStream(marshal_data)
                 bSignal = stm.read_byte()
                 
                 # Stop signal received
@@ -180,7 +180,7 @@ class WRPCUDPHost(IWRPCHost):
                 continue
             
     def _request(self, rq_data: bytes) -> bytes:
-        stream = Stream(rq_data)
+        stream = WRPCStream(rq_data)
         stream.protocol = self
         bType = stream.read_byte()
         
@@ -450,7 +450,7 @@ class WRPCProtocolUtils:
         message.dwDataSize = len(request)
         protocol.write_message(message, request)
         msg, marshal_data = protocol.wait(timeout=5.0)
-        stm = Stream(marshal_data)
+        stm = WRPCStream(marshal_data)
         stm.protocol = protocol
         if msg.nExceptions != 0:
             raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))

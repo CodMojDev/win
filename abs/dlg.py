@@ -146,5 +146,5 @@ class Dialog(Window):
         """
         Center the dialog over parent.
         """
-        rc = self.parent.rect
+        rc = self._parent.rect
         self.position = (rc.left + (rc.width - self.width) // 2, rc.top + (rc.height - self.height) // 2)

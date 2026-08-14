@@ -1,5 +1,7 @@
 from win.wingdi import *
 from win.winuser import *
+from typing import Self, TypeVar
+from .geom import *
 
 class Color:
     @classmethod
@@ -16,6 +18,10 @@ class Color:
         """
         
         value: int
+        
+        @classmethod
+        @interface_abstract_method
+        def length(cls) -> int: ...
         
         def __init__(self, value: int = 0):
             self.value = value
@@ -125,13 +131,19 @@ class Color:
             return self.value & value
         
         def __inv__(self):
-            return ~self.value
+            return self.__class__(~self.value)
         
         def __neg__(self):
-            return -self.value
+            return self.__class__(-self.value)
         
         def __pos__(self):
             return +self.value
+        
+        def __eq__(self, other: 'Color.IColor') -> bool:
+            return self.value == other.value
+        
+        def __ne__(self, other: 'Color.IColor') -> bool:
+            return self.value != other.value
         
         def hsl(self) -> 'Color.HSL':
             """
@@ -183,7 +195,7 @@ class Color:
             return (x + y) / 2.0
         
         @classmethod
-        def string(cls, color: str) -> 'Color.IColor':
+        def string(cls, color: str) -> Self:
             color = color.lstrip('#')
             components = []
             i = 0
@@ -191,6 +203,18 @@ class Color:
                 components.append(int(color[i:i+2], 16))
                 i += 2
             return cls.color(*components)
+        
+        def invert(self) -> 'Self':
+            """
+            Invert the color.
+            """
+            return self.__class__.color(*map(lambda x: (~x)&0xff, self))
+        
+        @classmethod
+        def from_id(cls, id: int, table: type['Color.IColorTable'] | None = None) -> Self:
+            if table is None:
+                table = Color.Table
+            return cls.color(*(tuple(Color.ARGB(table.ensure()[id]).rgba())[0:cls.length()]))
 
     class IColorAlpha(IColor):
         """
@@ -206,7 +230,7 @@ class Color:
         def color(self, r: int, g: int, b: int, a: int) -> 'Color.IColorAlpha': ...
         
         def rgba(self) -> 'Color.RGBA':
-            return Color.RGBA(self.r, self.g, self.b, self.a)
+            return Color.RGBA.color(self.r, self.g, self.b, self.a)
         
         def argb(self) -> 'Color.ARGB':
             return Color.ARGB.color(self.r, self.g, self.b, self.a)
@@ -227,6 +251,10 @@ class Color:
         """
         RGB Representation of color.
         """
+        
+        @classmethod
+        def length(cls) -> int:
+            return 3
         
         @classmethod
         def color(cls, r: int, g: int, b: int) -> 'Color.RGB':
@@ -266,6 +294,10 @@ class Color:
         """
         RGBA Representation of alpha-channeled color.
         """
+        
+        @classmethod
+        def length(cls) -> int:
+            return 4
         
         @classmethod
         def color(cls, r: int, g: int, b: int, a: int) -> 'Color.RGBA':
@@ -315,6 +347,10 @@ class Color:
         """
         
         @classmethod
+        def length(cls) -> int:
+            return 3
+        
+        @classmethod
         def color(cls, r: int, g: int, b: int) -> 'Color.BGR':
             return cls((b << 8 | g) << 8 | r)
         
@@ -352,6 +388,10 @@ class Color:
         """
         BGRA Representation of alpha-channeled color.
         """
+        
+        @classmethod
+        def length(cls) -> int:
+            return 4
         
         @classmethod
         def color(cls, r: int, g: int, b: int, a: int) -> 'Color.BGRA':
@@ -396,6 +436,10 @@ class Color:
         """
         ARGB Representation of alpha-channeled color.
         """
+        
+        @classmethod
+        def length(cls) -> int:
+            return 4
         
         @classmethod
         def color(cls, r: int, g: int, b: int, a: int) -> 'Color.ARGB':
@@ -443,6 +487,10 @@ class Color:
         """
         ABGR Representation of alpha-channeled color.
         """
+        
+        @classmethod
+        def length(cls) -> int:
+            return 4
         
         @classmethod
         def color(cls, r: int, g: int, b: int, a: int) -> 'Color.ABGR':
@@ -689,3 +737,372 @@ class Color:
         
         def __eq__(self, color: TUnion['Color.IColorAlpha', 'Color.GLColor']) -> bool:
             return self.value == color.gl().value
+
+    class ID:
+        ActiveBorder = 1
+        ActiveCaption = 2
+        ActiveCaptionText = 3
+        AppWorkspace = 4
+        Control = 5
+        ControlDark = 6
+        ControlDarkDark = 7
+        ControlLight = 8
+        ControlLightLight = 9
+        ControlText = 10
+        Desktop = 11
+        GrayText = 12
+        Highlight = 13
+        HighlightText = 14
+        HotTrack = 15
+        InactiveBorder = 16
+        InactiveCaption = 17
+        InactiveCaptionText = 18
+        Info = 19
+        InfoText = 20
+        Menu = 21
+        MenuText = 22
+        ScrollBar = 23
+        Window = 24
+        WindowFrame = 25
+        WindowText = 26
+        Transparent = 27
+        AliceBlue = 28
+        AntiqueWhite = 29
+        Aqua = 30
+        Aquamarine = 31
+        Azure = 32
+        Beige = 33
+        Bisque = 34
+        Black = 35
+        BlanchedAlmond = 36
+        Blue = 37
+        BlueViolet = 38
+        Brown = 39
+        BurlyWood = 40
+        CadetBlue = 41
+        Chartreuse = 42
+        Chocolate = 43
+        Coral = 44
+        CornflowerBlue = 45
+        Cornsilk = 46
+        Crimson = 47
+        Cyan = 48
+        DarkBlue = 49
+        DarkCyan = 50
+        DarkGoldenrod = 51
+        DarkGray = 52
+        DarkGreen = 53
+        DarkKhaki = 54
+        DarkMagenta = 55
+        DarkOliveGreen = 56
+        DarkOrange = 57
+        DarkOrchid = 58
+        DarkRed = 59
+        DarkSalmon = 60
+        DarkSeaGreen = 61
+        DarkSlateBlue = 62
+        DarkSlateGray = 63
+        DarkTurquoise = 64
+        DarkViolet = 65
+        DeepPink = 66
+        DeepSkyBlue = 67
+        DimGray = 68
+        DodgerBlue = 69
+        Firebrick = 70
+        FloralWhite = 71
+        ForestGreen = 72
+        Fuchsia = 73
+        Gainsboro = 74
+        GhostWhite = 75
+        Gold = 76
+        Goldenrod = 77
+        Gray = 78
+        Green = 79
+        GreenYellow = 80
+        Honeydew = 81
+        HotPink = 82
+        IndianRed = 83
+        Indigo = 84
+        Ivory = 85
+        Khaki = 86
+        Lavender = 87
+        LavenderBlush = 88
+        LawnGreen = 89
+        LemonChiffon = 90
+        LightBlue = 91
+        LightCoral = 92
+        LightCyan = 93
+        LightGoldenrodYellow = 94
+        LightGray = 95
+        LightGreen = 96
+        LightPink = 97
+        LightSalmon = 98
+        LightSeaGreen = 99
+        LightSkyBlue = 100
+        LightSlateGray = 101
+        LightSteelBlue = 102
+        LightYellow = 103
+        Lime = 104
+        LimeGreen = 105
+        Linen = 106
+        Magenta = 107
+        Maroon = 108
+        MediumAquamarine = 109
+        MediumBlue = 110
+        MediumOrchid = 111
+        MediumPurple = 112
+        MediumSeaGreen = 113
+        MediumSlateBlue = 114
+        MediumSpringGreen = 115
+        MediumTurquoise = 116
+        MediumVioletRed = 117
+        MidnightBlue = 118
+        MintCream = 119
+        MistyRose = 120
+        Moccasin = 121
+        NavajoWhite = 122
+        Navy = 123
+        OldLace = 124
+        Olive = 125
+        OliveDrab = 126
+        Orange = 127
+        OrangeRed = 128
+        Orchid = 129
+        PaleGoldenrod = 130
+        PaleGreen = 131
+        PaleTurquoise = 132
+        PaleVioletRed = 133
+        PapayaWhip = 134
+        PeachPuff = 135
+        Peru = 136
+        Pink = 137
+        Plum = 138
+        PowderBlue = 139
+        Purple = 140
+        Red = 141
+        RosyBrown = 142
+        RoyalBlue = 143
+        SaddleBrown = 144
+        Salmon = 145
+        SandyBrown = 146
+        SeaGreen = 147
+        SeaShell = 148
+        Sienna = 149
+        Silver = 150
+        SkyBlue = 151
+        SlateBlue = 152
+        SlateGray = 153
+        Snow = 154
+        SpringGreen = 155
+        SteelBlue = 156
+        Tan = 157
+        Teal = 158
+        Thistle = 159
+        Tomato = 160
+        Turquoise = 161
+        Violet = 162
+        Wheat = 163
+        White = 164
+        WhiteSmoke = 165
+        Yellow = 166
+        YellowGreen = 167
+        ButtonFace = 168
+        ButtonHighlight = 169
+        ButtonShadow = 170
+        GradientActiveCaption = 171
+        GradientInactiveCaption = 172
+        MenuBar = 173
+        MenuHighlight = 174
+    
+    class IColorTable:
+        @staticmethod
+        def ensure() -> list[int]:
+            """
+            Get the color table list.
+            """
+    
+    class Table(IColorTable):
+        array: list[int] | None = None
+        
+        @staticmethod
+        def ensure() -> list[int]:
+            if Color.Table.array is None:
+                Color.Table.array = array = [0] * 175
+                array[1] = int(Color.system(COLOR_ACTIVEBORDER).argb())
+                array[2] = int(Color.system(COLOR_ACTIVECAPTION).argb())
+                array[3] = int(Color.system(COLOR_INACTIVECAPTION).argb())
+                array[4] = int(Color.system(COLOR_APPWORKSPACE).argb())
+                array[168] = int(Color.system(COLOR_BTNFACE).argb())
+                array[169] = int(Color.system(COLOR_BTNHILIGHT).argb())
+                array[170] = int(Color.system(COLOR_BTNSHADOW).argb())
+                array[5] = int(Color.system(COLOR_BTNFACE).argb())
+                array[6] = int(Color.system(COLOR_BTNHILIGHT).argb())
+                array[7] = int(Color.system(COLOR_3DDKSHADOW).argb())
+                array[8] = int(Color.system(COLOR_3DLIGHT).argb())
+                array[9] = int(Color.system(COLOR_BTNHILIGHT).argb())
+                array[10] = int(Color.system(COLOR_BTNTEXT).argb())
+                array[11] = int(Color.system(COLOR_BACKGROUND).argb())
+                array[171] = int(Color.system(COLOR_GRADIENTACTIVECAPTION).argb())
+                array[172] = int(Color.system(COLOR_GRADIENTINACTIVECAPTION).argb())
+                array[12] = int(Color.system(COLOR_GRAYTEXT).argb())
+                array[13] = int(Color.system(COLOR_HIGHLIGHT).argb())
+                array[14] = int(Color.system(COLOR_HIGHLIGHTTEXT).argb())
+                array[15] = int(Color.system(COLOR_HOTLIGHT).argb())
+                array[16] = int(Color.system(COLOR_INACTIVEBORDER).argb())
+                array[17] = int(Color.system(COLOR_INACTIVECAPTION).argb())
+                array[18] = int(Color.system(COLOR_INACTIVECAPTIONTEXT).argb())
+                array[19] = int(Color.system(COLOR_INFOBK).argb())
+                array[20] = int(Color.system(COLOR_INFOTEXT).argb())
+                array[21] = int(Color.system(COLOR_MENU).argb())
+                array[173] = int(Color.system(COLOR_MENUBAR).argb())
+                array[174] = int(Color.system(COLOR_MENUHILIGHT).argb())
+                array[22] = int(Color.system(COLOR_MENUTEXT).argb())
+                array[23] = int(Color.system(COLOR_SCROLLBAR).argb())
+                array[24] = int(Color.system(COLOR_WINDOW).argb())
+                array[25] = int(Color.system(COLOR_WINDOWFRAME).argb())
+                array[26] = int(Color.system(COLOR_WINDOWTEXT).argb())
+                array[27] = 16777215
+                array[28] = -984833
+                array[29] = -332841
+                array[30] = -16711681
+                array[31] = -8388652
+                array[32] = -983041
+                array[33] = -657956
+                array[34] = -6972
+                array[35] = -16777216
+                array[36] = -5171
+                array[37] = -16776961
+                array[38] = -7722014
+                array[39] = -5952982
+                array[40] = -2180985
+                array[41] = -10510688
+                array[42] = -8388864
+                array[43] = -2987746
+                array[44] = -32944
+                array[45] = -10185235
+                array[46] = -1828
+                array[47] = -2354116
+                array[48] = -16711681
+                array[49] = -16777077
+                array[50] = -16741493
+                array[51] = -4684277
+                array[52] = -5658199
+                array[53] = -16751616
+                array[54] = -4343957
+                array[55] = -7667573
+                array[56] = -11179217
+                array[57] = -29696
+                array[58] = -6737204
+                array[59] = -7667712
+                array[60] = -1468806
+                array[61] = -7357301
+                array[62] = -12042869
+                array[63] = -13676721
+                array[64] = -16724271
+                array[65] = -7077677
+                array[66] = -60269
+                array[67] = -16728065
+                array[68] = -9868951
+                array[69] = -14774017
+                array[70] = -5103070
+                array[71] = -1296
+                array[72] = -14513374
+                array[73] = -65281
+                array[74] = -2302756
+                array[75] = -460545
+                array[76] = -10496
+                array[77] = -2448096
+                array[78] = -8355712
+                array[79] = -16744448
+                array[80] = -5374161
+                array[81] = -983056
+                array[82] = -38476
+                array[83] = -3318692
+                array[84] = -11861886
+                array[85] = -16
+                array[86] = -989556
+                array[87] = -1644806
+                array[88] = -3851
+                array[89] = -8586240
+                array[90] = -1331
+                array[91] = -5383962
+                array[92] = -1015680
+                array[93] = -2031617
+                array[94] = -329006
+                array[95] = -2894893
+                array[96] = -7278960
+                array[97] = -18751
+                array[98] = -24454
+                array[99] = -14634326
+                array[100] = -7876870
+                array[101] = -8943463
+                array[102] = -5192482
+                array[103] = -32
+                array[104] = -16711936
+                array[105] = -13447886
+                array[106] = -331546
+                array[107] = -65281
+                array[108] = -8388608
+                array[109] = -10039894
+                array[110] = -16777011
+                array[111] = -4565549
+                array[112] = -7114533
+                array[113] = -12799119
+                array[114] = -8689426
+                array[115] = -16713062
+                array[116] = -12004916
+                array[117] = -3730043
+                array[118] = -15132304
+                array[119] = -655366
+                array[120] = -6943
+                array[121] = -6987
+                array[122] = -8531
+                array[123] = -16777088
+                array[124] = -133658
+                array[125] = -8355840
+                array[126] = -9728477
+                array[127] = -23296
+                array[128] = -47872
+                array[129] = -2461482
+                array[130] = -1120086
+                array[131] = -6751336
+                array[132] = -5247250
+                array[133] = -2396013
+                array[134] = -4139
+                array[135] = -9543
+                array[136] = -3308225
+                array[137] = -16181
+                array[138] = -2252579
+                array[139] = -5185306
+                array[140] = -8388480
+                array[141] = -65536
+                array[142] = -4419697
+                array[143] = -12490271
+                array[144] = -7650029
+                array[145] = -360334
+                array[146] = -744352
+                array[147] = -13726889
+                array[148] = -2578
+                array[149] = -6270419
+                array[150] = -4144960
+                array[151] = -7876885
+                array[152] = -9807155
+                array[153] = -9404272
+                array[154] = -1286
+                array[155] = -16711809
+                array[156] = -12156236
+                array[157] = -2968436
+                array[158] = -16744320
+                array[159] = -2572328
+                array[160] = -40121
+                array[161] = -12525360
+                array[162] = -1146130
+                array[163] = -663885
+                array[164] = -1
+                array[165] = -657931
+                array[166] = -256
+                array[167] = -6632142
+            return Color.Table.array
+        
+WT_COLOR = TypeVar('WT_COLOR', bound=Color.IColor)
+WT_COLORALPHA = TypeVar('WT_COLORALPHA', bound=Color.IColorAlpha)

@@ -208,7 +208,7 @@ class WRPC:
         return buffer
     
     @staticmethod
-    def unmarshal(stream: Stream, ctx: 'WRPC.Context' = None) -> object:
+    def unmarshal(stream: WRPCStream, ctx: 'WRPC.Context' = None) -> object:
         if ctx is None:
             ctx = WRPC.Context()
         
@@ -352,7 +352,7 @@ class WRPC:
             return marshaller.unmarshal(stream)
         
     @staticmethod
-    def unmarshal_exceptions(stm: Stream, n: int) -> list[tuple[str, str]]:
+    def unmarshal_exceptions(stm: WRPCStream, n: int) -> list[tuple[str, str]]:
         exceptions = []
         
         for _ in range(n):
@@ -384,7 +384,7 @@ class WRPCProxyObject:
         protocol.write_message(message, rq_data)
         msg, data = protocol.wait(timeout=5.0)
         if msg.nExceptions != 0:
-            stm = Stream(data)
+            stm = WRPCStream(data)
             raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
     
     def __getattribute__(self, attribute: str) -> object:
@@ -401,7 +401,7 @@ class WRPCProxyObject:
         
         protocol.write_message(message, rq_data)
         msg, data = protocol.wait(timeout=5.0)
-        stm = Stream(data)
+        stm = WRPCStream(data)
         if msg.nExceptions != 0:
             raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
         stm.protocol = protocol
@@ -424,7 +424,7 @@ class WRPCProxyObject:
         protocol.write_message(message, rq_data)
         msg, data = protocol.wait(timeout=5.0)
         if msg.nExceptions != 0:
-            stm = Stream(data)
+            stm = WRPCStream(data)
             raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
         
     def __call__(self, *args, **kwargs):
@@ -443,7 +443,7 @@ class WRPCProxyObject:
         
         protocol.write_message(message, rq_data)
         msg, data = protocol.wait(timeout=5.0)
-        stm = Stream(data)
+        stm = WRPCStream(data)
         if msg.nExceptions != 0:
             raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
         stm.protocol = protocol
@@ -462,7 +462,7 @@ class WRPCProxyObject:
         protocol.write_message(message, rq_data)
         msg, data = protocol.wait(timeout=5.0)
         if msg.nExceptions != 0:
-            stm = Stream(data)
+            stm = WRPCStream(data)
             raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
         
     def unary(self, op: int) -> Any:
@@ -478,7 +478,7 @@ class WRPCProxyObject:
         
         protocol.write_message(message, rq_data)
         msg, data = protocol.wait(timeout=5.0)
-        stm = Stream(data)
+        stm = WRPCStream(data)
         if msg.nExceptions != 0:
             raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
         stm.protocol = protocol
@@ -498,7 +498,7 @@ class WRPCProxyObject:
         
         protocol.write_message(message, rq_data)
         msg, data = protocol.wait(timeout=5.0)
-        stm = Stream(data)
+        stm = WRPCStream(data)
         if msg.nExceptions != 0:
             raise WRPCException(WRPC.unmarshal_exceptions(stm, msg.nExceptions))
         stm.protocol = protocol

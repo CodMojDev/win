@@ -1,7 +1,7 @@
 from win.minwindef import *
 
 # WRPC Versions
-WRPC_VERSION_LAST = 0x1001
+WRPC_VERSION_LAST = 0x1002 # 1.0.2
 
 # WRPC message IDs
 WRPC_M_RESPONSE = 0x01
@@ -39,7 +39,7 @@ class WRPC_MESSAGE(CStructure):
         ('WRpcVersion', SHORT), # WRPC_VERSION_LAST
         ('MessageID', BYTE), # WRPC_M_RESPONSE, WRPC_M_REQUEST
         ('nExceptions', BYTE), 
-        ('wConnectionID', WORD)
+        ('wConnectionID', WORD),
         ('dwDataSize', DWORD)
     ]
     

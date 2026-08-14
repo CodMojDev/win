@@ -32,6 +32,7 @@ class Abs:
         reference_list: list[Any]
         
         def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
             self.property_map = {}
             self.reference_list = []
             self._abs_managed = True

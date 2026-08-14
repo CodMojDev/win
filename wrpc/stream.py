@@ -6,7 +6,7 @@ import io
 if typing.TYPE_CHECKING:
     from .protocol import IWRPCProtocol
 
-class Stream(io.BytesIO):
+class WRPCStream(io.BytesIO):
     protocol: 'IWRPCProtocol'
     
     def __init__(self, *args, **kwargs):

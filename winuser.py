@@ -1546,6 +1546,11 @@ if cpreproc.pragma_once("_WINUSER_"):
                     ("ptMinTrackSize", POINT),
                     ("ptMaxTrackSize", POINT)
                 ]
+                ptReserved: POINT
+                ptMaxSize: POINT
+                ptMaxPosition: POINT
+                ptMinTrackSize: POINT
+                ptMaxTrackSize: POINT
             MINMAXINFO = tagMINMAXINFO
             PMINMAXINFO = POINTER(MINMAXINFO)
             LPMINMAXINFO = PMINMAXINFO
@@ -8410,7 +8415,30 @@ class MENUBARINFO(CStructure):
     
 PMENUBARINFO = LPMENUBARINFO = PTR(MENUBARINFO)
 
-# NOT REALIZED
+class SCROLLBARINFO(CStructure):
+    _fields_ = [
+        ('cbSize', DWORD),
+        ('rcScrollBar', RECT),
+        ('dxyLineButton', INT),
+        ('xyThumbTop', INT),
+        ('xyThumbBottom', INT),
+        ('reserved', INT),
+        ('rgstate', DWORD * 6)
+    ]
+    cbSize: int
+    rcScrollBar: RECT
+    dxyLineButton: int
+    xyThumbTop: int
+    xyThumbBottom: int
+    reserved: int
+    rgstate: IArray[int]
+
+PSCROLLBARINFO = LPSCROLLBARINFO = PTR(SCROLLBARINFO)
+
+@user32.foreign(BOOL, HWND, LONG, PSCROLLBARINFO)
+def GetScrollBarInfo(hwnd: int, idObject: int, psbi: IPointer[SCROLLBARINFO]) -> int: ...
+
+# NOT IMPLEMENTED
 # TODO
 
 # REGION ***

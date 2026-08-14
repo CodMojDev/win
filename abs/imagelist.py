@@ -18,28 +18,30 @@ class ImageList(Handle):
         self._closed = True
     
     @overload
-    def add(self, hIcon: Icon) -> int: 
+    def add(self, hIcon: Icon, cache: ICacheAccessor[int] | None = None) -> int: 
         """
         Add icon to image list.
         """
     
     @overload
-    def add(self, hBitmap: int | HANDLE, hBmMask: int | HANDLE = NULL) -> int:
+    def add(self, hBitmap: int | HANDLE, hBmMask: int | HANDLE = NULL, cache: ICacheAccessor[int] | None = None) -> int:
         """
         Add bitmap to image list.
         """
     
-    def add(self, var: int | HANDLE, hBmMask: int | HANDLE = NULL) -> int:
+    def add(self, var: int | HANDLE, hBmMask: int | HANDLE = NULL, cache: ICacheAccessor[int] | None = None) -> int:
         if isinstance(var, Icon):
             result = ImageList_AddIcon(self, var)
         else:
             result = ImageList_Add(self, var, hBmMask)
         if result == -1: raise WinException()
+        if cache is not None: cache.cache(result)
         return result
     
-    def add_masked(self, bitmap: int | HANDLE, color: Color.IColor | int) -> int:
+    def add_masked(self, bitmap: int | HANDLE, color: Color.IColor | int, cache: ICacheAccessor[int] | None = None) -> int:
         result = ImageList_AddMasked(self, bitmap, int(color))
         if result == -1: raise WinException()
+        if cache is not None: cache.cache(result)
         return result
     
     def __getitem__(self, index: int):

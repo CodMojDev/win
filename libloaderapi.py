@@ -407,7 +407,7 @@ if cpreproc.pragma_once("_APISETLIBLOADER_"):
         Enumerates resources of a specified type within a binary module. For Windows Vista and later, this is typically a language-neutral Portable Executable (LN file), and the enumeration will also include resources from the corresponding language-specific resource files (.mui files) that contain localizable language resources. It is also possible for hModule to specify an .mui file, in which case only that file is searched for resources.
         """
         
-    @kernel32.foreign(BOOL, HMODULE, LPCSTR, ENUMRESNAMEPROCA, LONG_PTR, DWORD, LANGID, result_function=bool)
+    @kernel32.foreign(BOOL, HMODULE, LPCSTR, ENUMRESNAMEPROCW, LONG_PTR, DWORD, LANGID, result_function=bool)
     def EnumResourceNamesExW(hModule: int, lpType: str, lpEnumFunc: FARPROC, lParam: int) -> bool:
         """
         Enumerates resources of a specified type within a binary module. For Windows Vista and later, this is typically a language-neutral Portable Executable (LN file), and the enumeration will also include resources from the corresponding language-specific resource files (.mui files) that contain localizable language resources. It is also possible for hModule to specify an .mui file, in which case only that file is searched for resources.
@@ -448,13 +448,21 @@ if cpreproc.pragma_once("_APISETLIBLOADER_"):
 
     # REGION *** Desktop Family or OneCore Family or Games Family ***
 
-    @kernel32.foreign(HRSRC, HMODULE, LPCWSTR, LPCWSTR, name='FindResourceW')
+    @kernel32.foreign(HRSRC, HMODULE, LPCWSTR, LPCWSTR)
+    def FindResourceW(hModule: int, lpName: str, lpType: str) -> int: 
+        """
+        Determines the location of a resource with the specified type and name in the specified module.
+
+        To specify a language, use the FindResourceEx function.
+        """
+    
     def FindResource(hModule: int, lpName: str, lpType: str) -> int: 
         """
         Determines the location of a resource with the specified type and name in the specified module.
 
         To specify a language, use the FindResourceEx function.
         """
+        return FindResourceW(hModule, lpName, lpType)
         
     @kernel32.foreign(HMODULE, LPCSTR)
     def LoadLibraryA(lpLibFileName: bytes) -> int:
@@ -491,7 +499,7 @@ if cpreproc.pragma_once("_APISETLIBLOADER_"):
         Enumerates resources of a specified type within a binary module. For Windows Vista and later, this is typically a language-neutral Portable Executable (LN file), and the enumeration will also include resources from the corresponding language-specific resource files (.mui files) that contain localizable language resources. It is also possible for hModule to specify an .mui file, in which case only that file is searched for resources.
         """
         
-    @kernel32.foreign(BOOL, HMODULE, LPCWSTR, ENUMRESNAMEPROCA, LONG_PTR, result_function=bool)
+    @kernel32.foreign(BOOL, HMODULE, LPCWSTR, ENUMRESNAMEPROCW, LONG_PTR, result_function=bool)
     def EnumResourceNamesW(hModule: int, lpType: str, lpEnumFunc: FARPROC, lParam: int) -> bool:
         """
         Enumerates resources of a specified type within a binary module. For Windows Vista and later, this is typically a language-neutral Portable Executable (LN file), and the enumeration will also include resources from the corresponding language-specific resource files (.mui files) that contain localizable language resources. It is also possible for hModule to specify an .mui file, in which case only that file is searched for resources.

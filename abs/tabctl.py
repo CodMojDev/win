@@ -77,6 +77,9 @@ class TabControl(Control):
             
         def delete(self):
             self.ctl.send(TCM_DELETEITEM, self.index)
+            
+        def __eq__(self, tab: 'TabControl.Tab') -> bool:
+            return self.index == tab.index
         
     def __init__(self, width: int, height: int, parent: int | HANDLE, identifier: int | HANDLE):
         super().__init__(parent, identifier)
@@ -87,21 +90,22 @@ class TabControl(Control):
     def create(self, x: int = 0, y: int = 0, relative: int | HWND = NULL):
         super().create(self._width, self._height, x, y, '', relative=relative)
     
-    def insert(self, index: int, text: str, image: int | None = None, parameter: int | None = None, rtl: bool = False) -> int:
+    def insert(self, index: int, text: str, image: int | None = None, parameter: int | None = None, rtl: bool = False) -> Tab:
         """
         Insert tab into tab control.
         """
         tci = TCITEMW()
-        mask = TCIF_TEXT
-        if image is not None:
-            mask |= TCIF_IMAGE
-            tci.iImage = image
+        mask = TCIF_TEXT | TCIF_IMAGE
+        if image is None:
+            image = -1
+        tci.iImage = image
         if parameter is not None:
             mask |= TCIF_PARAM
             tci.lParam = parameter
         if rtl:
             mask |= TCIF_RTLREADING
         tci.pszText = text
+        tci.mask = mask
         index = self.send(TCM_INSERTITEMW, index, tci.ref())
         if index == -1: raise WinException()
         return TabControl.Tab(self, index)

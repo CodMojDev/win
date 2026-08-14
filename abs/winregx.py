@@ -14,7 +14,7 @@ def DeleteTree(key: winreg.HKEYType | int, subkey: str):
     raise WinException(lStatus)
 
 def CopyTree(key_src: winreg.HKEYType | int, subkey: str | None, key_dest: winreg.HKEYType | int):
-    lStatus = RegCopyTreeW(int(key), subkey, int(key_dest))
+    lStatus = RegCopyTreeW(int(key_src), subkey, int(key_dest))
     if lStatus == 0: return
     if lStatus == ERROR_PATH_NOT_FOUND or lStatus == ERROR_FILE_NOT_FOUND:
         raise FileNotFoundError(errno.ENOENT, win_errors[lStatus], subkey, lStatus)

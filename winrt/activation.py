@@ -9,7 +9,7 @@ class IActivationFactory(IInspectable):
         IInspectable.virtual_table, 'IActivationFactory')
     _iid_ = IID('{00000035-0000-0000-C000-000000000046}')
     
-    @virtual_table.com_function(DOUBLE_PTR(IInspectable))
+    @virtual_table.com_function(PVOID)
     def ActivateInstance(self, instance: IDoublePtr[IInspectable]) -> int:
         """
         Creates a new instance of the Windows Runtime class that is associated with the current activation factory.
