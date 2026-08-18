@@ -9,15 +9,16 @@ class Edit(Control):
     Win32 Edit common control.
     """
     
-    def __init__(self, width: int, height: int, parent: int | HWND, 
-                 identifier: int | HMENU, text: str = '', readonly: bool = False):
+    def __init__(self, width: int=None, height: int=None, parent: int | HWND=None, 
+                 identifier: int | HMENU=None, text: str = '', readonly: bool = False, **kwargs):
         super().__init__(parent, identifier)
-        self.class_name = 'EDIT'
-        if readonly:
-            self._style |= ES_READONLY
-        self._text = text
-        self._width = width
-        self._height = height
+        if 'headless' not in kwargs:
+            self.class_name = 'EDIT'
+            if readonly:
+                self._style |= ES_READONLY
+            self._text = text
+            self._width = width
+            self._height = height
             
     @property
     def selection(self) -> tuple[int, int]:

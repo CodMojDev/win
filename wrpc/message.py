@@ -322,6 +322,20 @@ WRPC_T_MARSHALREF = 0x13
 WRPC_T_MARSHALEXT = 0x14
 
 #
+# WRPC marshal format for Compressed
+# BYTE Type
+# BYTE CompressSpec
+# DWORD cb
+# CHAR Data[cb]
+#
+
+WRPC_T_COMPRESSED = 0x15
+WRPC_T_ZLIB = 0x01
+WRPC_T_ZLIB_LOW = 0x02
+WRPC_T_ZLIB_FAST = 0x03
+WRPC_T_ZLIB_HIGH = 0x04
+
+#
 # WRPC marshal format for Exception
 #
 # WORD TypeNameSize

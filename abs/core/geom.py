@@ -400,6 +400,14 @@ class Rect(RECT, CStructure):
     def rect_size(self, size: 'GraphicUtils.Size'):
         self.width, self.height = GraphicUtils.size_tuple(size)
 
+    @property
+    def position(self) -> tuple[int, int]:
+        return self.x, self.y
+    
+    @position.setter
+    def position(self, position: 'GraphicUtils.Point'):
+        self.x, self.y = GraphicUtils.point_tuple(position)
+
 Rect.EMPTY = Rect()
 
 class MARGINS(CStructure):

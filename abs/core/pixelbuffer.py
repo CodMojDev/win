@@ -4,7 +4,7 @@ from .handle import *
 class PixelBufferMeta(type):
     _generic_cache_ = {}
     
-    def __getitem__(cls, color: type[WT_COLOR]) -> 'PixelBuffer[WT_COLOR]':
+    def __getitem__(cls, color: type[WT_COLOR]) -> 'type[PixelBuffer[WT_COLOR]]':
         pixelbuffer_t = cls._generic_cache_.get(color, None)
         if pixelbuffer_t is None:
             class pixelbuffer_t(PixelBuffer):
@@ -36,7 +36,7 @@ class PixelBuffer(Generic[WT_COLOR], metaclass=PixelBufferMeta):
         self.info = BitmapInfo(self.width, self.height, self.color_size<<3)
     
     def __getitem__(self, x: int) -> PxBufferLine[WT_COLOR]:
-        return self.T(PixelBuffer.PxBufferLine(x, self))   
+        return PixelBuffer.PxBufferLine(x, self)
      
     def get(self, x: int, y: int) -> int:
         return int.from_bytes(bytes(i_cast(self.buffer+((x+y*self.width)*self.color_size), PTR(BYTE * self.color_size)).contents), 'little')
@@ -46,3 +46,6 @@ class PixelBuffer(Generic[WT_COLOR], metaclass=PixelBufferMeta):
         
     def map(self, dc: DC, x: int, y: int, width: int, height: int):
         dc.stretch_di_bits(x, y, 0, 0, width, height, self.width, self.height, self.buffer, self.info)
+        
+    def __del__(self):
+        self.allocator.deallocate(self.buffer)

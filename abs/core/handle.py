@@ -154,6 +154,14 @@ class StockObject(GDIObjectHandle):
     def close(self):
         self._closed = True
 
+@gdi32.foreign(BOOL, HDC, ULONG, PVOID)
+def GdiDrawStream(hdc: int, size: int, pDS: WT_ADDRLIKE) -> int: ...
+
+DS_TRUESIZE = 0x20
+DS_TILE = 0x2
+DS_TRANSPARENTALPHA = 0x4
+DS_TRANSPARENTCLR = 0x8
+
 class DC(Handle):
     """
     Class, representing GDI Device Context (DC).
@@ -961,6 +969,57 @@ class DC(Handle):
         """
         if not Rectangle(self, *tuple(rc)):
             raise WinException()
+        
+    def draw_stream(self, lp: MemoryIO | WT_ADDRLIKE, size: int | None = None):
+        """
+        Draw the by internal GDI stream operation like nine-grid stretching.
+        """
+        if isinstance(lp, MemoryIO):
+            size = lp.memory_size - lp.memory_position
+            lp = lp.memory_address + lp.memory_position
+        if not GdiDrawStream(self, size, lp):
+            raise WinException()
+    
+    def ninegrid_stretch(self, bitmap: int | HANDLE, rect: RECT, margins: MARGINS, clip: RECT | None = None, source: RECT | None = None, options: int = 0, transparent_color: Color.IColor | int = 0):
+        """
+        Perform the Nine-Grid stretch of the bitmap.
+        """
+        if clip is None:
+            clip = rect
+        if source is None:
+            bmp = bitmap
+            if not isinstance(bmp, Bitmap):
+                bmp = Bitmap.foreign_owner(bmp)
+            bmp_desc = bmp.object
+            source = Rect.create(0, 0, bmp_desc.bmWidth, bmp_desc.bmHeight)
+        with io.BytesIO() as stream_io:
+            stream = ToolStreamOverIO(stream_io)
+            # 0x44726177 'DrwS' / 'SrwD'
+            stream.write(b'SwrD')
+            # op 0
+            stream.write_uint32(0)
+            stream.write_uint32(self.value)
+            stream.write_structure(clip)
+            # op 1
+            stream.write_uint32(1)
+            stream.write_uint32(bitmap.value)
+            # op 9
+            stream.write_uint32(9)
+            stream.write_structure(rect)
+            stream.write_structure(source)
+            stream.write_uint32(options)
+            stream.write_structure(margins)
+            # sentinel / gap
+            stream.write_uint32(0)
+            # save written data
+            stream.seek(0)
+            data = stream.read()
+        with MemoryIO.allocate(len(data)) as memory:
+            # write data to memory
+            memory.write(data)
+            memory.seek(0)
+            # GdiDrawStream
+            self.draw_stream(memory)
 
 class Monitor(HMONITOR):
     @classmethod
@@ -1694,6 +1753,28 @@ class Bitmap(GDIObjectHandle):
         if not bitmap.value:
             raise WinException()
         return bitmap
+    
+    def copy(self, size: GraphicUtils.Size = (0, 0), flags: int = 0) -> 'Bitmap':
+        """
+        Copy the bitmap.
+        """
+        width, height = GraphicUtils.size(size)
+        instance = self.__class__(CopyImage(self, IMAGE_BITMAP, width, height, flags))
+        if not instance: raise WinException()
+        return instance
+    
+    def clip(self, rect: Rect) -> 'Bitmap':
+        """
+        Clip the bitmap in desired rectangle.
+        """
+        with DC.get() as screen_dc:
+            with screen_dc.create_compatible() as new_dc:
+                with screen_dc.create_compatible() as old_dc:
+                    new = screen_dc.create_compatible_bitmap(rect.width, rect.height)
+                    with new_dc.select_ex(new):
+                        with old_dc.select_ex(self):
+                            new_dc.bit_blt(0, 0, rect.x, rect.y, rect.width, rect.height, old_dc, SRCCOPY)
+                    return new
 
 class PaintDC(DC):
     """

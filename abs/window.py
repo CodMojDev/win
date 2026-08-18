@@ -21,6 +21,9 @@ import random
 # imports from typing module
 from typing import Iterator
 
+# import from DefbCI
+from win import _defbase_ctypinit as _defb_ci
+
 # # # # # # # # # # # # # # # # # # # #
 # Win Abstractions Layer code Begins
 
@@ -963,6 +966,9 @@ class Window(Abs.Object, HWND):
     _timers: dict[int, FARPROC]
     class_name: str | None
     
+    def on_fully_created(self):
+        pass
+    
     def Window_on_nc_destroy(self):
         # notify the application cycle what one of application-hosted windows is destroyed
         app = WindowLoopUnit.current(running=False)
@@ -1201,6 +1207,7 @@ class Window(Abs.Object, HWND):
             else: return
         
         Window._foreign_cache[self.value] = self
+        self.on_fully_created()
     
     def on_paint(self, dc: PaintDC) -> bool:
         return False
@@ -1885,7 +1892,7 @@ class Window(Abs.Object, HWND):
         """
         pointsToMap = [GraphicUtils.point(point) for point in points]
         length = len(points)
-        pPoints = (POINT * length)(*pointsToMap)
+        pPoints = (Point * length)(*pointsToMap)
         MapWindowPoints(self, window, pPoints, length)
         return tuple(pPoints)
     
@@ -2447,7 +2454,16 @@ class Window(Abs.Object, HWND):
     def frozen(self) -> bool:
         return IsHungAppWindow(self) != FALSE
     
-    
+class Mouse:
+    @staticmethod
+    def track(window: int | HANDLE, flags: int = TME_LEAVE, hover_time: int = 0):
+        tme = TRACKMOUSEEVENT()
+        tme.cbSize = tme.size()
+        tme.dwFlags = flags
+        tme.dwHoverTime = hover_time
+        tme.hwndTrack = window
+        if not TrackMouseEvent(tme.ref()):
+            raise WinException()
 
 class MDIMenu(Menu):
     """
@@ -2999,11 +3015,12 @@ class Control(Window):
     
     _id_last: ClassVar[int] = 0x7ff
     
-    def __init__(self, parent: int | HWND, identifier: int | HMENU):
+    def __init__(self, parent: int | HWND=None, identifier: int | HMENU=None, **kwargs):
         super().__init__()
-        self._style = WS_CHILD | WS_VISIBLE
-        self._identifier = identifier
-        self._parent = parent
+        if 'headless' not in kwargs:
+            self._style = WS_CHILD | WS_VISIBLE
+            self._identifier = identifier
+            self._parent = parent
      
     _identifier: int | HMENU
     _parent: int | HWND
@@ -3072,7 +3089,7 @@ class GLWindow(Window):
         self.manual_initialize = False # let you manually initialize the OpenGL context. by default it is OFF
         
         # OpenGL-specific window event subscribing
-        ThreadLoopUnit.current().after_message += self.GL_after_message
+        ThreadLoopUnit.current(False).after_message += self.GL_after_message
         self.on_close += self.GL_close
         
         # setup the OpenGL pixel format
@@ -3099,7 +3116,7 @@ class GLWindow(Window):
         """
         
         self.enable_after_message_render = False
-        ThreadLoopUnit.current().after_message -= self.GL_after_message
+        ThreadLoopUnit.current(False).after_message -= self.GL_after_message
     
     def GL_after_message(self):
         # standard after-message handler, execute OpenGL tick event and swap the buffers
@@ -3109,7 +3126,7 @@ class GLWindow(Window):
     def GL_close(self):
         # OpenGL window closed, if enabled after-message render when unbind it from application
         if self.enable_after_message_render:
-            ThreadLoopUnit.current().after_message -= self.GL_after_message
+            ThreadLoopUnit.current(False).after_message -= self.GL_after_message
         return True
     
     def initialize_gl(self):

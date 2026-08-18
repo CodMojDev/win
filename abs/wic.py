@@ -202,7 +202,7 @@ class BitmapEx(Bitmap):
         decoder = BitmapDecoder.from_filename(file_name)
         frame = decoder.frames[0]
         converter = FormatConverter()
-        converter.initialize(frame, GUID_WICPixelFormat32bppBGR)
+        converter.initialize(frame, GUID_WICPixelFormat32bppBGRA)
         width, height = frame.size
         info = BitmapInfo(width, height, 32)
         pvBits = PVOID()

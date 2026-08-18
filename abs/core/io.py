@@ -1,6 +1,7 @@
 from win.defbase_errordef import *
 from win.minwindef import *
 from win.com.objinterfacedef import *
+from win.defbase_allocator import *
 
 kernel32 = get_win_library('kernel32.dll')
 
@@ -31,11 +32,20 @@ class MemoryIO(io.IOBase):
     memory_position: int
     memory_address: int
     memory_size: int
+    close_callback: Callable[[], None]
+    
+    @classmethod
+    def allocate(cls, size: int, allocator: IAllocator = CLocalAllocator()) -> 'MemoryIO':
+        address = allocator.allocate(size)
+        instance = cls(address, size)
+        instance.close_callback = lambda: allocator.deallocate(address)
+        return instance
     
     def __init__(self, address: WT_ADDRLIKE, size: int = -1):
         self.memory_address = PtrUtil.get_address(address)
         self.memory_position = 0
         self.memory_size = size
+        self.close_callback = lambda: None
     
     def __iter__(self) -> int:
         if self.memory_size == -1:
@@ -49,6 +59,11 @@ class MemoryIO(io.IOBase):
         if not data:
             raise StopIteration
         return data
+    
+    def close(self):
+        if self._checkClosed: return
+        self._checkClosed = True
+        self.close_callback()
     
     def tell(self) -> int:
         return self.memory_position
@@ -102,7 +117,11 @@ class MemoryIO(io.IOBase):
         
         if self.memory_size != -1:
             if data_length >= self.memory_size:
-                data_length = -self.memory_size + self.memory_position
+                remaining = self.memory_size - self.memory_position
+                if remaining <= 0:
+                    return 0
+                if data_length > remaining:
+                    data_length = remaining
             data = data[:data_length]
         
         buffer = create_string_buffer(data)
@@ -521,6 +540,12 @@ class ToolStreamOverIO(DelegatingStream):
         """
         return UINT64.from_buffer_copy(self.read(8)).value
     
+    def read_pointer(self) -> int:
+        """
+        Read the pointer from stream.
+        """
+        return self.read_structure(PVOID).value
+    
     def read_float(self) -> float:
         """
         Read the single float from stream.
@@ -533,7 +558,7 @@ class ToolStreamOverIO(DelegatingStream):
         """
         return DOUBLE.from_buffer_copy(self.read(8)).value
     
-    def read_structure(self, structure: type[WT_SIMPLESTRUCTURE]) -> WT_SIMPLESTRUCTURE:
+    def read_structure(self, structure: type[WTCT]) -> WTCT:
         """
         Read the structure from stream.
         """
@@ -660,6 +685,12 @@ class ToolStreamOverIO(DelegatingStream):
         Write the unsigned 64-bit integer into stream.
         """
         return self.write(bytes(UINT64(integer)))
+    
+    def write_pointer(self, value: WT_ADDRLIKE) -> int:
+        """
+        Write the pointer to stream.
+        """
+        return self.write(bytes(PVOID(PtrUtil.get_address(value))))
     
     def write_float(self, value: float) -> int:
         """

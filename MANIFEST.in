@@ -1,0 +1,5 @@
+recursive-include abs/controls/data *
+recursive-include abs/data *
+recursive-include com/data *
+recursive-include com/icl/iclstorage *
+recursive-include *.py
