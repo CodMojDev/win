@@ -248,6 +248,9 @@ class IPropertyStore(IUnknown):
     def SetValue(self, key: PROPERTYKEY, propvar: PROPVARIANT, **kwargs) -> int:
         return self.virt_delegate(key.ref(), propvar.ref())
     
+    @virtual_table.com_function()
+    def Commit(self) -> int: ...
+    
     virtual_table.build()
     
 LPPROPERTYSTORE = PTR(IPropertyStore)

@@ -41,7 +41,7 @@ class MemoryIO(io.IOBase):
         instance.close_callback = lambda: allocator.deallocate(address)
         return instance
     
-    def __init__(self, address: WT_ADDRLIKE, size: int = -1):
+    def __init__(self, address: WT_ADDRLIKE = -1, size: int = -1):
         self.memory_address = PtrUtil.get_address(address)
         self.memory_position = 0
         self.memory_size = size

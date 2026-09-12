@@ -1,6 +1,7 @@
 from win.wingdi import *
 from win.winuser import *
-from typing import Self, TypeVar
+from typing import TypeVar
+from typing_extensions import Self
 from .geom import *
 
 class Color:

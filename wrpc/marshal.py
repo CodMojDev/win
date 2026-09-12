@@ -20,7 +20,7 @@ class IWRPCMarshal(IInterface):
     
     @interface_abstract_method
     @classmethod
-    def unmarshal(self, stream: Stream) -> Any:
+    def unmarshal(self, stream: WRPCStream) -> Any:
         """
         Unmarshal marshalled object on stream into Python object.
         """

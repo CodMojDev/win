@@ -30,6 +30,7 @@ if cpreproc.pragma_once("_SYSINFOAPI_H_"):
             ("dwOemId", DWORD), # Obsolete field...do not use
             ("s", _S_WW)
         ]
+        _anonymous_ = ['s']
 
     class _SYSTEM_INFO(CStructure):
         _fields_ = [
@@ -44,6 +45,19 @@ if cpreproc.pragma_once("_SYSINFOAPI_H_"):
             ("wProcessorLevel", WORD),
             ("wProcessorRevision", WORD)
         ]
+        _anonymous_ = ['u']
+        wProcessorArchitecture: int
+        wReserved: int
+        dwOemId: int
+        dwPageSize: int
+        lpMinimumApplicationAddress: int
+        lpMaximumApplicationAddress: int
+        dwActiveProcessorMask: int
+        dwNumberOfProcessors: int
+        dwProcessorType: int
+        dwAllocationGranularity: int
+        wProcessorLevel: int
+        wProcessorRevision: int
     SYSTEM_INFO = _SYSTEM_INFO
     LPSYSTEM_INFO = POINTER(SYSTEM_INFO)
 

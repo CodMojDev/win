@@ -1825,9 +1825,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 ("cyIntegral", UINT),
                 ("cxIdeal", UINT), 
                 ("lParam", LPARAM),
-                ("cxHeader", UINT),
-                ("rcChevronLocation", RECT), # the rect is in client co-ord wrt hwndChild
-                ("uChevronState", UINT), # STATE_SYSTEM_*
+                ("cxHeader", UINT)
             ]
             if cpreproc.get_version() >= WIN32_WINNT_VISTA:
                 _fields_.extend([
@@ -6351,10 +6349,10 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                 cxWidth: int
 
             @comctl32.foreign(HRESULT, PTR(TASKDIALOGCONFIG), PINT, PINT, PBOOL)
-            def TaskDialogIndirect(self, pTaskConfig: IPointer[TASKDIALOGCONFIG], pnButton: PINT, pnRadioButton: PINT, pfVerificationFlagChecked: PBOOL) -> int: ...
+            def TaskDialogIndirect(pTaskConfig: IPointer[TASKDIALOGCONFIG], pnButton: PINT, pnRadioButton: PINT, pfVerificationFlagChecked: PBOOL) -> int: ...
             
             @comctl32.foreign(HRESULT, HWND, HINSTANCE, LPCWSTR, LPCWSTR, LPCWSTR, TASKDIALOG_COMMON_BUTTON_FLAGS, LPCWSTR, PINT)
-            def TaskDialog(self, hwndOwner: int, hInstance: int, pszWindowTitle: LPCWSTR, pszMainInstruction: LPCWSTR, pszContent: LPCWSTR, dwCommonButtons: int, pszIcon: LPCWSTR, pnButton: PINT) -> int: ...
+            def TaskDialog(hwndOwner: int, hInstance: int, pszWindowTitle: LPCWSTR, pszMainInstruction: LPCWSTR, pszContent: LPCWSTR, dwCommonButtons: int, pszIcon: LPCWSTR, pnButton: PINT) -> int: ...
 
         # (_WINVER >= WIN32_WINNT_VISTA)
     # NOTASKDIALOG

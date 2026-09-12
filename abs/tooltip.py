@@ -10,7 +10,7 @@ class Tooltip(Window):
     def create(self, parent: int | HANDLE = NULL):
         super().create(parent)
         self.set_position(insert_after=HWND_TOPMOST, flags=SWP_NOACTIVATE)
-        
+    TTM_ACTIVATE
     def activate(self, activate: bool = True):
         self.send(TTM_ACTIVATE, activate)
         

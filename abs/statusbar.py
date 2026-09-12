@@ -41,6 +41,7 @@ class StatusBar(Control):
         self.value = CreateStatusWindowW(self._style, self._text, self._parent, self._identifier)
         if not self.value:
             raise WinException()
+        self.on_fully_created()
         
     def __setitem__(self, index: int, value: str):
         buf = create_unicode_buffer(value)
@@ -51,11 +52,11 @@ class StatusBar(Control):
         return self.Item(self, index)
     
     @property
-    def parts(self) -> tuple[int, ...]:
+    def parts(self) -> list[int]:
         nParts = self.send(SB_GETPARTS, lParam=NULL)
         buf = (INT * nParts)()
         self.send(SB_GETPARTS, nParts, buf)
-        return tuple(buf)
+        return list(buf)
         
     @parts.setter
     def parts(self, parts: Iterable[int]):
@@ -65,3 +66,6 @@ class StatusBar(Control):
             iParts.append(int(part))
         pParts = (INT * length)(*iParts)
         self.send(SB_SETPARTS, length, pParts)
+        
+    def count(self) -> int:
+        return self.send(SB_GETPARTS, 0, NULL)

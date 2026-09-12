@@ -5,6 +5,7 @@ from win.abs.edit import *
 from win.abs.combobox import *
 from win.abs.msgbox import *
 from win.abs.toolbar import *
+from win.abs.updown import *
 
 PGIO_REVERT = 0
 PGIO_DBLCLK = 1
@@ -46,11 +47,6 @@ class PropertyGridItem:
         Abort if the property grid item is in edit mode.
         """
         return True
-        
-    def show(self):
-        """
-        Show the property grid item.
-        """
 
     def hide(self):
         """
@@ -91,8 +87,8 @@ class PropertyGridItemString(PropertyGridItem):
         if self.view is None:
             self.view = view
         if self.edit is None:
-            self.edit = Edit(rect.width, rect.height, view, 0, text=self.text)
-            
+            self.unique_edit_id = random.randint(0, 1<<31)
+            self.edit = Edit(rect.width, rect.height, view, Identifiers[f'PropertyGridItemString->Edit-{self.unique_edit_id}'], text=self.text)
             self.edit.style |= self.styles
             self.edit.create(rect.x, rect.y)
             self.edit.font = view.logical_name_font
@@ -109,10 +105,6 @@ class PropertyGridItemString(PropertyGridItem):
             font = self.view.logical_name_font
         with dc.select_ex(font):
             dc.draw_text(self.text, rect, DT_LEFT)
-    
-    def show(self):
-        if self.edit is not None and not self.edit.visible:
-            self.edit.show()
             
     def hide(self):
         if self.edit is not None and self.edit.visible:
@@ -124,16 +116,17 @@ class PropertyGridItemString(PropertyGridItem):
     def abort(self) -> bool:
         if self.edit is not None:
             self.edit.hide()
-            self.text = self.edit.name
+            self.text = self.edit.text
             self.operation(PGIO_COMMIT)
         return True
     
     def operation(self, op: int):
         if op == PGIO_DBLCLK:
-            self.edit.selection = (0, len(self.edit.name))
+            self.edit.selection = (0, -1)
         elif op == PGIO_REVERT:
             self.text = self.original_text
         elif op == PGIO_COMMIT:
+            self.text = self.edit.text
             if self.text != self.original_text:
                 self.view.on_item_updated.execute(self)
         elif op == PGIO_FOCUS:
@@ -167,8 +160,9 @@ class PropertyGridItemCombobox(PropertyGridItem):
         if self.view is None:
             self.view = view
         if self.combobox is None:
-            self.combobox = Combobox(rect.width, rect.height, view, Identifiers['PropertyGridItemCombobox->Combobox'])
-            self.combobox.styles.add(CBS_DROPDOWN)
+            self.unique_combobox_id = random.randint(0, 1<<31)
+            self.combobox = Combobox(rect.width, rect.height, view, Identifiers[f'PropertyGridItemCombobox->Combobox-{self.unique_combobox_id}'])
+            self.combobox.styles.add(CBS_DROPDOWNLIST)
             self.combobox.create(rect.x, rect.y)
             self.combobox.font = self.view.logical_name_font
             for variant in self.variants:
@@ -198,10 +192,6 @@ class PropertyGridItemCombobox(PropertyGridItem):
             self.combobox.hide()
             self.operation(PGIO_COMMIT)
         return True
-    
-    def show(self):
-        if self.combobox is not None and not self.combobox.visible:
-            self.combobox.show()
             
     def hide(self):
         if self.combobox is not None and self.combobox.visible:
@@ -218,6 +208,7 @@ class PropertyGridItemCombobox(PropertyGridItem):
                 self.combobox.current = self.current
             self.view.invalidate()
         elif op == PGIO_COMMIT:
+            self.current = self.combobox.current
             if self.current != self.default:
                 self.view.on_item_updated.execute(self)
         elif op == PGIO_FOCUS:
@@ -284,14 +275,16 @@ class PropertyGridItemColor(PropertyGridItem):
             self.view = view
             view.command_hooks.append(self.on_command)
         if self.button is None:
-            self.button = Button(25, rect.height, view, Identifiers['PropertyGridItemColor->Color-Button'], text='...')
+            self.unique_button_id = random.randint(0, 1<<31)
+            self.button = Button(25, rect.height, view, Identifiers[f'PropertyGridItemColor->Color-Button-{self.unique_button_id}'], text='...')
             self.button.create(rect.right-25, rect.y)
             self.button.hide()
         else:
             self.button.position = (rect.right-25, rect.y)
             self.button.size = (25, rect.height)
         if self.edit is None:
-            self.edit = Edit(rect.width - 25 - 24 - 2, rect.height, view, Identifiers['PropertyGridItemColor->Edit'])
+            self.unique_edit_id = random.randint(0, 1<<31)
+            self.edit = Edit(rect.width - 25 - 24 - 2, rect.height, view, Identifiers[f'PropertyGridItemColor->Edit-{self.unique_edit_id}'])
             self.edit.create(rect.x + 24 + 2, rect.y)
             self.edit.font = view.logical_name_font
             self.edit.hide()
@@ -300,18 +293,13 @@ class PropertyGridItemColor(PropertyGridItem):
             self.edit.size = (rect.width - 25 - 24 - 2, rect.height)
             
     def on_command(self, identifier: int, code: int, hwnd: int) -> bool:
-        if identifier == Identifiers['PropertyGridItemColor->Color-Button']:
-            dialog = ColorDialog(self.view, color=self.color)
-            if dialog.create():
-                self.color = dialog.color
-                self.edit.name = '#'+str(self.color.rgb())[2:]
-                self.view.invalidate()
-                
-    def show(self):
-        if self.button is not None and not self.button.visible:
-            self.button.show()
-        if self.edit is not None and not self.edit.visible:
-            self.edit.show()
+        if identifier == Identifiers[f'PropertyGridItemColor->Color-Button-{self.unique_button_id}']:
+            if code == BN_CLICKED:
+                dialog = ColorDialog(self.view, color=self.color)
+                if dialog.create():
+                    self.color = dialog.color
+                    self.edit.name = '#'+str(self.color.rgb())[2:]
+                    self.view.invalidate()
             
     def hide(self):
         if self.button is not None and self.button.visible:
@@ -455,6 +443,9 @@ class PropertyGridView(Window):
         
         # render mode
         self.render_mode = PGVRM_DIRECTORIES
+        
+        # allow double clicks
+        self.class_style = CS_DBLCLKS
     
     def gridview_on_mouse_wheel(self, delta: int, key_flags: int, x: int, y: int):
         sbi = SCROLLBARINFO()
@@ -629,14 +620,14 @@ class PropertyGridView(Window):
                 self.ht_map.append((rect, PGVHT_BUDDY, i))
                 row.host(self, rect)
                 if row.selected: row.enter()
-                
-                with dc.create_compatible_bitmap(rect.width, rect.height) as bitmap:
-                    with dc.create_compatible() as mem_dc:
-                        with mem_dc.select_ex(bitmap):
-                            # fill the property grid item value background
-                            mem_dc.fill(Rect.create(0, 0, rect.width, rect.height), self.background_brush)
-                            row.paint(mem_dc)
-                            dc.bit_blt(rect.x, rect.y, 0, 0, rect.width, rect.height, mem_dc, SRCCOPY)
+                else:
+                    with dc.create_compatible_bitmap(rect.width, rect.height) as bitmap:
+                        with dc.create_compatible() as mem_dc:
+                            with mem_dc.select_ex(bitmap):
+                                # fill the property grid item value background
+                                mem_dc.fill(Rect.create(0, 0, rect.width, rect.height), self.background_brush)
+                                row.paint(mem_dc)
+                                dc.bit_blt(rect.x, rect.y, 0, 0, rect.width, rect.height, mem_dc, SRCCOPY)
             else:
                 # if row is not in view range, skip it
                 if i < self.minimal: 

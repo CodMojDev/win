@@ -205,16 +205,34 @@ class BitmapEx(Bitmap):
         converter.initialize(frame, GUID_WICPixelFormat32bppBGRA)
         width, height = frame.size
         info = BitmapInfo(width, height, 32)
-        pvBits = PVOID()
-        hBitmap = CreateDIBSection(NULL, info.ref(), DIB_RGB_COLORS, byref(pvBits), NULL, 0)
-        if not hBitmap: raise WinException()
-        bitmap = BitmapEx(hBitmap)
+        bits = MemoryIO()
+        bitmap = BitmapEx.section(info, bits)
         stride = width * 4
         size = stride * height
-        converter.copy(pvBits, stride, size, NULL)
+        converter.copy(bits.memory_address, stride, size, NULL)
         return bitmap
 
 class IconEx(Icon):
+    @classmethod
+    def from_image(self, file_name: str) -> 'IconEx':
+        decoder = BitmapDecoder.from_filename(file_name)
+        frame = decoder.frames[0]
+        converter = FormatConverter()
+        converter.initialize(frame, GUID_WICPixelFormat32bppBGRA)
+        width, height = frame.size
+        info = BitmapInfo(width, height, 32)
+        bits = MemoryIO()
+        bitmap = Bitmap.section(info, bits)
+        stride = width * 4
+        size = stride * height
+        converter.copy(bits.memory_address, stride, size, NULL)
+        mask = Bitmap.create(width, height, bit_count=1)
+        ii = ICONINFO()
+        ii.fIcon = TRUE
+        ii.hbmColor = bitmap
+        ii.hbmMask = mask
+        return Icon.indirect(ii)
+    
     def save(self, file: str | io.IOBase):
         if not isinstance(file, io.IOBase):
             stream = FileStream(file)

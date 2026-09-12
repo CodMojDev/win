@@ -19,7 +19,7 @@ class TreeItem(HTREEITEM):
             Begin the label editing for tree item.
             """
             
-            hEdit = self.tree_item.tree_view.send(TVM_EDITLABELW, lParam=self)
+            hEdit = self.tree_item.tree_view.send(TVM_EDITLABELW, lParam=self.tree_item)
             if not hEdit: return None
             return Edit.foreign(hEdit)
         
@@ -222,24 +222,24 @@ class TreeView(Control):
         super().create(self._width, self._height, x, y, '', relative)
         
     @property
-    def bk_color(self) -> Color.RGB:
-        return Color.RGB(self.send(TVM_GETBKCOLOR))
+    def bk_color(self) -> Color.BGR:
+        return Color.BGR(self.send(TVM_GETBKCOLOR))
     
     @bk_color.setter
     def bk_color(self, bk_color: int | Color.IColor):
         self.send(TVM_SETBKCOLOR, lParam=int(bk_color))
         
     @property
-    def text_color(self) -> Color.RGB:
-        return Color.RGB(self.send(TVM_GETTEXTCOLOR))
+    def text_color(self) -> Color.BGR:
+        return Color.BGR(self.send(TVM_GETTEXTCOLOR))
     
     @text_color.setter
     def text_color(self, text_color: int | Color.IColor):
         self.send(TVM_SETTEXTCOLOR, lParam=int(text_color))
         
     @property
-    def line_color(self) -> Color.RGB:
-        return Color.RGB(self.send(TVM_GETLINECOLOR))
+    def line_color(self) -> Color.BGR:
+        return Color.BGR(self.send(TVM_GETLINECOLOR))
     
     @line_color.setter
     def line_color(self, line_color: int | Color.IColor):

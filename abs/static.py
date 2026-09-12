@@ -33,14 +33,3 @@ class Static(Control):
     @cursor.setter
     def cursor(self, cursor: int | HANDLE):
         self.send(STM_SETIMAGE, IMAGE_CURSOR, cursor)
-        
-    @property
-    def text(self) -> str:
-        i = self.send(WM_GETTEXTLENGTH)
-        p = create_unicode_buffer(i)
-        self.send(WM_GETTEXT, i, p)
-        return p.value
-    
-    @text.setter
-    def text(self, text: str):
-        self.send(WM_SETTEXT, 0, text)

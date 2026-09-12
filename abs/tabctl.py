@@ -80,12 +80,21 @@ class TabControl(Control):
             
         def __eq__(self, tab: 'TabControl.Tab') -> bool:
             return self.index == tab.index
-        
+    
+    on_selection_changing: MultiEvent
+    on_selection_changed: MultiEvent
+    on_get_object: MultiEvent
+    on_tc_key_down: MultiEvent
+    
     def __init__(self, width: int, height: int, parent: int | HANDLE, identifier: int | HANDLE):
         super().__init__(parent, identifier)
         self.class_name = WC_TABCONTROLW
         self._width = width
         self._height = height
+        self.on_selection_changing = MultiEvent()
+        self.on_selection_changed = MultiEvent()
+        self.on_get_object = MultiEvent()
+        self.on_tc_key_down = MultiEvent()
     
     def create(self, x: int = 0, y: int = 0, relative: int | HWND = NULL):
         super().create(self._width, self._height, x, y, '', relative=relative)
@@ -214,3 +223,15 @@ class TabControl(Control):
         rc = display_rect.copy()
         self.send(TCM_ADJUSTRECT, TRUE, rc.ref())
         return rc
+    
+    def parent_window_on_notify(self, nm: NMHDR):
+        if nm.hwndFrom == self.value:
+            code = INT(nm.code).value
+            if code == TCN_SELCHANGING:
+                self.on_selection_changing.execute()
+            elif code == TCN_SELCHANGE:
+                self.on_selection_changed.execute()
+            elif code == TCN_KEYDOWN:
+                self.on_tc_key_down.execute(i_cast_structure(nm, NMTCKEYDOWN))
+            else:
+                super().parent_window_on_notify(nm)

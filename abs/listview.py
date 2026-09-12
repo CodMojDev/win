@@ -21,7 +21,6 @@ class ListView(Control):
                 """
                 Select column.
                 """
-                
                 self.list_view.send(LVM_SETSELECTEDCOLUMN, self.index)
             
             @property
@@ -31,6 +30,13 @@ class ListView(Control):
             @width.setter
             def width(self, width: int):
                 self.list_view.send(LVM_SETCOLUMNWIDTH, self.index, width)
+        
+            def delete(self):
+                """
+                Delete the column.
+                """
+                if not self.list_view.send(LVM_DELETECOLUMN, self.index):
+                    raise WinException()
             
         list_view: 'ListView'
         
@@ -48,6 +54,7 @@ class ListView(Control):
             
             if text is not None:
                 text = create_unicode_buffer(text)
+                setattr(column, '_buffer_cache', text)
                 column.pszText = i_cast(text, LPWSTR)
                 column.cchTextMax = len(text)
                 column.mask |= LVCF_TEXT
@@ -101,6 +108,18 @@ class ListView(Control):
                            LVCF_DEFAULTWIDTH | LVCF_IDEALWIDTH | LVCF_ORDER | LVCF_TEXT)
             if not self.list_view.send(LVM_SETCOLUMNW, index, column.ref()):
                 raise IndexError(f'Invalid item index: {index}')
+        
+        def clear(self):
+            """
+            Clear all the columns.
+            """
+            while True:
+                try:
+                    column = ListView.Columns.Column(self.list_view)
+                    column.index = 0
+                    column.delete()
+                except:
+                    break
         
     class Items:
         class Item(LVITEMW):

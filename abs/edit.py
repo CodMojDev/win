@@ -9,6 +9,15 @@ class Edit(Control):
     Win32 Edit common control.
     """
     
+    on_update: MultiEvent
+    on_edit_vscroll: MultiEvent
+    on_edit_hscroll: MultiEvent
+    on_changed: MultiEvent
+    on_limit_reached: MultiEvent
+    on_out_of_memory: MultiEvent
+    on_realigned_to_rtl: MultiEvent
+    on_realigned_to_ltr: MultiEvent
+    
     def __init__(self, width: int=None, height: int=None, parent: int | HWND=None, 
                  identifier: int | HMENU=None, text: str = '', readonly: bool = False, **kwargs):
         super().__init__(parent, identifier)
@@ -19,6 +28,14 @@ class Edit(Control):
             self._text = text
             self._width = width
             self._height = height
+            self.on_changed = MultiEvent()
+            self.on_update = MultiEvent()
+            self.on_edit_vscroll = MultiEvent()
+            self.on_edit_hscroll = MultiEvent()
+            self.on_realigned_to_rtl = MultiEvent()
+            self.on_realigned_to_ltr = MultiEvent()
+            self.on_out_of_memory = MultiEvent()
+            self.on_limit_reached = MultiEvent()
             
     @property
     def selection(self) -> tuple[int, int]:
@@ -29,22 +46,20 @@ class Edit(Control):
     
     @selection.setter
     def selection(self, selection: tuple[int, int]):
-        self.post(EM_SETSEL, selection[0], selection[1])
+        self.send(EM_SETSEL, selection[0], selection[1])
         
     def undo(self):
         """
         Undo the changes to edit control.
         """
-        
-        self.post(EM_UNDO)
+        self.send(EM_UNDO)
         
     def redo(self):
         """
         Redo the changes to edit control.
         """
-        
-        self.post(EM_REDO)
-        
+        self.send(EM_REDO)
+    
     @property
     def readonly(self) -> bool:
         return self.style & ES_READONLY
@@ -98,3 +113,29 @@ class Edit(Control):
         tip.ttiIcon = icon
         
         self.send(EM_SHOWBALLOONTIP, 0, tip.ref())
+        
+    @property
+    def text(self) -> str:
+        length = self.send(WM_GETTEXTLENGTH)
+        text = create_unicode_buffer(length)
+        self.send(WM_GETTEXT, length+1, text)
+        return text.value
+    
+    def parent_window_on_command(self, identifier: int, notify_code: int, hwnd: int):
+        if identifier == self.identifier:
+            if notify_code == EN_ALIGN_LTR_EC:
+                self.on_realigned_to_ltr.execute()
+            elif notify_code == EN_ALIGN_RTL_EC:
+                self.on_realigned_to_rtl.execute()
+            elif notify_code == EN_UPDATE:
+                self.on_update.execute()
+            elif notify_code == EN_CHANGE:
+                self.on_changed.execute()
+            elif notify_code == EN_ERRSPACE:
+                self.on_out_of_memory.execute()
+            elif notify_code == EN_HSCROLL:
+                self.on_edit_hscroll.execute()
+            elif notify_code == EN_VSCROLL:
+                self.on_edit_vscroll.execute()
+            else:
+                super().parent_window_on_command(identifier, notify_code, hwnd)

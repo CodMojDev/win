@@ -182,7 +182,7 @@ class WARResource:
                     return item.child(self.ref_res_item)
                 else:
                     return file.item(self.ref_res_item)
-        data = self.file.get(self.offset)
+        data = self.file.data(self.offset)
         self.cached = data
         return data
     
@@ -208,16 +208,20 @@ class WARFile:
     resources_offset: int
     data_map: list[bytes]
     
-    def __init__(self, path: str | None):
-        if path in self.CACHE: return
+    def __init__(self, path: str | None = None):
         self.path = path
         
         if path is not None:
-            self.file = open(path, 'rb')
-            self.stream = ToolStreamOverIO(self.file)
+            if path not in WARFile.CACHED:
+                self.file = open(path, 'rb')
+                self.stream = ToolStreamOverIO(self.file)
+                self.loaded = False
+            else:
+                self.loaded = WARFile.CACHED.get(path).loaded
+        else:
+            self.loaded = False
         
         self.resources = []
-        self.loaded = False
         self.data_map = []
         
     def load(self):
@@ -229,14 +233,14 @@ class WARFile:
         self.data_offset = self.stream.read_uint32()
         self.resources_offset = self.stream.read_uint32()
         
-        self.stream.seek(self.data_offset)
+        self.stream.seek(self.resources_offset)
         count = self.stream.read_uint32()
         for _ in range(count):
             resource = WARResource(self)
             resource.load(self.stream)
             self.resources.append(resource)
         
-        self.CACHE[self.path] = self
+        WARFile.CACHED[self.path] = self
         self.loaded = True
         
         self.stream.seek(self.data_offset)
@@ -260,7 +264,7 @@ class WARFile:
     
     def data(self, offset: int) -> bytes:
         last = self.stream.tell()
-        self.stream.seek(self.data_offset+offset)
+        self.stream.seek(self.data_offset+offset+4)
         length = self.stream.read_uint32()
         data = self.stream.read(length)
         self.stream.seek(last)
@@ -273,26 +277,21 @@ class WARFile:
         self.data_map.append(data)
         return offset
     
-    def internal_data_set(self, offset: int, data: bytes):
-        calculated = 0
-        for i, value in enumerate(self.data_map):
-            if calculated == offset: break
-            calculated += 4 + len(value)
-        self.data_map[i] = data
-    
-    def data_set(self, offset: int, data: bytes):
+    def internal_construct_data_changes(self) -> list[tuple[int, int]]:
         changes = []
         calculated = 0
         for value in self.data_map:
             changes.append((calculated, 0))
             calculated += 4 + len(value)
-        calculated = 0
-        self.internal_data_set(offset, data)
+        return changes
+    
+    def internal_apply_data_changes(self, changes: list[tuple[int, int]]):
         calculated = 0
         for i, value in enumerate(self.data_map):
             changes[i] = (changes[i][0], calculated)
             calculated += 4 + len(value)
         changes = dict(changes)
+        
         def recurse(resource: WARResource):
             if resource.children is not None:
                 for child in resource.children:
@@ -304,6 +303,7 @@ class WARFile:
                 if resource.ref_file is None:
                     if resource.offset in changes:
                         resource.offset = changes[resource.offset]
+                        resource.cached = None
                 else:
                     if resource.ref_file_offset in changes:
                         resource.ref_file_offset = changes[resource.ref_file_offset]
@@ -319,6 +319,45 @@ class WARFile:
 
         for resource in self.resources:
             recurse(resource)
+    
+    def internal_internal_data_remove(self, offset: int):
+        calculated = 0
+        found = None
+        for i, value in enumerate(self.data_map):
+            if calculated == offset:
+                found = i
+                break
+            calculated += 4 + len(value)
+        if found is not None:
+            self.data_map.pop(found)
+        
+    def internal_data_remove(self, offset: int):
+        changes = self.internal_construct_data_changes()
+        self.internal_internal_data_remove(offset)
+        self.internal_apply_data_changes(changes)
+    
+    def data_remove(self, offset: int):
+        self.internal_data_remove(offset)
+        self.save()
+    
+    def internal_internal_data_set(self, offset: int, data: bytes):
+        calculated = 0
+        found = None
+        for i, value in enumerate(self.data_map):
+            if calculated == offset:
+                found = i
+                break
+            calculated += 4 + len(value)
+        if found is not None:
+            self.data_map[found] = data
+    
+    def internal_data_set(self, offset: int, data: bytes):
+        changes = self.internal_construct_data_changes()
+        self.internal_internal_data_set(offset, data)
+        self.internal_apply_data_changes(changes)
+    
+    def data_set(self, offset: int, data: bytes):
+        self.internal_data_set()
         self.save()
     
     def save(self):
@@ -330,26 +369,40 @@ class WARFile:
         with io.BytesIO() as resources:
             stream = ToolStreamOverIO(resources)
             stream.write_uint32(len(self.resources))
+            
             def recurse(resource: WARResource):
                 if resource.children is not None:
                     stream.write_uint8(WAR_RESOURCE_FLAGS_DIRECTORY)
+                    stream.write_uint32(resource.string_offset)
                     stream.write_uint32(len(resource.children))
                     for child in resource.children:
                         recurse(child)
                 else:
+                    flags = 0
+                    if resource.ref_file is not None:
+                        flags |= WAR_RESOURCE_FLAGS_FILE
+                    if resource.string is not None:
+                        stream.write_uint8(flags | WAR_RESOURCE_FLAGS_STRING)
+                        stream.write_uint32(resource.string_offset)
+                    else:
+                        stream.write_uint8(flags)
+                        stream.write_uint32(resource.resource_id)
                     if resource.ref_file is not None:
                         if resource.ref_res_item is not None:
                             stream.write_uint8(WAR_RESOURCE_FILESPEC_WAR)
                             stream.write_uint32(resource.ref_file_offset)
                             stream.write_uint32(0)
                         else:
-                            stream.write_uint8(WAR_RESOURCE_FILESPEC_SIMPLE)
+                            stream.write_uint8(flags | WAR_RESOURCE_FILESPEC_SIMPLE)
                             stream.write_uint32(resource.ref_file_offset)
                             offsets_to_write_offset.append(stream.tell())
                             stream.write_uint32(0)
                             ignored_offsets.append(resource.ref_res_offset)
                             resources_to_retrieve_data.append(resource)
-                            
+                    else:
+                        stream.write_uint32(resource.offset)
+            for resource in self.resources:
+                recurse(resource)
             stream.seek(0)
             resources = stream.read()
         
@@ -388,17 +441,18 @@ class WARFile:
         self.stream = ToolStreamOverIO(self.file)
         
         self.stream.write(b'WART')
+        self.stream.seek(8, os.SEEK_CUR)
         
         self.resources_offset = self.stream.tell()
         self.stream.write(resources)
         last = self.stream.tell()
-        self.seek(8)
+        self.stream.seek(8)
         self.stream.write_uint32(self.resources_offset)
-        self.seek(last)
+        self.stream.seek(last)
         
         self.data_offset = self.stream.tell()
         self.stream.write(data)
-        self.seek(4)
+        self.stream.seek(4)
         self.stream.write_uint32(self.data_offset)
         
         self.file.flush()

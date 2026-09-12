@@ -354,6 +354,22 @@ TMT_ATLASIMAGE = 8000
 TMT_ATLASINPUTIMAGE = 8001
 TMT_ATLASRECT = 8002
 
+PO_STATE = 0
+PO_PART = 1
+PO_CLASS = 2
+PO_GLOBAL = 3
+PO_NOTFOUND = 4
+PROPERTYORIGIN = UINT
+
+@uxtheme.foreign(BOOL, HTHEME, INT, INT)
+def IsThemePartDefined(hTheme: int, iPartId: int, iStateId: int) -> int: ...
+
+@uxtheme.foreign(BOOL, HTHEME, INT, INT)
+def IsThemeBackgroundPartiallyTransparent(hTheme: int, iPartId: int, iStateId: int) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, LPCOLORREF)
+def GetThemeColor(hTheme: int, iPartId: int, iStateId: int, iPropId: int, pColor: IPointer[COLORREF]) -> int: ...
+
 class Theme(Handle):
     """
     Class, representing Windows theme.
@@ -404,6 +420,27 @@ class Theme(Handle):
         hr = GetThemeSysFont(self, font_id, lf.ref())
         if FAILED(hr): raise COMError(hr)
         return lf
+    
+    def partially_transparent(self, part_id: int, state_id: int) -> bool:
+        """
+        Check the visual style background is partially transparent.
+        """
+        return IsThemeBackgroundPartiallyTransparent(self, part_id, state_id) != FALSE
+
+    def part_defined(self, part_id: int, state_id: int) -> bool:
+        """
+        Check the given visual style part is defined in theme.
+        """
+        return IsThemePartDefined(self, part_id, state_id) != FALSE
+
+    def get_color(self, part_id: int, state_id: int, prop_id: int) -> Color.BGR:
+        """
+        Get the visual style part color which defined in theme.
+        """
+        color = COLORREF()
+        hr = GetThemeColor(self, part_id, state_id, prop_id, byref(color))
+        if FAILED(hr): raise COMError(hr)
+        return Color.BGR(color.value)
 
 class VisualStyleElement:
     THEME_HANDLES: ClassVar[dict[str, Theme]] = {}
@@ -457,6 +494,24 @@ class VisualStyleElement:
         Get the system font of Visual Style element.
         """
         return self.get(hwnd).get_system_font(font_id)
+ 
+    def partially_transparent(self, hwnd: int | HANDLE | None = None) -> bool:
+        """
+        Check the Visual Style Element background is partially transparent.
+        """
+        return self.get(hwnd).partially_transparent(self.part_id, self.state_id)
+ 
+    def defined(self, hwnd: int | HANDLE | None = None) -> bool:
+        """
+        Check the Visual Style Element is defined.
+        """
+        return self.get(hwnd).part_defined(self.part_id, self.state_id)
+    
+    def color(self, property_id: int, hwnd: int | HANDLE | None = None) -> Color.BGR:
+        """
+        Get the color of the Visual Style Element.
+        """
+        return self.get(hwnd).get_color(self.part_id, self.state_id, property_id)
  
 class VisualStyleElements:
     class Button:

@@ -1,15 +1,24 @@
 from win.commdlg import *
 from .window import *
 
-class FileDialog:
+class FileDialog(Window):
     """
     File dialog class.
     """
     
+    open_file: tagOFNW
+    on_message: SingleEvent
+    lpfnHook: FARPROC
+    lpstrFileTitle: IWideCharArray
+    lpstrFile: IWideCharArray
+    lpstrInitialDir: IWideCharArray | None
+    lpstrFilter: IWideCharArray | None
     
     def __init__(self, owner: int | HANDLE = NULL, show_help: bool = False,
                  filter: str = None, initial_dir: str = None, 
                  filter_index: int = 0, extra_flags: int = 0):
+        super().__init__()
+        
         # initialize OFNW structure
         self.open_file = tagOFNW()
         self.open_file.lStructSize = self.open_file.size()
@@ -52,7 +61,9 @@ class FileDialog:
         if initial_dir is not None:
             self.lpstrInitialDir = create_unicode_buffer(initial_dir)
             self.open_file.lpstrInitialDir = i_cast(self.lpstrInitialDir, LPWSTR)
-            
+        else:
+            self.lpstrInitialDir = None
+        
         # event for dlgproc handling
         self.on_message = SingleEvent()
     
@@ -88,16 +99,26 @@ class FileDialog:
         """
         Open "Open file" dialog.
         """
-        
-        return bool(GetOpenFileNameW(self.open_file.ref()))
+        result = GetOpenFileNameW(self.open_file.ref()) != FALSE
+        if not result:
+            code = CommDlgExtendedError()
+            if code != 0:
+                raise CommonDialogError(code)
+        return result
     
     def save(self) -> bool:
         """
         Open "Save as..." dialog.
         """
-        
-        return bool(GetSaveFileNameW(self.open_file.ref()))
+        result = GetSaveFileNameW(self.open_file.ref()) != FALSE
+        if not result:
+            code = CommDlgExtendedError()
+            if code != 0:
+                raise CommonDialogError(code)
+        return result
     
     def hook_proc(self, hWnd: int, uMsg: int, wParam: int, lParam: int) -> int:
+        if uMsg == WM_INITDIALOG:
+            self.value = hWnd
         if self.on_message.empty(): return FALSE
         return self.on_message.execute(hWnd, uMsg, wParam, lParam)

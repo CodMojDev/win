@@ -12,7 +12,10 @@ from . import cpreproc
 
 from .minwindef import *
 
-from .wingdi import LPDEVMODE, DEVMODEW, DM_COPIES, DM_COLLATE, LPLOGFONTA, LPLOGFONTW
+from .wingdi import (LPDEVMODE, DEVMODEW, 
+                     DM_COPIES, DM_COLLATE, 
+                     LPLOGFONTA, LPLOGFONTW, 
+                     LOGFONTA, LOGFONTW)
 
 from .com.unknwn import *
 
@@ -298,25 +301,31 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
     LPOFNOTIFY = unicode(LPOFNOTIFYW, LPOFNOTIFYA)
 
     # Structure used for all object based OpenFileName notifications
-    class _OFNOTIFYEXA(CStructure):
+    class OFNOTIFYEXA(CStructure):
         _fields_ = [
             ("hdr", NMHDR),
             ("lpOFN", LPOPENFILENAMEA),
             ("psf", LPVOID),
             ("pidl", LPVOID) # May be NULL
         ]
-    OFNOTIFYEXA = _OFNOTIFYEXA
+        hdr: NMHDR
+        lpOFN: IPointer[OPENFILENAMEA]
+        psf: int
+        pidl: int
     LPOFNOTIFYEXA = POINTER(OFNOTIFYEXA)
 
     # Structure used for all object based OpenFileName notifications
-    class _OFNOTIFYEXW(CStructure):
+    class OFNOTIFYEXW(CStructure):
         _fields_ = [
             ("hdr", NMHDR),
             ("lpOFN", LPOPENFILENAMEW),
             ("psf", LPVOID),
             ("pidl", LPVOID) # May be NULL
         ]
-    OFNOTIFYEXW = _OFNOTIFYEXW
+        hdr: NMHDR
+        lpOFN: IPointer[OPENFILENAMEW]
+        psf: int
+        pidl: int
     LPOFNOTIFYEXW = POINTER(OFNOTIFYEXW)
 
     OFNOTIFYEX = unicode(OFNOTIFYEXW, OFNOTIFYEXA)
@@ -627,6 +636,21 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("nSizeMax", INT),                  # max pt size allowed if
                                                 #   CF_LIMITSIZE is used
         ]
+        lStructSize: int
+        hwndOwner: int
+        hDC: int
+        lpLogFont: IPointer[LOGFONTA]
+        iPointSize: int
+        Flags: int
+        rgbColors: int
+        lCustData: int
+        lpfnHook: FARPROC
+        lpTemplateName: LPCSTR
+        hInstance: int
+        lpszStyle: LPSTR
+        nFontType: int
+        nSizeMin: int
+        nSizeMax: int
     CHOOSEFONTA = tagCHOOSEFONTA
     
     class tagCHOOSEFONTW(CStructure):
@@ -653,6 +677,21 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("nSizeMax", INT),                  # max pt size allowed if
                                                 #   CF_LIMITSIZE is used
         ]
+        lStructSize: int
+        hwndOwner: int
+        hDC: int
+        lpLogFont: IPointer[LOGFONTW]
+        iPointSize: int
+        Flags: int
+        rgbColors: int
+        lCustData: int
+        lpfnHook: FARPROC
+        lpTemplateName: LPCWSTR
+        hInstance: int
+        lpszStyle: LPWSTR
+        nFontType: int
+        nSizeMin: int
+        nSizeMax: int
     CHOOSEFONTW = tagCHOOSEFONTW
     
     CHOOSEFONT = unicode(CHOOSEFONTW, CHOOSEFONTA)
@@ -766,6 +805,25 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("hPrintTemplate", HGLOBAL),
             ("hSetupTemplate", HGLOBAL)
         ]
+        lStructSize: int
+        hwndOwner: int
+        hDevMode: int
+        hDevNames: int
+        hDC: int
+        Flags: int
+        nFromPage: int
+        nToPage: int
+        nMinPage: int
+        nMaxPage: int
+        nCopies: int
+        hInstance: int
+        lCustData: int
+        lpfnPrintHook: FARPROC
+        lpfnSetupHook: FARPROC
+        lpPrintTemplateName: LPCSTR
+        lpSetupTemplateName: LPCSTR
+        hPrintTemplate: int
+        hSetupTemplate: int
     PRINTDLGA = tagPDA
     LPPRINTDLGA = POINTER(PRINTDLGA)
     
@@ -791,6 +849,25 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("hPrintTemplate", HGLOBAL),
             ("hSetupTemplate", HGLOBAL)
         ]
+        lStructSize: int
+        hwndOwner: int
+        hDevMode: int
+        hDevNames: int
+        hDC: int
+        Flags: int
+        nFromPage: int
+        nToPage: int
+        nMinPage: int
+        nMaxPage: int
+        nCopies: int
+        hInstance: int
+        lCustData: int
+        lpfnPrintHook: FARPROC
+        lpfnSetupHook: FARPROC
+        lpPrintTemplateName: LPCWSTR
+        lpSetupTemplateName: LPCWSTR
+        hPrintTemplate: int
+        hSetupTemplate: int
     PRINTDLGW = tagPDW
     LPPRINTDLGW = POINTER(PRINTDLGW)
     
@@ -882,6 +959,8 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("nFromPage", DWORD),
             ("nToPage", DWORD)
         ]
+        nFromPage: int
+        nToPage: int
     PRINTPAGERANGE = tagPRINTPAGERANGE
     LPPRINTPAGERANGE = POINTER(PRINTPAGERANGE)
     PCPRINTPAGERANGE = LPPRINTPAGERANGE
@@ -913,6 +992,27 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("nStartPage", DWORD), # start page id
             ("dwResultAction", DWORD) # result action if S_OK is returned
         ]
+        lStructSize: int
+        hwndOwner: int
+        hDevMode: int
+        hDevNames: int
+        hDC: int
+        Flags: int
+        Flags2: int
+        ExclusionFlags: int
+        nPageRanges: int
+        nMaxPageRanges: int
+        lpPageRanges: IPointer[PRINTPAGERANGE]
+        nMinPage: int
+        nMaxPage: int
+        nCopies: int
+        hInstance: int
+        lpPrintTemplateName: LPCSTR
+        lpCallback: IPointer[IUnknown]
+        nPropertyPages: int
+        lphPropertyPages: IPointer[HPROPSHEETPAGE]
+        nStartPage: int
+        dwResultAction: int
     PRINTDLGEXA = tagPDEXA
     LPPRINTDLGEXA = POINTER(PRINTDLGEXA)
 
@@ -943,6 +1043,27 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("nStartPage", DWORD), # start page id
             ("dwResultAction", DWORD) # result action if S_OK is returned
         ]
+        lStructSize: int
+        hwndOwner: int
+        hDevMode: int
+        hDevNames: int
+        hDC: int
+        Flags: int
+        Flags2: int
+        ExclusionFlags: int
+        nPageRanges: int
+        nMaxPageRanges: int
+        lpPageRanges: IPointer[PRINTPAGERANGE]
+        nMinPage: int
+        nMaxPage: int
+        nCopies: int
+        hInstance: int
+        lpPrintTemplateName: LPCWSTR
+        lpCallback: IPointer[IUnknown]
+        nPropertyPages: int
+        lphPropertyPages: IPointer[HPROPSHEETPAGE]
+        nStartPage: int
+        dwResultAction: int
     PRINTDLGEXW = tagPDEXW
     LPPRINTDLGEXW = POINTER(PRINTDLGEXW)
 
@@ -1008,6 +1129,10 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("wOutputOffset", WORD),
             ("wDefault", WORD)
         ]
+        wDriverOffset: int
+        wDeviceOffset: int
+        wOutputOffset: int
+        wDefault: int
     DEVNAMES = tagDEVNAMES
     LPDEVNAMES = POINTER(DEVNAMES)
     PCDEVNAMES = LPDEVNAMES
@@ -1044,6 +1169,20 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("lpPageSetupTemplateName", LPCSTR),
             ("hPageSetupTemplate", HGLOBAL)
         ]
+        lStructSize: int
+        hwndOwner: int
+        hDevMode: int
+        hDevNames: int
+        Flags: int
+        ptPaperSize: POINT
+        rtMinMargin: RECT
+        rtMargin: RECT
+        hInstance: int
+        lCustData: int
+        lpfnPageSetupHook: FARPROC
+        lpfnPagePaintHook: FARPROC
+        lpPageSetupTemplateName: LPCSTR
+        hPageSetupTemplate: int
     PAGESETUPDLGA = tagPSDA
     LPPAGESETUPDLGA = POINTER(PAGESETUPDLGA)
 
@@ -1064,6 +1203,20 @@ if cpreproc.pragma_once("_INC_COMMDLG"):
             ("lpPageSetupTemplateName", LPCWSTR),
             ("hPageSetupTemplate", HGLOBAL)
         ]
+        lStructSize: int
+        hwndOwner: int
+        hDevMode: int
+        hDevNames: int
+        Flags: int
+        ptPaperSize: POINT
+        rtMinMargin: RECT
+        rtMargin: RECT
+        hInstance: int
+        lCustData: int
+        lpfnPageSetupHook: FARPROC
+        lpfnPagePaintHook: FARPROC
+        lpPageSetupTemplateName: LPCWSTR
+        hPageSetupTemplate: int
     PAGESETUPDLGW = tagPSDW
     LPPAGESETUPDLGW = POINTER(PAGESETUPDLGW)
 

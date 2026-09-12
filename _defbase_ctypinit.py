@@ -2,18 +2,84 @@ from ctypes import *
 
 import sys
 
+if sys.implementation.name != 'cpython':
+    raise RuntimeError('Only CPython interpreter implementation supported.')
+
 defined_Py_TRACE_REFS = hasattr(sys, 'getobjects')
 
-if not hasattr(sys, '_is_gil_enabled'):
-    GIL_ENABLED = True
-else:
-    GIL_ENABLED = sys._is_gil_enabled()
+if sys.version_info[0:2] == (3, 14):
+    if not hasattr(sys, '_is_gil_enabled'):
+        GIL_ENABLED = True
+    else:
+        GIL_ENABLED = sys._is_gil_enabled()
     
 from typing import (TypeVar, Generic, Optional, 
-                    Mapping, Any, Self, Dict,
+                    Mapping, Any, Dict,
                     AnyStr, Sequence, Type,
-                    Iterable)
-    
+                    Iterable, Callable, List)
+from typing_extensions import Self, TypeAlias
+import typing_extensions
+import typing, ctypes
+
+if sys.version_info < (3, 8):
+    raise RuntimeError('Versions before 3.8 are not supported.')
+if sys.version_info > (3, 14):
+    raise RuntimeError('Versions after 3.14 are not supported.')
+
+_INIT_CHAIN: List[Callable[[], None]] = []
+_GLOBAL_REFS: List[Any] = []
+
+mappingproxy = type(type.__dict__)
+
+PY_BINARY_FUNC = CFUNCTYPE(c_void_p, c_void_p, c_void_p)
+
+if sys.version_info[0:2] == (3, 8) or typing.TYPE_CHECKING:
+    def polyfill_39plus_to_38():
+        tp_type = PyType_CAST_DEREF(type)
+        type.__dict__.m_proxy['__class_getitem__'] = classmethod(lambda cls, item: typing._GenericAlias(cls, item))
+        def polyfill_type_or(a, b):
+            self = cast(a, py_object).value
+            item = cast(b, py_object).value
+            union = typing.Union[self, item]
+            Py_INCREF(union)
+            return id(union)
+        pfn_polyfill_type_or = PY_BINARY_FUNC(polyfill_type_or)
+        _GLOBAL_REFS.append(pfn_polyfill_type_or)
+        tp_type.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
+        memset(tp_type.tp_as_number, 0, 36*sizeof(c_void_p))
+        tp_type.tp_as_number[15] = cast(pfn_polyfill_type_or, c_void_p).value
+        tp_none = PyType_CAST_DEREF(type(None))
+        tp_none.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
+        memset(tp_none.tp_as_number, 0, 36*sizeof(c_void_p))
+        tp_none.tp_as_number[15] = cast(pfn_polyfill_type_or, c_void_p).value
+        tp_specialform = PyType_CAST_DEREF(typing._SpecialForm)
+        tp_specialform.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
+        memset(tp_specialform.tp_as_number, 0, 36*sizeof(c_void_p))
+        tp_specialform.tp_as_number[15] = cast(pfn_polyfill_type_or, c_void_p).value
+        tp_genericalias = PyType_CAST_DEREF(typing._GenericAlias)
+        tp_genericalias.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
+        memset(tp_genericalias.tp_as_number, 0, 36*sizeof(c_void_p))
+        tp_genericalias.tp_as_number[15] = cast(pfn_polyfill_type_or, c_void_p).value
+        tp_pycstructtype = PyType_CAST_DEREF(type(Structure))
+        tp_pycstructtype.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
+        memset(tp_pycstructtype.tp_as_number, 0, 36*sizeof(c_void_p))
+        tp_pycstructtype.tp_as_number[15] = cast(pfn_polyfill_type_or, c_void_p).value
+        tp_type.Reload()
+        type_check = typing._type_check
+        def polyfill_typing_type_check(arg, msg, is_argument=True):
+            try:
+                result = type_check(arg, msg, is_argument)
+            except TypeError:
+                if not callable(arg):
+                    return arg
+                raise
+            return result
+        typing._type_check = polyfill_typing_type_check
+        typing.TypeAlias = typing_extensions.TypeAlias
+        typing.Self = typing_extensions.Self
+        ctypes.c_time_t = c_int32 if sizeof(c_void_p) == 4 else c_int64
+    _INIT_CHAIN.append(polyfill_39plus_to_38)
+
 _CWT = TypeVar('_WT')
 
 class IArray(Generic[_CWT]):
@@ -24,10 +90,7 @@ class IArray(Generic[_CWT]):
 class IPointer(IArray[_CWT]):   
     contents: _CWT
 
-if sys.version_info < (3, 10):
-    raise RuntimeError('Versions before 3.10 are not supported.')
-
-if sys.version_info >= (3, 10) and sys.version_info < (3, 12):
+if sys.version_info >= (3, 8) and sys.version_info < (3, 12):
     class PyObject(Structure, Generic[_CWT]):
         fields_extra = []
         if defined_Py_TRACE_REFS:
@@ -245,7 +308,7 @@ class PyMemberDef(Structure):
         return (self.flags & flag) != 0
     
     def EnumFlags(self) -> Sequence[str]:
-        result: list[str] = []
+        result: List[str] = []
         
         if self.HasFlag(Py_READONLY):
             result.append('Py_READONLY')
@@ -439,16 +502,17 @@ def _wrap_tpflag(name: str, flag: int):
     _wrap_flag(PyTypeObject, name, flag, method_suffix='TPFLAG')
     
 class PyTypeObject(PyVarObject[_CWT]):
-    # только нужные
     _fields_ = [
         ('tp_name', c_char_p),
         ('tp_basicsize', c_ssize_t),
         ('unusedSizeT', c_ssize_t),
         ('tp_dealloc', c_void_p),
         ('unusedSizeT3', c_ssize_t),
-        ('unusedPtrs', c_void_p * 13),
-        ('tp_flags', c_ulong),
+        ('unusedPtrs', c_void_p * 4),
+        ('tp_as_number', POINTER(c_void_p)),
         ('unusedPtrs2', c_void_p * 8),
+        ('tp_flags', c_ulong),
+        ('unusedPtrs3', c_void_p * 8),
         ('tp_members', PyMemberDef_PTR),
         ('tp_getset', PyGetSetDef_PTR),
         ('_tp_base', c_void_p),
@@ -464,6 +528,7 @@ class PyTypeObject(PyVarObject[_CWT]):
     tp_dealloc: c_void_p
     tp_basicsize: int
     tp_flags: int
+    tp_as_number: IPointer[c_void_p]
     
     @property
     def type(self) -> Type[_CWT]:
@@ -485,7 +550,7 @@ class PyTypeObject(PyVarObject[_CWT]):
         return (self.tp_flags & tp_flag) != 0
     
     def EnumTPFLAGS(self) -> Sequence[str]:
-        result: list[str] = []
+        result: List[str] = []
         
         if self.HasTPFLAG(_Py_TPFLAGS_STATIC_BUILTIN):
             result.append('_Py_TPFLAGS_STATIC_BUILTIN')
@@ -803,10 +868,10 @@ PyCDataObject_HEADLESS_PTR = POINTER(PyCDataObject_HEADLESS)
 pythonapi._PyObject_GC_New.argtypes = [c_void_p]
 pythonapi._PyObject_GC_New.restype = PyObject_PTR
         
-def PyObject_GC_New(typ: type[_CWT], typeobj) -> IPointer[_CWT]:
+def PyObject_GC_New(typ: Type[_CWT], typeobj) -> IPointer[_CWT]:
     return cast(pythonapi._PyObject_GC_New(id(typeobj)), POINTER(typ))
 
-def NewObject(typeobj: type[_CWT]) -> _CWT:
+def NewObject(typeobj: Type[_CWT]) -> _CWT:
     obj = cast(pythonapi._PyObject_GC_New(id(typeobj)), py_object).value
     PyObject_GC_Track(obj)
     return obj
@@ -832,6 +897,12 @@ pythonapi.Py_IncRef.restype = None
 
 def Py_INCREF(obj):
     pythonapi.Py_IncRef(id(obj))
+
+pythonapi.Py_DecRef.argtypes = [c_void_p]
+pythonapi.Py_DecRef.restype = None
+
+def Py_DECREF(obj):
+    pythonapi.Py_DecRef(id(obj))
     
 pythonapi.PyObject_GC_UnTrack.argtypes = [c_void_p]
 pythonapi.PyObject_GC_UnTrack.restype = None
@@ -844,7 +915,7 @@ class ICArgObject: ...
 class ICData:
     _b_base_: int
     _b_needsfree_: bool
-    _objects: Mapping[Any, int] | None
+    _objects: typing.Union[Mapping[Any, int], None]
     def __buffer__(self, flags: int, /) -> memoryview: ...
     def __ctypes_from_outparam__(self, /) -> Self: ...
     if sys.version_info >= (3, 14):
@@ -852,7 +923,7 @@ class ICData:
 
 ICARG_CWT = TypeVar('ICARG_CWT', bound=ICArgObject)
 
-def New_PyCArgObject(t: type[ICARG_CWT]) -> Optional[IPointer[PyCArgObject[ICARG_CWT]]]:
+def New_PyCArgObject(t: Type[ICARG_CWT]) -> Optional[IPointer[PyCArgObject[ICARG_CWT]]]:
     p = PyObject_GC_New(PyCArgObject, PyTypeObject_PTR)
     if not p: return None
     
@@ -975,13 +1046,13 @@ def HasTPFLAG(typ: type, tp_flag: int) -> bool:
 def EnumTPFLAGS(typ: type) -> Sequence[str]:
     return PyType_CAST_DEREF(typ).EnumTPFLAGS()
         
-def PyType_CAST(typ: type[_CWT]) -> IPointer[PyTypeObject[_CWT]]:
+def PyType_CAST(typ: Type[_CWT]) -> IPointer[PyTypeObject[_CWT]]:
     return cast(id(typ), PyTypeObject_PTR)
 
 def PyObject_CAST(obj: _CWT) -> IPointer[PyObject[_CWT]]:
     return cast(id(obj), PyObject_PTR)
 
-def PyType_CAST_DEREF(typ: type[_CWT]) -> PyTypeObject[_CWT]:
+def PyType_CAST_DEREF(typ: Type[_CWT]) -> PyTypeObject[_CWT]:
     return cast(id(typ), PyTypeObject_PTR).contents
 
 def PyObject_CAST_DEREF(obj: _CWT) -> PyObject[_CWT]:
@@ -990,19 +1061,17 @@ def PyObject_CAST_DEREF(obj: _CWT) -> PyObject[_CWT]:
 def To_PyObject(obj: IPointer[PyObject[_CWT]]) -> _CWT:
     return obj.contents.object
 
-def To_PyType(typ: IPointer[PyTypeObject[_CWT]]) -> type[_CWT]:
+def To_PyType(typ: IPointer[PyTypeObject[_CWT]]) -> Type[_CWT]:
     return typ.contents.type
 
 def To_PyObject_DEREFERENCED(obj: PyObject[_CWT]) -> _CWT:
     return cast(byref(obj), py_object).value
 
-def To_PyType_DEREFERENCED(typ: PyTypeObject[_CWT]) -> type[_CWT]:
+def To_PyType_DEREFERENCED(typ: PyTypeObject[_CWT]) -> Type[_CWT]:
     return cast(byref(typ), py_object).value
 
-def offsetof(typ: type[Structure], field: str):
+def offsetof(typ: Type[Structure], field: str):
     return getattr(getattr(typ, field), 'offset')
-
-mappingproxy = type(type.__dict__)
 
 def Init():
     SetTPFLAG(CArgObject, Py_TPFLAGS_BASETYPE)
@@ -1016,21 +1085,6 @@ def Init():
     t_codetype = PyType_CAST_DEREF(type(HasTPFLAG.__code__))
     for member in t_codetype.members:
         member.readonly = False
-        
-    #t_frametype = PyType_CAST_DEREF(type(sys._getframe()))
-    #for member in t_frametype.members:
-    #    member.readonly = False
     
-"""
-from types import MappingProxyType
-    
-class PyMappingProxy(Dict):
-    _proxy: MappingProxyType
-    
-    def __init__(self, proxy: MappingProxyType):
-        if not hasattr(proxy, 'm_proxy'):
-            raise RuntimeError('Not marked proxy object')
-        self._proxy = proxy
-        
-    
-"""
+    for init_routine in _INIT_CHAIN:
+        init_routine()

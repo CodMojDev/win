@@ -49,3 +49,8 @@ class Toolbar(Control):
         information.cbSize = information.size()
         information.mask = mask
         self.send(TB_SETBUTTONINFOW, identifier, information.ref())
+        
+    @property
+    def button_size(self) -> Size:
+        i = self.send(TB_GETBUTTONSIZE)
+        return Size(LOWORD(i), HIWORD(i))

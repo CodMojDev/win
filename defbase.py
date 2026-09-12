@@ -9,14 +9,16 @@ abstraction helpers.
 
 from typing import (Callable, Any, List, 
                     Union as TUnion, Generic, TypeVar, 
-                    Type, Dict, Optional, ClassVar, Self,
+                    Type, Dict, Optional, ClassVar,
                     Protocol, overload, TYPE_CHECKING)
 from functools import wraps
+from typing_extensions import Self
 
 import typing_extensions as defb_tx
 import typing as defb_t
 import types as defb_ty
 import warnings
+import ctypes
 
 __all__ = [
     "declare",
@@ -187,6 +189,19 @@ __all__ = [
     "format_qualname"
 ]
 
+# # # # # # # # # # # # # # # # # # #
+# CPython-Specific part begins !!!  #
+# # # # # # # # # # # # # # # # # # #
+
+# initialize DefbCI
+from . import _defbase_ctypinit
+
+_defbase_ctypinit.Init()
+
+# # # # # # # # # # # # # # # # # # #
+# CPython-Specific part ends !!!    #
+# # # # # # # # # # # # # # # # # # #
+
 def pcall(f, *args, **kwargs) -> tuple[Any, BaseException]:
     try:
         return f(*args, **kwargs), None
@@ -356,7 +371,7 @@ class IFunction(IInterface):
     ctypes library function.
     """
     
-    def __call__(*args: Any, **kwargs: Any): 
+    def __call__(*args: Any, **kwargs: Any) -> Any: 
         """
         Call the `IFunction`.
         """
@@ -411,14 +426,14 @@ class IMarshaller(IInterface):
         """
         
     @classmethod
-    def is_marshaller(self, marshaller: Callable | 'IMarshaller' | Any) -> bool:
+    def is_marshaller(self, marshaller: TUnion[TUnion[Callable, 'IMarshaller'], Any]) -> bool:
         """
         Check given value is marshaller-compatible. Must not be overriden.
         """
         return isinstance(marshaller, IMarshaller) or callable(marshaller)
         
     @classmethod
-    def call_marshaller(self, value: Any, marshaller: Callable | 'IMarshaller') -> Any:
+    def call_marshaller(self, value: Any, marshaller: TUnion[Callable, 'IMarshaller']) -> Any:
         """
         Call the given marshaller on type. Must not be overriden.
         """
@@ -748,8 +763,21 @@ def unraisablehook_remove(entry: type[IUnraisableHook]):
     
 from ctypes import Structure, byref, POINTER as _POINTER, pointer, c_int, c_void_p
 from _ctypes import CFuncPtr
+        
+from typing import Tuple, Mapping
+from typing_extensions import TypeAlias
 
-class IArray(IInterface, Generic[WT]):
+if TYPE_CHECKING:
+    import _typeshed
+
+class ICData(IInterface):
+    _b_base_: int
+    _b_needsfree_: bool
+    _objects: Mapping[Any, int] | None
+    def __buffer__(self, flags: int, /) -> memoryview: ...
+    def __ctypes_from_outparam__(self, /) -> Self: ...
+
+class IArray(ICData, Generic[WT]):
     """
     Type-safe interface over
     ctypes array.
@@ -781,8 +809,6 @@ class IPointer(IArray[WT]):
     """
     
     contents: WT
-        
-from typing import TypeAlias, Tuple, Mapping
 
 IDoublePtr: TypeAlias = IPointer[IPointer[WT]]
     
@@ -828,20 +854,8 @@ def define_extended_type(cls):
 # CPython-Specific part begins !!!  #
 # # # # # # # # # # # # # # # # # # #
 
-# initialize DefbCI
-from . import _defbase_ctypinit
-
-_defbase_ctypinit.Init()
-
 if _WT_UNSTABLE_API:  
     from _ctypes import _SimpleCData as SimpleCData
-
-    class ICData(IInterface):
-        _b_base_: int
-        _b_needsfree_: bool
-        _objects: Mapping[Any, int] | None
-        def __buffer__(self, flags: int, /) -> memoryview: ...
-        def __ctypes_from_outparam__(self, /) -> Self: ...
 
     # don't know how to bypass ctypes check
     # for only _CArgObject type and not its
@@ -1858,7 +1872,7 @@ def ASSERT(expr: bool):
         
         AssertTool.wassert(line, filename, lineno)
     
-from typing import Self
+from typing_extensions import Self
 
 GenericAlias = type(Generic[WT])
 

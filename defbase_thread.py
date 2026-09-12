@@ -2,6 +2,7 @@ from .processthreadsapi import *
 from .defbase_process import *
 from .wow64apiset import *
 from .handleapi import *
+from .synchapi import *
 from .winbase import *
 from .winnt import *
 
@@ -34,7 +35,7 @@ class CThread:
     
     @property
     def alive(self) -> bool:
-        dwRet = WaitForSingleObject(self.handle, timeout)
+        dwRet = WaitForSingleObject(self.handle, 1)
         if dwRet == WAIT_TIMEOUT: return True
         return False
     

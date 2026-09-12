@@ -18,7 +18,9 @@ if cpreproc.pragma_once("_WS_DEMO_LICENSING_H_"):
     # REGION *** Desktop Family ***
 
     if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WIN8:
-        AddDemoAppLicense = declare(oemlicense.AddDemoAppLicense, VOID, UINT, PBYTE)
-        RemoveDemoAppLicense = declare(oemlicense.RemoveDemoAppLicense, VOID, LPCWSTR)
+        @oemlicense.foreign(HRESULT, UINT, PBYTE)
+        def AddDemoAppLicense(cbLicenseBlob: int, pbLicenseBlob: IPointer[BYTE]) -> int: ...
+        @oemlicense.foreign(HRESULT, LPCWSTR)
+        def RemoveDemoAppLicense(pwszPackageFamilyName: WT_LPWSTR) -> int: ...
         
     # REGION ***

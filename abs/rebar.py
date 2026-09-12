@@ -182,6 +182,7 @@ class Rebar(Control):
         if header_width is not None:
             mask |= RBBIM_HEADERSIZE
             rbbi.cxHeader = header_width
+        rbbi.fMask = mask
         return rbbi
     
     def insert(self, index: int = -1, text: str | None = None, integral_height: int | None = None,
@@ -203,7 +204,9 @@ class Rebar(Control):
             background, parameter, identifier,
             image_index, chevron_location, 
             chevron_state, header_width)
-        return Rebar.Band(self, self.send(RB_INSERTBANDW, index, rbbi.ref()))
+        result = self.send(RB_INSERTBANDW, index, rbbi.ref())
+        if result == 0: raise WinException()
+        return Rebar.Band(self, result)
     
     def hit(self, x: int, y: int) -> tuple[Band | None, int]:
         """

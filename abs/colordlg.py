@@ -1,14 +1,21 @@
 from win.commdlg import *
 from .window import *
 
-class ColorDialog:
+class ColorDialog(Window):
     """
     Color dialog class.
     """
     
+    on_message: SingleEvent
+    choose_color: CHOOSECOLORW
+    pfnHookProc: FARPROC
+    cust_colors: IArray[int]
+    
     def __init__(self, owner: int | HANDLE = NULL, 
                  full_open: bool = False, show_help: bool = False, 
                  color: Optional[int | Color.IColor] = None, template: Optional[int | PVOID] = None):
+        super().__init__()
+        
         # setup CHOOSECOLORW structure
         self.choose_color = CHOOSECOLORW()
         self.choose_color.Flags |= CC_ANYCOLOR | CC_ENABLEHOOK
@@ -43,6 +50,8 @@ class ColorDialog:
             self.choose_color.Flags |= CC_ENABLETEMPLATEHANDLE
             self.choose_color.hInstance = PtrUtil.get_address(template)
     
+        self.on_message = SingleEvent()
+    
     @property
     def color(self) -> Color.BGR:
         return Color.BGR(self.choose_color.rgbResult)
@@ -51,15 +60,15 @@ class ColorDialog:
         """
         Create "Choose color" dialog.
         """
-        
-        return bool(ChooseColorW(self.choose_color.ref()))
-    
-    def on_message(self, hWnd: int, uMsg: int, wParam: int, lParam: int) -> int:
-        """"
-        This handler is called on dialog message.
-        """
-        
-        return FALSE
+        result = ChooseColorW(self.choose_color.ref()) != FALSE
+        if not result:
+            code = CommDlgExtendedError()
+            if code != 0:
+                raise CommonDialogError(code)
+        return result
     
     def hook_proc(self, hWnd: int, uMsg: int, wParam: int, lParam: int) -> int:
-        return self.on_message(hWnd, uMsg, wParam, lParam)
+        if uMsg == WM_INITDIALOG:
+            self.value = hWnd
+        if self.on_message.empty(): return FALSE
+        return self.on_message.execute(hWnd, uMsg, wParam, lParam)

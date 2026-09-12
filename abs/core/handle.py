@@ -653,12 +653,12 @@ class DC(Handle):
         if not InvertRect(self, byref(rect)):
             raise WinException()
         
-    def get_text_extent_point(self, text: str) -> SIZE:
+    def get_text_extent_point(self, text: str) -> Size:
         """
         Get text extent point by text.
         """
         
-        sizeText = SIZE()
+        sizeText = Size()
         buf = create_unicode_buffer(text)
         GetTextExtentPointW(self, buf, len(text), byref(sizeText))
         return sizeText
@@ -1513,6 +1513,15 @@ class Icon(Handle):
         
         return icon
     
+    @classmethod
+    def indirect(cls, info: ICONINFO) -> Self:
+        """
+        Create the Icon by indirect color and mask bitmaps.
+        """
+        hIcon = CreateIconIndirect(info.ref())
+        if not hIcon: raise WinException()
+        return cls(hIcon)
+    
     def save(self, path: str, bpp: int=24):
         with open(path, 'wb') as icon:
             with DC.create_compatible(NULL) as dc:
@@ -1591,7 +1600,7 @@ class Icon(Handle):
                 mask_bits_io = MemoryIO(out_mask_bits, mask_info.image_size)
                 icon.write(mask_bits_io.read())
     
-class CursorMeta(Handle.__class__):
+class CursorMeta(Icon.__class__):
     @property
     def position(cls) -> tuple[int, int]:
         pt = POINT()
@@ -1621,7 +1630,7 @@ class CursorMeta(Handle.__class__):
     def y(cls, y: int):
         cls.position = (cls.x, y)
     
-class Cursor(Handle, metaclass=CursorMeta):
+class Cursor(Icon, metaclass=CursorMeta):
     """
     Class, representing cursor.
     """
@@ -1651,7 +1660,6 @@ class Cursor(Handle, metaclass=CursorMeta):
         """
         Load the cursor from resource.
         """
-        
         icon = cls.foreign_owner(LoadCursorW(hInst, i_cast(id, LPCWSTR)))
         
         if not icon.value:
@@ -1707,18 +1715,19 @@ class Bitmap(GDIObjectHandle):
     """
     
     @classmethod
-    def create(self, width: int, height: int, planes: int = 1, bit_count: int = 32, bits = NULL):
+    def create(cls, width: int, height: int, planes: int = 1, bit_count: int = 32, bits = NULL) -> Self:
         """
         Create the bitmap by width/height, optionally planes, bpp and bits.
         """
         
-        bitmap = Bitmap()
-        if width + height != -2: # width == -1, height == -1
+        bitmap = cls()
+        if width == -1 and height == -1:
             bitmap.value = CreateBitmap(width, height, planes, bit_count, bits)
+            if not bitmap.value: raise WinException()
         return bitmap
     
     @classmethod
-    def from_icon(self, icon: int | HANDLE) -> 'Bitmap':
+    def from_icon(cls, icon: int | HANDLE) -> 'Bitmap':
         """
         Create the bitmap from ICO icon.
         """
@@ -1754,11 +1763,11 @@ class Bitmap(GDIObjectHandle):
             raise WinException()
         return bitmap
     
-    def copy(self, size: GraphicUtils.Size = (0, 0), flags: int = 0) -> 'Bitmap':
+    def copy(self, size: GraphicUtils.Size = (0, 0), flags: int = 0) -> Self:
         """
         Copy the bitmap.
         """
-        width, height = GraphicUtils.size(size)
+        width, height = GraphicUtils.size_tuple(size)
         instance = self.__class__(CopyImage(self, IMAGE_BITMAP, width, height, flags))
         if not instance: raise WinException()
         return instance
@@ -1775,6 +1784,31 @@ class Bitmap(GDIObjectHandle):
                         with old_dc.select_ex(self):
                             new_dc.bit_blt(0, 0, rect.x, rect.y, rect.width, rect.height, old_dc, SRCCOPY)
                     return new
+                
+    @classmethod
+    def section(cls, info: BITMAPINFO,
+                memory: MemoryIO,
+                usage: int = DIB_RGB_COLORS, 
+                dc: int | HANDLE = NULL,
+                section: int | HANDLE = NULL,
+                offset: int = 0) -> Self:
+        """
+        Create the DIB Section Bitmap.
+        """
+        
+        pv = PVOID()
+        hBitmap = CreateDIBSection(dc, info.ref(), usage, byref(pv), section, offset)
+        if not hBitmap: 
+            raise WinException()
+        width = info.bmiHeader.biWidth
+        height = info.bmiHeader.biHeight
+        size = width*height*(info.bmiHeader.biBitCount>>3)
+        
+        memory.memory_address = pv.value
+        memory.memory_position = 0
+        memory.memory_size = size
+        
+        return cls(hBitmap)
 
 class PaintDC(DC):
     """
@@ -1830,6 +1864,13 @@ class GLContext(Handle):
             raise WinException()
         return glCtx
     
+    def set_current(self, hDC: int | HANDLE):
+        """
+        Make the OpenGL context current.
+        """
+        if not wglMakeCurrent(hDC, self):
+            raise WinException()
+    
     def owned_current(self, value: bool):
         """
         Exchange the "current" state of context owning to local or foreign.
@@ -1843,6 +1884,10 @@ class GLContext(Handle):
             wglMakeCurrent(NULL, NULL)
         wglDeleteContext(self)
         self._closed = True
+        
+    def share(self, context: int | HANDLE):
+        if not wglShareLists(self, context):
+            raise WinException()
 
 EVENT_ALL_ACCESS = 0x1F0003
 EVENT_MODIFY_STATE = 0x2
@@ -1982,3 +2027,84 @@ class Semaphore(Handle):
     def close(self):
         CloseHandle(self)
         self._closed = True
+
+from win.commdlg import CommDlgExtendedError
+
+class CommonDialogError(Exception):
+    """
+    Error class for CommonDialog32-specific errors.
+    """
+    
+    def __init__(self, err: int | None = None):
+        if err is None:
+            err = CommDlgExtendedError()
+        if err == 0xffff: # CDERR_DIALOGFAILURE
+            hr = E_FAIL
+        elif err == 0x0006: # CDERR_FINDRESFAILURE
+            hr = DISP_E_MEMBERNOTFOUND
+        elif err == 0x0002: # CDERR_INITIALIZATION
+            hr = E_OUTOFMEMORY # oftenly
+        elif err == 0x0007: # CDERR_LOADRESFAILURE
+            hr = E_FAIL # generic fail
+        elif err == 0x0005: # CDERR_LOADSTRFAILURE
+            hr = E_FAIL # generic fail
+        elif err == 0x0008: # CDERR_LOCKRESFAILURE
+            hr = E_FAIL # generic fail
+        elif err == 0x0009: # CDERR_MEMALLOCFAILURE
+            hr = E_OUTOFMEMORY
+        elif err == 0x000A: # CDERR_MEMLOCKFAILURE
+            hr = E_FAIL # generic fail
+        elif err == 0x0004: # CDERR_NOHINSTANCE
+            hr = E_INVALIDARG # invalid argument
+        elif err == 0x000B: # CDERR_NOHOOK
+            hr = E_INVALIDARG # invalid argument
+        elif err == 0x0003: # CDERR_NOTEMPLATE
+            hr = E_INVALIDARG # invalid argument
+        elif err == 0x000C: # CDERR_REGISTERMSGFAIL
+            hr = E_FAIL # generic fail
+        elif err == 0x0001: # CDERR_STRUCTSIZE
+            hr = E_INVALIDARG # invalid argument
+        elif err == 0x100A: # PDERR_CREATEICFAILURE
+            hr = E_FAIL # generic fail
+        elif err == 0x100C: # PDERR_DEFAULTDIFFERENT
+            hr = E_INVALIDARG # invalid argument
+        elif err == 0x1009: # PDERR_DNDMMISMATCH
+            hr = E_INVALIDARG # invalid argument
+        elif err == 0x1006: # PDERR_INITFAILURE
+            hr = E_FAIL
+        elif err == 0x1004: # PDER_LOADDRVFAILURE
+            hr = E_FAIL # generic fail
+        elif err == 0x1008: # PDERR_NODEFAULTPRN
+            hr = E_INVALIDARG # invalid argument
+        elif err == 0x1007: # PDERR_NODEVICES
+            hr = E_FAIL # generic fail
+        elif err == 0x1008: # PDERR_NODEVICES
+            hr = E_FAIL # generic fail
+        elif err == 0x1002: # PDERR_PARSEFAILURE
+            hr = E_FAIL # generic fail
+        elif err == 0x100B: # PDERR_PRINTERNOTFOUND
+            hr = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, ERROR_UNKNOWN_PRINTER_DRIVER)
+        elif err == 0x1003: # PDERR_RETDEFFAILURE
+            hr = E_INVALIDARG # invalid argument
+        elif err == 0x1001: # PDERR_SETUPFAILURE
+            hr = E_FAIL # generic fail
+        elif err == 0x2002: # CFERR_MAXLESSTHANMIN
+            hr = E_INVALIDARG # invalid argument
+        elif err == 0x2001: # CFERR_NOFONTS
+            hr = E_FAIL # generic fail
+        elif err == 0x3003: # FNERR_BUFFERTOOSMALL
+            hr = DISP_E_BUFFERTOOSMALL
+        elif err == 0x3002: # FNERR_INVALIDFILENAME
+            hr = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, ERROR_BAD_PATHNAME)
+        elif err == 0x3001: # FNERR_SUBCLASSFAILURE
+            hr = E_OUTOFMEMORY # error is memory-oriented
+        elif err == 0x4001: # FRERR_BUFFERLENGTHZERO
+            hr = E_POINTER # invalid pointer
+        else:
+            hr = E_FAIL # generic fail
+        super().__init__(f'[{hex(err)}] {COMError(hr)}')
+        
+class ConvertUtil:
+    @staticmethod
+    def filetime_to_int(ft: FILETIME) -> int:
+        return UINT64.from_address(ft.addressof()).value

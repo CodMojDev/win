@@ -27,7 +27,8 @@ if cpreproc.ifndef("_WOW64APISET_H_"):
     # REGION *** Desktop Family or OneCore Family ***
 
     # RC warns because "WINBASE_DECLARE_GET_SYSTEM_WOW64_DIRECTORY" is a bit long.
-    Wow64DisableWow64FsRedirection = declare(kernel32.Wow64DisableWow64FsRedirection, BOOL, PPVOID)
+    @kernel32.foreign(BOOL, PPVOID)
+    def Wow64DisableWow64FsRedirection(OldValue: IPointer[PVOID]) -> int: ...
     Wow64RevertWow64FsRedirection = declare(kernel32.Wow64RevertWow64FsRedirection, BOOL, PVOID)
 
     # REGION ***

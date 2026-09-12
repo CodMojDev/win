@@ -212,39 +212,6 @@ PWCHAR = PTR(WCHAR)
 LPWORD = PWORD = PTR(WORD)
 PDOUBLE = LPDOUBLE = PTR(DOUBLE)
 
-class FILETIME(ctypes.Structure):
-    _fields_ = [("dwLowDateTime", DWORD),
-                ("dwHighDateTime", DWORD)]
-_FILETIME = FILETIME
-
-class WIN32_FIND_DATAA(CStructure):
-    _fields_ = [("dwFileAttributes", DWORD),
-                ("ftCreationTime", FILETIME),
-                ("ftLastAccessTime", FILETIME),
-                ("ftLastWriteTime", FILETIME),
-                ("nFileSizeHigh", DWORD),
-                ("nFileSizeLow", DWORD),
-                ("dwReserved0", DWORD),
-                ("dwReserved1", DWORD),
-                ("cFileName", CHAR * MAX_PATH),
-                ("cAlternateFileName", CHAR * 14)]
-
-LPWIN32_FIND_DATAA = PTR(WIN32_FIND_DATAA)
-
-class WIN32_FIND_DATAW(CStructure):
-    _fields_ = [("dwFileAttributes", DWORD),
-                ("ftCreationTime", FILETIME),
-                ("ftLastAccessTime", FILETIME),
-                ("ftLastWriteTime", FILETIME),
-                ("nFileSizeHigh", DWORD),
-                ("nFileSizeLow", DWORD),
-                ("dwReserved0", DWORD),
-                ("dwReserved1", DWORD),
-                ("cFileName", WCHAR * MAX_PATH),
-                ("cAlternateFileName", WCHAR * 14)]
-
-LPWIN32_FIND_DATAW = PTR(WIN32_FIND_DATAW)
-
 import sys
 
 def pointer(obj: WT, /) -> IPointer[WT]: ...

@@ -376,7 +376,10 @@ def TlAddRefGuard(itf: IT):
     Add ref-guard to interface.
     """
     TlAddRefGuardEx(itf, itf)
-    
+
+class TL_GUARD_OBJECT:
+    pass
+
 def TlAddRefGuardEx(holder: Any, itf: IT):
     """
     Indirectly add ref-guard of interface to any guard holder object.

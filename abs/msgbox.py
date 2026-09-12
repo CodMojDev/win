@@ -81,21 +81,21 @@ class MsgBox:
         """
         return ErrorBox
     
-    @classmethod
+    @staticmethod
     def exclamation():
         """
         Shortcut for ExclamationBox.
         """
         return ExclamationBox
     
-    @classmethod
+    @staticmethod
     def asterisk():
         """
         Shortcut for AsteriskBox.
         """
         return AsteriskBox
     
-    @classmethod
+    @staticmethod
     def question():
         """
         Shortcut for QuestionBox.
