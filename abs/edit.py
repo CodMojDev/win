@@ -113,13 +113,6 @@ class Edit(Control):
         tip.ttiIcon = icon
         
         self.send(EM_SHOWBALLOONTIP, 0, tip.ref())
-        
-    @property
-    def text(self) -> str:
-        length = self.send(WM_GETTEXTLENGTH)
-        text = create_unicode_buffer(length)
-        self.send(WM_GETTEXT, length+1, text)
-        return text.value
     
     def parent_window_on_command(self, identifier: int, notify_code: int, hwnd: int):
         if identifier == self.identifier:

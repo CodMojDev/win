@@ -18,16 +18,16 @@ from .defbase import *
 if cpreproc.pragma_once("_APISETCONSOLE_"):
     from .wincontypes import *
 
-    kernelbase = W_WinDLL("kernelbase.dll")
+    kernel32 = get_win_library("kernel32.dll")
 
     # REGION *** Application Family or OneCore Family ***
 
-    AllocConsole = declare(kernelbase.AllocConsole, BOOL, VOID)
-    FreeConsole = declare(kernelbase.FreeConsole, BOOL, VOID)
-    AttachConsole = declare(kernelbase.AttachConsole, BOOL, DWORD)
+    AllocConsole = declare(kernel32.AllocConsole, BOOL, VOID)
+    FreeConsole = declare(kernel32.FreeConsole, BOOL, VOID)
+    AttachConsole = declare(kernel32.AttachConsole, BOOL, DWORD)
     ATTACH_PARENT_PROCESS = DWORD(-1).value
-    GetConsoleCP = declare(kernelbase.GetConsoleCP, UINT, VOID)
-    GetConsoleOutputCP = declare(kernelbase.GetConsoleOutputCP, UINT, VOID)
+    GetConsoleCP = declare(kernel32.GetConsoleCP, UINT, VOID)
+    GetConsoleOutputCP = declare(kernel32.GetConsoleOutputCP, UINT, VOID)
     #
     # Input Mode flags:
     #
@@ -49,14 +49,14 @@ if cpreproc.pragma_once("_APISETCONSOLE_"):
     ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004
     DISABLE_NEWLINE_AUTO_RETURN = 0x0008
     ENABLE_LVB_GRID_WORLDWIDE = 0x0010
-    GetConsoleMode = declare(kernelbase.GetConsoleMode, BOOL, HANDLE, LPDWORD)
-    SetConsoleMode = declare(kernelbase.SetConsoleMode, BOOL, HANDLE, DWORD)
-    GetNumberOfConsoleInputEvents = declare(kernelbase.GetNumberOfConsoleInputEvents, BOOL, HANDLE, LPDWORD)
-    ReadConsoleInputA = declare(kernelbase.ReadConsoleInputA, BOOL, HANDLE, PINPUT_RECORD, DWORD, LPDWORD)
-    ReadConsoleInputW = declare(kernelbase.ReadConsoleInputW, BOOL, HANDLE, PINPUT_RECORD, DWORD, LPDWORD)
+    GetConsoleMode = declare(kernel32.GetConsoleMode, BOOL, HANDLE, LPDWORD)
+    SetConsoleMode = declare(kernel32.SetConsoleMode, BOOL, HANDLE, DWORD)
+    GetNumberOfConsoleInputEvents = declare(kernel32.GetNumberOfConsoleInputEvents, BOOL, HANDLE, LPDWORD)
+    ReadConsoleInputA = declare(kernel32.ReadConsoleInputA, BOOL, HANDLE, PINPUT_RECORD, DWORD, LPDWORD)
+    ReadConsoleInputW = declare(kernel32.ReadConsoleInputW, BOOL, HANDLE, PINPUT_RECORD, DWORD, LPDWORD)
     ReadConsoleInput = unicode(ReadConsoleInputW, ReadConsoleInputA)
-    PeekConsoleInputA = declare(kernelbase.PeekConsoleInputA, BOOL, HANDLE, PINPUT_RECORD, DWORD, LPDWORD)
-    PeekConsoleInputW = declare(kernelbase.PeekConsoleInputW, BOOL, HANDLE, PINPUT_RECORD, DWORD, LPDWORD)
+    PeekConsoleInputA = declare(kernel32.PeekConsoleInputA, BOOL, HANDLE, PINPUT_RECORD, DWORD, LPDWORD)
+    PeekConsoleInputW = declare(kernel32.PeekConsoleInputW, BOOL, HANDLE, PINPUT_RECORD, DWORD, LPDWORD)
     PeekConsoleInput = unicode(PeekConsoleInputW, PeekConsoleInputA)
 
     class CONSOLE_READCONSOLE_CONTROL(CStructure):
@@ -72,11 +72,11 @@ if cpreproc.pragma_once("_APISETCONSOLE_"):
         dwControlKeyState: int
     PCONSOLE_READCONSOLE_CONTROL = POINTER(CONSOLE_READCONSOLE_CONTROL)
 
-    ReadConsoleA = declare(kernelbase.ReadConsoleA, BOOL, HANDLE, LPVOID, DWORD, LPDWORD, PCONSOLE_READCONSOLE_CONTROL)
-    ReadConsoleW = declare(kernelbase.ReadConsoleW, BOOL, HANDLE, LPVOID, DWORD, LPDWORD, PCONSOLE_READCONSOLE_CONTROL)
+    ReadConsoleA = declare(kernel32.ReadConsoleA, BOOL, HANDLE, LPVOID, DWORD, LPDWORD, PCONSOLE_READCONSOLE_CONTROL)
+    ReadConsoleW = declare(kernel32.ReadConsoleW, BOOL, HANDLE, LPVOID, DWORD, LPDWORD, PCONSOLE_READCONSOLE_CONTROL)
     ReadConsole = unicode(ReadConsoleW, ReadConsoleA)
-    WriteConsoleA = declare(kernelbase.WriteConsoleA, BOOL, HANDLE, PVOID, DWORD, LPDWORD, LPVOID)
-    WriteConsoleW = declare(kernelbase.WriteConsoleW, BOOL, HANDLE, PVOID, DWORD, LPDWORD, LPVOID)
+    WriteConsoleA = declare(kernel32.WriteConsoleA, BOOL, HANDLE, PVOID, DWORD, LPDWORD, LPVOID)
+    WriteConsoleW = declare(kernel32.WriteConsoleW, BOOL, HANDLE, PVOID, DWORD, LPDWORD, LPVOID)
     WriteConsole = unicode(WriteConsoleW, WriteConsoleA)
     #
     # Ctrl Event flags
@@ -92,7 +92,7 @@ if cpreproc.pragma_once("_APISETCONSOLE_"):
     # typedef for ctrl-c handler routines
     #
     PHANDLER_ROUTINE = WINAPI(BOOL, DWORD)
-    SetConsoleCtrlHandler = declare(kernelbase.SetConsoleCtrlHandler, BOOL, PHANDLER_ROUTINE, BOOL)
+    SetConsoleCtrlHandler = declare(kernel32.SetConsoleCtrlHandler, BOOL, PHANDLER_ROUTINE, BOOL)
     # WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_SYSTEM)
 
     # REGION ***
@@ -101,9 +101,9 @@ if cpreproc.pragma_once("_APISETCONSOLE_"):
 
     # CreatePseudoConsole Flags
     PSEUDOCONSOLE_INHERIT_CURSOR = (0x1)
-    CreatePseudoConsole = declare(kernelbase.CreatePseudoConsole, HRESULT, COORD, HANDLE, HANDLE, DWORD, POINTER(HPCON))
-    ResizePseudoConsole = declare(kernelbase.ResizePseudoConsole, HRESULT, HPCON, COORD)
-    ClosePseudoConsole = declare(kernelbase.ClosePseudoConsole, VOID, HPCON)
+    CreatePseudoConsole = declare(kernel32.CreatePseudoConsole, HRESULT, COORD, HANDLE, HANDLE, DWORD, POINTER(HPCON))
+    ResizePseudoConsole = declare(kernel32.ResizePseudoConsole, HRESULT, HPCON, COORD)
+    ClosePseudoConsole = declare(kernel32.ClosePseudoConsole, VOID, HPCON)
 
     # REGION ***
 # _APISETCONSOLE_

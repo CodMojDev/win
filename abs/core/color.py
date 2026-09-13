@@ -105,31 +105,31 @@ class Color:
             return str(self)
         
         def __add__(self, value):
-            return self.value + value
+            return self.__class__(self.value + value)
         
         def __sub__(self, value):
-            return self.value - value
+            return self.__class__(self.value - value)
         
         def __mul__(self, value):
-            return self.value * value
+            return self.__class__(self.value * value)
         
         def __truediv__(self, value):
-            return self.value / value
+            return self.__class__(self.value / value)
         
         def __floordiv__(self, value):
-            return self.value // value
+            return self.__class__(self.value // value)
         
         def __lshift__(self, value):
-            return self.value << value
+            return self.__class__(self.value << value)
         
         def __rshift__(self, value):
-            return self.value >> value
+            return self.__class__(self.value >> value)
         
         def __or__(self, value):
-            return self.value | value
+            return self.__class__(self.value | value)
         
         def __and__(self, value):
-            return self.value & value
+            return self.__class__(self.value & value)
         
         def __inv__(self):
             return self.__class__(~self.value)
@@ -138,7 +138,7 @@ class Color:
             return self.__class__(-self.value)
         
         def __pos__(self):
-            return +self.value
+            return self.__class__(+self.value)
         
         def __eq__(self, other: 'Color.IColor') -> bool:
             return self.value == other.value
@@ -215,7 +215,7 @@ class Color:
         def from_id(cls, id: int, table: type['Color.IColorTable'] | None = None) -> Self:
             if table is None:
                 table = Color.Table
-            return cls.color(*(tuple(Color.ARGB(table.ensure()[id]).rgba())[0:cls.length()]))
+            return cls.color(*(tuple(table._color_(table.ensure()[id]).rgba())[0:cls.length()]))
 
     class IColorAlpha(IColor):
         """
@@ -916,6 +916,8 @@ class Color:
         MenuHighlight = 174
     
     class IColorTable:
+        _color_: type[Color.IColor]
+        
         @staticmethod
         def ensure() -> list[int]:
             """
@@ -924,6 +926,7 @@ class Color:
     
     class Table(IColorTable):
         array: list[int] | None = None
+        _color_ = Color.ARGB
         
         @staticmethod
         def ensure() -> list[int]:
@@ -931,7 +934,7 @@ class Color:
                 Color.Table.array = array = [0] * 175
                 array[1] = int(Color.system(COLOR_ACTIVEBORDER).argb())
                 array[2] = int(Color.system(COLOR_ACTIVECAPTION).argb())
-                array[3] = int(Color.system(COLOR_INACTIVECAPTION).argb())
+                array[3] = int(Color.system(COLOR_CAPTIONTEXT).argb())
                 array[4] = int(Color.system(COLOR_APPWORKSPACE).argb())
                 array[168] = int(Color.system(COLOR_BTNFACE).argb())
                 array[169] = int(Color.system(COLOR_BTNHILIGHT).argb())

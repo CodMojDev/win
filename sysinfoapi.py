@@ -16,8 +16,10 @@ from typing import (Callable)
 from . import cpreproc
 
 if cpreproc.pragma_once("_SYSINFOAPI_H_"):
-    kernel32 = W_WinDLL("kernel32.dll")
-    kernelbase = W_WinDLL("kernelbase.dll")
+    kernel32 = get_win_library("kernel32.dll")
+    kernelbase = get_win_library("kernelbase.dll")
+    if isinstance(kernelbase, NullLibrary):
+        kernelbase = kernel32
 
     class _S_WW(CStructure):
         _fields_ = [

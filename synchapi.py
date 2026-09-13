@@ -28,8 +28,10 @@ from .winbase import PREASON_CONTEXT
 from .defbase import *
 
 if cpreproc.pragma_once("_SYNCHAPI_H_"):
-    kernel32 = W_WinDLL("kernel32.dll")
-    kernelbase = W_WinDLL("kernelbase.dll")
+    kernel32 = get_win_library("kernel32.dll")
+    kernelbase = get_win_library("kernelbase.dll")
+    if isinstance(kernelbase, NullLibrary):
+        kernelbase = kernel32
 
     # REGION *** Application or OneCore Family or Games Family ***
 

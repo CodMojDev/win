@@ -186,7 +186,11 @@ __all__ = [
     "CData", "SimpleCData",
     "PTRD",
     "is_float_like", "is_int_like",
-    "format_qualname"
+    "format_qualname",
+    "add_policy_flag", "remove_policy_flag",
+    "DEFB_POLICY_RAISEONNULLCALL",
+    "DEFB_POLICY_RAISEONNULLLIBRARY",
+    "NullLibrary"
 ]
 
 # # # # # # # # # # # # # # # # # # #
@@ -218,6 +222,9 @@ if _WT_UNSTABLE_API:
         'CVoidP'
     ])
 
+DEFB_POLICY_RAISEONNULLCALL = 0x1
+DEFB_POLICY_RAISEONNULLLIBRARY = 0x2
+
 class _DEFB_STATE: # internal global state
     __slots__  = ['_linked_libraries', '_defbase_process', 
                   '_defbase_module', '_interfacedef', '_unknwn',
@@ -226,7 +233,8 @@ class _DEFB_STATE: # internal global state
                   '_local_allocator', '_prev_excepthook', '_excepthook_enabled',
                   '_excepthook_entries', '_prev_unraisablehook', 
                   '_unraisablehook_enabled', '_unraisablehook_entries', 
-                  '_prev_profile', '_profile_enabled', '_profile_entries',]
+                  '_prev_profile', '_profile_enabled', '_profile_entries',
+                  '_defb_policy']
     _trace_entries: list['ITraceEntry']
     _profile_entries: list['IProfileEntry']
     _prev_profile: Any
@@ -236,6 +244,7 @@ class _DEFB_STATE: # internal global state
     _excepthook_entries: list['IExceptHook']
     _prev_unraisablehook: Any
     _unraisablehook_entries: list['IUnraisableHook']
+    _defb_policy: int
     
     def __init__(self):
         self._linked_libraries = {}
@@ -253,6 +262,7 @@ class _DEFB_STATE: # internal global state
         self._prev_profile = None
         self._profile_enabled = False
         self._profile_entries = []
+        self._defb_policy = DEFB_POLICY_RAISEONNULLCALL
     
 _defb_state: _DEFB_STATE = _DEFB_STATE()
 
@@ -1235,6 +1245,9 @@ def is_null(function: IFunction) -> bool:
     """
     Check the exported function from `W_CDLL` is NULL.
     """
+    defb_function = getattr(function, '_defb_function', None)
+    if defb_function is not None:
+        return is_null(defb_function)
     return isinstance(function, NullFunction)
 
 class NullFunction:
@@ -1254,7 +1267,22 @@ class NullFunction:
         return self._name
     
     def __call__(self, *args, **kwargs):
-        raise RuntimeError(f'Implementation of function {self.library}!{self.name} is missing')
+        if _defb_state._defb_policy & DEFB_POLICY_RAISEONNULLCALL:
+            raise RuntimeError(f'Implementation of function {self.library}!{self.name} is missing')
+        else:
+            return None
+
+def remove_policy_flag(flag: int):
+    """
+    Remove the DEFB policy flag.
+    """
+    _defb_state._defb_policy &= (~flag)
+
+def add_policy_flag(flag: int):
+    """
+    Add the DEFB policy flag.
+    """
+    _defb_state._defb_policy |= flag
 
 from _ctypes import (FUNCFLAG_STDCALL, FUNCFLAG_CDECL, FUNCFLAG_PYTHONAPI)
 from ctypes import cast, CDLL
@@ -1295,7 +1323,7 @@ class W_CDLL(CDLL):
     
     collection: ClassVar[Collection[Self]]
     
-    def __getitem__(self, name_or_ordinal):
+    def __getitem__(self, name_or_ordinal: int | str):
         try:
             func = self._FuncPtr((name_or_ordinal, self))
             if not isinstance(name_or_ordinal, int):
@@ -1495,12 +1523,14 @@ def foreign_optimized(ret: type,
             return result
         
         if not intermediate_method:
-            return wraps(f)(_function)
+            result = wraps(f)(_function)
         else:
             @wraps(f)
             def _intermediate(*args, **kwargs):
                 return f(*args, **kwargs, function=_function)
-            return _intermediate
+            result = _intermediate
+        setattr(result, '_defb_function', function)
+        return result
     
     return _foreign
 
@@ -1563,16 +1593,16 @@ def foreign(ret: type,
             return result
     
         if not intermediate_method:
-            _function = wraps(f)(_function)
+            result = wraps(f)(_function)
         else:
             @wraps(f)
             def _intermediate(*args, **kwargs):
                 return f(*args, **kwargs, function=_function)
+            result = _intermediate
         
-        if intermediate_method:
-            return _intermediate
+        setattr(result, '_defb_function', function)
         
-        return _function
+        return result
     
     return _foreign
     
@@ -3219,6 +3249,48 @@ def unicode(wide: WT, ansi: WT) -> WT:
         return wide
     return ansi
 
+class NullLibrary:
+    name: str
+    _name: str
+    handle: None
+    _handle: None
+    func_ptr: None
+    _FuncPtr: None
+    
+    def __init__(self, name: str):
+        self.name = name
+        self._name = name
+        self.handle = None
+        self._handle = None
+        self.func_ptr = None
+        self._FuncPtr = None
+
+    def __getattr__(self, name: str):
+        return NullFunction(self._name, name)
+        
+    def __getitem__(self, name_or_ordinal: int | str):
+        return NullFunction(self._name, name_or_ordinal)
+    
+    def foreign(self,
+                ret: type, 
+                *args: type, 
+                name: Optional[str] = None,
+                ordinal: Optional[int] = None,
+                class_method: bool = False,
+                result_function: Optional[Callable] = None,
+                intermediate_method: bool = False) -> Callable:
+        """
+        Foreign method declare
+        """
+        return foreign_optimized(ret, 
+                                 *args, 
+                                 library=self, 
+                                 name=name, 
+                                 ordinal=ordinal, 
+                                 class_method=class_method,
+                                 result_function=result_function,
+                                 intermediate_method=intermediate_method)
+
 def link_library(library: str, library_type: Type[LI] = W_CDLL, **kwargs):
     """
     Link library to the foreign libraries collection.
@@ -3228,7 +3300,16 @@ def link_library(library: str, library_type: Type[LI] = W_CDLL, **kwargs):
         raise ValueError('Library type must be Python type.')
     if not issubclass(library_type, W_CDLL):
         raise ValueError('Library type must be W_CDLL descendant.')
-    _defb_state._linked_libraries[library] = library_type(library, wt_link_api_up_stack=1+kwargs.get('wt_link_api_up_stack', 0))
+    try:
+        if issubclass(library_type, W_CDLL):
+            instance = library_type(library, wt_link_api_up_stack=1+kwargs.get('wt_link_api_up_stack', 0))
+        else:
+            instance = library_type(library)
+    except Exception:
+        if _defb_state._defb_policy & DEFB_POLICY_RAISEONNULLLIBRARY:
+            raise
+        instance = NullLibrary(library)
+    _defb_state._linked_libraries[library] = instance
 
 def get_library(library: str, library_type: Type[LI] = W_CDLL, **kwargs) -> LI:
     """
@@ -3248,7 +3329,6 @@ def get_win_library(library: str) -> W_WinDLL:
     Get library from foreign libraries collection or
     create new library of `W_WinDLL` type.
     """
-    
     return get_library(library, W_WinDLL, wt_link_api_up_stack=1)
 
 from types import ModuleType

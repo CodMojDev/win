@@ -15,7 +15,7 @@ from .minwindef import *
 from .defbase import *
 
 if cpreproc.pragma_once("_APISETHANDLE_"):
-    kernelbase = W_WinDLL("kernelbase.dll")
+    kernel32 = get_win_library("kernel32.dll")
     #
     # Constants
     #
@@ -26,21 +26,21 @@ if cpreproc.pragma_once("_APISETHANDLE_"):
     #
     # Prototypes
     #
-    CloseHandle = declare(kernelbase.CloseHandle, BOOL, HANDLE)
-    DuplicateHandle = declare(kernelbase.DuplicateHandle, BOOL, HANDLE, HANDLE, HANDLE, LPHANDLE, DWORD, BOOL, DWORD)
+    CloseHandle = declare(kernel32.CloseHandle, BOOL, HANDLE)
+    DuplicateHandle = declare(kernel32.DuplicateHandle, BOOL, HANDLE, HANDLE, HANDLE, LPHANDLE, DWORD, BOOL, DWORD)
 
     # REGION ***
 
     # REGION *** Application Family or OneCore Family ***
 
-    CompareObjectHandles = declare(kernelbase.CompareObjectHandles, BOOL, HANDLE, HANDLE)
+    CompareObjectHandles = declare(kernel32.CompareObjectHandles, BOOL, HANDLE, HANDLE)
 
     # REGION ***
 
     # REGION *** Application Family or OneCore Family or Games Family ***
 
-    GetHandleInformation = declare(kernelbase.GetHandleInformation, BOOL, HANDLE, LPDWORD)
-    SetHandleInformation = declare(kernelbase.SetHandleInformation, BOOL, HANDLE, DWORD, DWORD)
+    GetHandleInformation = declare(kernel32.GetHandleInformation, BOOL, HANDLE, LPDWORD)
+    SetHandleInformation = declare(kernel32.SetHandleInformation, BOOL, HANDLE, DWORD, DWORD)
 
     # REGION ***
 # _APISETHANDLE_

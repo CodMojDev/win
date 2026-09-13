@@ -54,13 +54,15 @@ class Scrollbar:
         
         # self button disable switch
         switch: int
+        # self button state index
+        state_index: int
         
         # antagonist button disable switch
         antagonist_switch: int
         # antagonist button state index
         antagonist_state_index: int
         
-        def __init__(self, scrollbar: 'Scrollbar', switch: int, antagonist_switch: int, antagonist_state_index: int):
+        def __init__(self, scrollbar: 'Scrollbar', switch: int, state_index: int, antagonist_switch: int, antagonist_state_index: int):
             self.scrollbar = scrollbar
             self.switch = switch
             
@@ -83,6 +85,10 @@ class Scrollbar:
             """
             EnableScrollBar(self.scrollbar.window, self.scrollbar.type, self.switch)
         
+        @property
+        def enabled(self) -> bool:
+            return self.scrollbar.info().rgstate[self.state_index] & 1
+        
     # scrollbar HWND and type (SB_VERT, SB_HORZ, SB_CTL)
     window: int | HWND
     type: int
@@ -97,8 +103,8 @@ class Scrollbar:
         self.window = window
         self.type = type
         
-        self.left = self.up = self.Button(self, ESB_DISABLE_LEFT, ESB_DISABLE_RIGHT, 1)
-        self.right = self.down = self.Button(self, ESB_DISABLE_RIGHT, ESB_DISABLE_LEFT, 5)
+        self.left = self.down = self.Button(self, ESB_DISABLE_LEFT, 5, ESB_DISABLE_RIGHT, 1)
+        self.right = self.up = self.Button(self, ESB_DISABLE_RIGHT, 1, ESB_DISABLE_LEFT, 5)
         
     def info(self) -> SCROLLBARINFO:
         """
@@ -125,7 +131,7 @@ class Scrollbar:
     
     @range.setter
     def range(self, range: tuple[int, int]):
-        if not SetScrollRange(self.window, self.type, range[0], range[1]):
+        if not SetScrollRange(self.window, self.type, range[0], range[1], TRUE):
             raise WinException()
         
     @property
@@ -160,7 +166,7 @@ class Scrollbar:
         si.cbSize = si.size()
         si.fMask = mask
         SetLastError(0)
-        SetScrollInfo(self.window, self.type, si.ref())
+        SetScrollInfo(self.window, self.type, si.ref(), TRUE)
         code = GetLastError()
         if code != 0:
             raise WinException(code)
@@ -200,6 +206,12 @@ class Scrollbar:
     @maximal.setter
     def maximal(self, maximal: int):
         self.range = (self.minimal, maximal)
+        
+    def enable_all(self):
+        """
+        Enable all the buttons.
+        """
+        EnableScrollBar(self.window, self.type, ESB_ENABLE_BOTH)
 
 # menu APIs
 class Menu(Handle):
@@ -425,6 +437,10 @@ def to_unicode(vk: int, scan_code: int) -> tuple[str, int]:
     buffer = (WCHAR * 10)()
     result = ToUnicodeEx(vk, scan_code, _to_unicode_keyboard_state, buffer, 10, 0, GetKeyboardLayout(0))
     return buffer.value, result
+
+# DPI process awareness
+@user32.foreign(BOOL)
+def SetProcessDPIAware() -> int: ...
 
 # document "undocumented" window band infrastructure
 @user32.foreign(BOOL, HWND, PDWORD)
@@ -1706,8 +1722,9 @@ class Window(Abs.Object, HWND):
             if not self.on_nc_mouse_leave():
                 result = LRESULT()
                 # get the result from DWM default window procedure
-                if DwmDefWindowProc(hwnd, msg, wParam, lParam, byref(result)):
-                    return result.value # if succeeded, then return LRESULT
+                if not is_null(DwmDefWindowProc):
+                    if DwmDefWindowProc(hwnd, msg, wParam, lParam, byref(result)):
+                        return result.value # if succeeded, then return LRESULT
                 # otherwise let it fallback
             else: # otherwise the message is handled
                 return 0
@@ -3157,6 +3174,9 @@ class Application(WindowLoopUnit):
             super().__init__()
             # set application singleton
             Application.CURRENT = self
+            # set process DPI-aware
+            if not is_null(SetProcessDPIAware):
+                SetProcessDPIAware()
     
 class IdentifiersT:
     """

@@ -98,7 +98,7 @@ class PropertyGridItemString(PropertyGridItem):
             
     def paint(self, dc: DC):
         rect = Rect.create(0, 0, self.rect.width, self.rect.height)
-        self.text = self.edit.name
+        self.text = self.edit.text
         if self.text != self.original_text:
             font = self.view.logical_bold_name_font
         else:
@@ -255,7 +255,7 @@ class PropertyGridItemColor(PropertyGridItem):
                 dc.frame(Rect.create(0, 0, 24, self.rect.height), Brush.stock(BLACK_BRUSH))
                 with Brush.create(self.color) as brush:
                     dc.fill(Rect.create(2, 2, 24 - 2 - 2, self.rect.height - 2 - 2), brush)
-                    self.text = self.edit.name
+                    self.text = self.edit.text
                     if self.text.strip():
                         if self.color != self.original_color:
                             font = self.view.logical_bold_name_font
@@ -273,7 +273,7 @@ class PropertyGridItemColor(PropertyGridItem):
         self.rect = rect
         if self.view is None:
             self.view = view
-            view.command_hooks.append(self.on_command)
+            view.on_command += self.on_command
         if self.button is None:
             self.unique_button_id = random.randint(0, 1<<31)
             self.button = Button(25, rect.height, view, Identifiers[f'PropertyGridItemColor->Color-Button-{self.unique_button_id}'], text='...')
@@ -298,7 +298,7 @@ class PropertyGridItemColor(PropertyGridItem):
                 dialog = ColorDialog(self.view, color=self.color)
                 if dialog.create():
                     self.color = dialog.color
-                    self.edit.name = '#'+str(self.color.rgb())[2:]
+                    self.edit.text = '#'+str(self.color.rgb())[2:]
                     self.view.invalidate()
             
     def hide(self):
@@ -316,17 +316,17 @@ class PropertyGridItemColor(PropertyGridItem):
         if not self.edit_mode: return True
         self.button.hide()
         self.edit.hide()
-        self.text = self.edit.name
+        self.text = self.edit.text
         return self.commit()
     
     def operation(self, op: int):
         if op == PGIO_REVERT:
             self.color = self.original_color
             self.text = self.original_text
-            self.edit.name = self.text
+            self.edit.text = self.text
             self.view.invalidate()
         elif op == PGIO_COMMIT:
-            self.text = self.edit.name
+            self.text = self.edit.text
             self.commit()
         elif op == PGIO_FOCUS:
             self.edit.focus()
@@ -336,6 +336,8 @@ class PropertyGridItemColor(PropertyGridItem):
             self.button.close()
         if self.edit is not None:
             self.edit.close()
+        if self.view is not None:
+            self.view.on_command -= self.on_command
             
     def commit(self) -> bool:
         color = self.text.strip()
@@ -392,12 +394,33 @@ class PropertyGridView(Window):
     
     directories: dict[str, tuple[bool, bool, list[PropertyGridItem]]]
     ht_map: list[tuple[Rect, int, int | str]]
-    command_hooks: list[Callable[[int, int, int], bool]]
+    propname_width: int
     minimal: int
-    directory_color: Color.IColor
+    render_mode: int
+    
+    directory_color: Color.BGR
+    background_color: Color.BGR
+    directory_name_color: Color.BGR
+    select_color: Color.BGR
+    
     directory_font: str
     name_font: str
-    propname_width: int
+    
+    has_uxtheme: bool
+    vs_glyphopened: VisualStyleElement
+    vs_glyphclosed: VisualStyleElement
+    
+    pen_windowtext: Pen
+    pen_buttonshadow: Pen
+    
+    logical_directory_font: Font
+    logical_name_font: Font
+    logical_bold_name_font: Font
+    
+    directory_brush: Brush
+    select_color_brush: Brush
+    bk_brush: Brush
+    directory_name_brush: Brush
     
     def __init__(self):
         super().__init__()
@@ -422,14 +445,13 @@ class PropertyGridView(Window):
         self.on_left_button_up += self.gridview_on_left_button_up
         self.on_mouse_wheel += self.gridview_on_mouse_wheel
         self.on_command += self.gridview_on_command
+        self.on_destroy += self.gridview_on_destroy
         self.on_left_button_double_click += self.gridview_on_left_button_double_click
         self.on_item_updated = MultiEvent()
         
         self.propname_width = 40
-        self.command_hooks = []
         self.directories = {}
         self.ht_map = []
-        
         self.minimal = 0
         
         # setup property grid colors
@@ -446,17 +468,46 @@ class PropertyGridView(Window):
         
         # allow double clicks
         self.class_style = CS_DBLCLKS
+        
+        # switch the visual style elements
+        if isinstance(uxtheme, NullLibrary):
+            has_UxTheme = False
+        else:
+            try:
+                Theme.create(None, 'TREEVIEW')
+            except:
+                has_UxTheme = False
+            else:
+                has_UxTheme = True
+        if has_UxTheme:
+            try:
+                Theme.create(None, 'Explorer::TreeView')
+            except WinException:
+                has_ExplorerTreeView = False
+            else:
+                has_ExplorerTreeView = (VisualStyleElements.ExplorerTreeView.Glyph.CLOSED.defined() and
+                                        VisualStyleElements.ExplorerTreeView.Glyph.OPENED.defined())
+            if has_ExplorerTreeView:
+                self.vs_glyphclosed = VisualStyleElements.ExplorerTreeView.Glyph.CLOSED
+                self.vs_glyphopened = VisualStyleElements.ExplorerTreeView.Glyph.OPENED
+            else:
+                self.vs_glyphclosed = VisualStyleElements.TreeView.Glyph.CLOSED
+                self.vs_glyphopened = VisualStyleElements.TreeView.Glyph.OPENED
+        self.has_uxtheme = has_UxTheme
+    
+    def gridview_on_destroy(self):
+        tables = WindowLoopUnit.current(False).accelerator_tables
+        for i, table in enumerate(tables):
+            if table.window == self:
+                tables.pop(i)
+                break
     
     def gridview_on_mouse_wheel(self, delta: int, key_flags: int, x: int, y: int):
-        sbi = SCROLLBARINFO()
-        sbi.cbSize = sbi.size()
-        if not GetScrollBarInfo(self, OBJID_VSCROLL, sbi.ref()):
-            raise WinException()
         if delta > 0:
-            if not (sbi.rgstate[1] & 1):
+            if not self.vscroll.up.enabled:
                 self.gridview_on_vscroll(SB_LINEUP, 0, 0)
         else:
-            if not (sbi.rgstate[5] & 1):
+            if not self.vscroll.down.enabled:
                 self.gridview_on_vscroll(SB_LINEDOWN, 0, 0)
     
     def gridview_on_command(self, identifier: int, code: int, hwnd: int):
@@ -476,14 +527,13 @@ class PropertyGridView(Window):
                     row.operation(PGIO_COMMIT)
                     self.invalidate()
                     break
-        else:
-            for hook in self.command_hooks:
-                if hook(identifier, code, hwnd):
-                    return
     
     def gridview_on_create(self) -> bool:
+        self.vscroll.page = 1
+        
         self.setup_brushes()
         self.setup_fonts()
+        self.setup_pens()
         
         self.last_sb_position = 0
         return True
@@ -491,13 +541,18 @@ class PropertyGridView(Window):
     def setup_brushes(self):
         self.directory_brush = Brush.create(self.directory_color)
         self.select_color_brush = Brush.create(self.select_color)
-        self.background_brush = Brush.create(self.background_color)
+        self.bk_brush = Brush.create(self.background_color)
         self.directory_name_brush = Brush.create(self.directory_name_color)
 
     def setup_fonts(self):
         self.logical_directory_font = Font.create(self.directory_font, 18, weight=FW_DEMIBOLD)
         self.logical_name_font = Font.create(self.name_font, 20)
         self.logical_bold_name_font = Font.create(self.name_font, 20, weight=FW_BOLD)
+    
+    def setup_pens(self):
+        if not self.has_uxtheme:
+            self.pen_windowtext = Pen.create(PS_SOLID, 1, Color.BGR.from_id(Color.ID.WindowText))
+            self.pen_buttonshadow = Pen.create(PS_SOLID, 1, Color.BGR.from_id(Color.ID.ButtonShadow))
     
     def rows(self) -> list[tuple[str, bool] | PropertyGridItem]:
         result = []
@@ -544,19 +599,12 @@ class PropertyGridView(Window):
         rows = self.rows()
         
         # set the scroll bar info
-        EnableScrollBar(self, SB_VERT, ESB_ENABLE_BOTH)
+        self.vscroll.enable_all()
         if self.minimal + self.SCROLL_Y_UNIT >= len(rows):
-            EnableScrollBar(self, SB_VERT, ESB_DISABLE_DOWN)
+            self.vscroll.down.disable()
         elif self.minimal == 0:
-            EnableScrollBar(self, SB_VERT, ESB_DISABLE_UP)
-        else:
-            si = SCROLLINFO()
-            si.cbSize = si.size()
-            si.fMask = SIF_RANGE | SIF_PAGE
-            si.nMin = 0
-            si.nMax = (len(rows)-1)//self.SCROLL_Y_UNIT
-            si.nPage = 1
-            SetScrollInfo(self, SB_VERT, si.ref(), TRUE)
+            self.vscroll.up.disable()
+        self.vscroll.range = (0, (len(rows)-1)//self.SCROLL_Y_UNIT)
         
         # recalc the property name width
         maximal_cx = 0
@@ -625,7 +673,7 @@ class PropertyGridView(Window):
                         with dc.create_compatible() as mem_dc:
                             with mem_dc.select_ex(bitmap):
                                 # fill the property grid item value background
-                                mem_dc.fill(Rect.create(0, 0, rect.width, rect.height), self.background_brush)
+                                mem_dc.fill(Rect.create(0, 0, rect.width, rect.height), self.bk_brush)
                                 row.paint(mem_dc)
                                 dc.bit_blt(rect.x, rect.y, 0, 0, rect.width, rect.height, mem_dc, SRCCOPY)
             else:
@@ -641,16 +689,16 @@ class PropertyGridView(Window):
                 
                 # get the element glyph icon for visible state
                 if not visible:
-                    element = VisualStyleElements.ExplorerTreeView.Glyph.CLOSED
+                    state = 0 # +
                     for row in self.directories[name][2]:
                         row.hide()
                 else:
-                    element = VisualStyleElements.ExplorerTreeView.Glyph.OPENED
+                    state = 1 # -
                 
                 # calculate directory button rectangle, append into HT map and draw
                 dirbutton_rect = Rect.create(0 + 1, y+3, 16, 16)
                 self.ht_map.append((dirbutton_rect, PGVHT_DIRBUTTON, name))
-                element.draw_background(dc, dirbutton_rect)
+                self.draw_directory_button(state, dc, dirbutton_rect)
                 
                 # draw the directory name
                 with dc.select_ex(self.logical_directory_font):
@@ -672,6 +720,31 @@ class PropertyGridView(Window):
                                 dc.rectangle(dir_rect)
             y += 23
         return True
+    
+    def draw_directory_button(self, state: int, dc: DC, rect: Rect):
+        if self.has_uxtheme:
+            if state == 0:
+                element = self.vs_glyphclosed
+            else:
+                element = self.vs_glyphopened
+            element.draw_background(dc, rect)
+        else:
+            rect = Rect.create(rect.x + (rect.width - 9) // 2, rect.y + (rect.height - 9) // 2, 9, 9)
+            with dc.select_ex(self.pen_buttonshadow):
+                dc.rectangle(rect)
+            with dc.select_ex(self.pen_windowtext):
+                if state == 0: # +
+                    x = rect.left+rect.width//2
+                    dc.move(x, rect.top+2)
+                    dc.line(x, rect.bottom-2)
+                    
+                    y = rect.top+rect.height//2
+                    dc.move(rect.left+2, y)
+                    dc.line(rect.right-2, y)
+                elif state == 1: # -
+                    y = rect.top+rect.height//2
+                    dc.move(rect.left+2, y)
+                    dc.line(rect.right-2, y)
     
     def on_size(self, flags: int, width: int, height: int) -> bool:
         self.invalidate()
@@ -785,7 +858,10 @@ class PropertyGridView(Window):
             nmrc.code = PGVN_ROWCLICK
             # PGVNMRC fields
             nmrc.flags = PGVNRC_DIR
-            nmrc.lpDir = n
+            length = (len(n)+1)<<1
+            buffer = malloc(length)
+            memcpy(buffer, n, length)
+            nmrc.lpDir = i_cast(buffer, LPWSTR)
             self.parent.send(WM_NOTIFY, self.identifier, nmrc.ref())
             self.invalidate()
         elif ht == PGVHT_BUDDY:
@@ -862,9 +938,6 @@ class PropertyGridDescription(Window):
                     dx += size.cx + dc.get_text_extent_point(' ').cx
         return True
     
-    def on_focus_lost(self, _):
-        self.grid_view.send(WM_KILLFOCUS)
-    
     def get_recommended_height(self, text: str, header: str):
         with DC.create_compatible(NULL) as dc:
             with dc.select_ex(self.logical_header_font):
@@ -894,7 +967,10 @@ PGS_OWNERBUDDY = 0x1
 class PropertyGrid(Window):
     ALPHABET_IMAGE = Bitmap.load(os.path.join(os.path.dirname(__file__), 'data/alphabet.bmp'))
     DIRECTORIES_IMAGE = Bitmap.load(os.path.join(os.path.dirname(__file__), 'data/directories.bmp'))
-    buddy: TUnion[Window, None]
+    
+    buddy: Window | None
+    on_buddy_notify: MultiEvent
+    on_buddy_command: MultiEvent
     
     def __init__(self):
         super().__init__()
@@ -966,6 +1042,7 @@ class PropertyGrid(Window):
             nmrc = i_cast_structure(nm, PGVNMRC)
             if nmrc.flags & PGVNRC_DIR:
                 self.description.header = nmrc.lpDir.value
+                free(nmrc.lpDir)
                 self.description.invalidate()
             elif nmrc.flags & PGVNRC_ITEM:
                 item = self.grid_view.rows()[nmrc.iItem]

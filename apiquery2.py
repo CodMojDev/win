@@ -10,10 +10,10 @@
 
 from . import cpreproc
 
-from .minwindef import W_WinDLL, BOOL, LPCSTR
+from .minwindef import get_win_library, BOOL, LPCSTR
 
 if cpreproc.pragma_once("_APIQUERY2_H_"):
-    kernelbase = W_WinDLL("kernelbase.dll")
+    kernelbase = get_win_library("kernelbase.dll")
 
     # *** Desktop Family or OneCore Family ***
 

@@ -17,7 +17,7 @@ from .defbase import *
 from .winbase import *
 
 if cpreproc.pragma_once("_HEAPAPI_H_"):
-    kernelbase = W_WinDLL("kernelbase.dll")
+    kernel32 = get_win_library("kernel32.dll")
     # REGION *** Application Family or OneCore Family or Games Family ***
 
     #

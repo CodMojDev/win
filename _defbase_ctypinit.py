@@ -136,7 +136,7 @@ if sys.version_info >= (3, 8) and sys.version_info < (3, 12):
         ]
         
 elif sys.version_info >= (3, 12) and sys.version_info < (3, 15):
-    if sys.version_info != (3, 14):
+    if sys.version_info[0:2] != (3, 14):
         class PyObject(Structure, Generic[_CWT]):
             fields_extra = []
             if defined_Py_TRACE_REFS:

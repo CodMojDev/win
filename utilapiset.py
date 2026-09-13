@@ -17,8 +17,10 @@ from .winnt import PVOID, PPVOID
 from .defbase import *
 
 if cpreproc.pragma_once("_APISETUTIL_"):
-    kernel32 = W_WinDLL("kernel32.dll")
-    kernelbase = W_WinDLL("kernelbase.dll")
+    kernel32 = get_win_library("kernel32.dll")
+    kernelbase = get_win_library("kernelbase.dll")
+    if isinstance(kernelbase, NullLibrary):
+        kernelbase = kernel32
 
     # REGION *** Application Family or OneCore Family or Games Family ***
 

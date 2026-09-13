@@ -17,8 +17,10 @@ if cpreproc.ifndef("NOAPISET"):
     from .libloaderapi import *
 if cpreproc.ifndef("NONLS"):
     
-    kernel32 = W_WinDLL("kernel32.dll")
-    kernelbase = W_WinDLL("kernelbase.dll")
+    kernel32 = get_win_library("kernel32.dll")
+    kernelbase = get_win_library("kernelbase.dll")
+    if isinstance(kernelbase, NullLibrary):
+        kernelbase = kernel32
 
     # REGION *** Application Family or OneCore or Games Family ***
 
