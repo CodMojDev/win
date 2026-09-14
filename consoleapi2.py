@@ -17,7 +17,7 @@ from .winbase import PSECURITY_ATTRIBUTES
 from .defbase import *
 
 if cpreproc.pragma_once("_APISETCONSOLEL2_"):
-    kernel32 = W_WinDLL("kernel32.dll")
+    kernel32 = get_win_library("kernel32.dll")
 
     from .wincontypes import *
 

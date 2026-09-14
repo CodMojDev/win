@@ -23,7 +23,7 @@ from .defbase import *
 from .minwindef import BOOL, DWORD, windll, INT, LPCWSTR, VOID, INT
 
 if cpreproc.pragma_once("_FXS_UTILITY_H_"):
-    fxsutility = W_WinDLL("fxsutility.dll")
+    fxsutility = get_win_library("fxsutility.dll")
 
     # REGION *** Desktop Family ***
 

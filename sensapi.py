@@ -33,7 +33,7 @@ from .minwindef import (DWORD, LPDWORD, LPCSTR,
 from .defbase import *
 
 if cpreproc.pragma_once("__SENSAPI_H__"):
-    sensapi = W_WinDLL("sensapi.dll")
+    sensapi = get_win_library("sensapi.dll")
 
     NETWORK_ALIVE_LAN = 0x00000001
     NETWORK_ALIVE_WAN = 0x00000002

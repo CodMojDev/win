@@ -17,11 +17,9 @@ from .defbase import *
 from .shtypes import *
 
 if cpreproc.pragma_once("_INC_SHLWAPI"):
-    shlwapi = W_WinDLL("shlwapi.dll")
+    shlwapi = get_win_library("shlwapi.dll")
     if cpreproc.ifndef("NOSHLWAPI"):
-
         # REGION *** Desktop Family or OneCore Family ***
-
 
         # REGION ***
 

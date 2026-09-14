@@ -19,7 +19,7 @@ from . import cpreproc
 from .defbase import *
 
 if cpreproc.pragma_once("_INC_TOOLHELP32"):
-    kernel32 = W_WinDLL("kernel32.dll")
+    kernel32 = get_win_library("kernel32.dll")
 
     # REGION *** Desktop Family ***
 

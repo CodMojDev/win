@@ -118,14 +118,6 @@ class CComPtr(CStructure, Template[IT]):
         
         return S_OK
     
-    @TemplateFunction[IT2]
-    def QueryInterface(self, pp: IDoublePtr[IT2], **kwargs) -> int:
-        template: Template[IT2] = get_template()
-        pp = i_cast(pp, template.get_pointer_type())
-        ASSERT(not PtrArithmetic.equals(pp, NULL))
-        template_type = template.get_single_type()
-        return self.p.contents.QueryInterface(template_type._iid_, pp)
-    
 class COMModule(W_WinDLL):
     def __init__(self, name: str):
         super().__init__(name)

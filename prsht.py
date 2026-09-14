@@ -27,7 +27,7 @@ from .defbase import *
 from . import cpreproc
 
 if cpreproc.pragma_once("_PRSHT_H_"):
-    comctl32 = W_WinDLL("comctl32.dll")
+    comctl32 = get_win_library("comctl32.dll")
     
     MAXPROPPAGES = 100
 

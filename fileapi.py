@@ -17,7 +17,7 @@ from .winbase import *
 from .minwindef import *
 
 if cpreproc.pragma_once("_APISETFILE_"):
-    kernel32 = W_WinDLL("kernel32.dll")
+    kernel32 = get_win_library("kernel32.dll")
 
     class WIN32_FIND_DATAA(CStructure):
         _fields_ = [("dwFileAttributes", DWORD),

@@ -24,7 +24,7 @@ from .minwindef import *
 from .winnt import SECURITY_INFORMATION, PSECURITY_DESCRIPTOR, ACCESS_MASK, LPSECURITY_ATTRIBUTES
 
 if cpreproc.pragma_once("_WINREG_"): 
-    advapi32 = W_WinDLL("advapi32.dll")
+    advapi32 = get_win_library("advapi32.dll")
 
     #
     # RRF - Registry Routine Flags (for RegGetValue)

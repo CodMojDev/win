@@ -15,7 +15,7 @@ from ..defbase import declare
 
 cpreproc.define("_INC_FLOAT")
 
-ucrtbase = W_WinDLL("ucrtbase.dll")
+ucrtbase = get_win_library("ucrtbase.dll")
 
 # Define the floating point precision used.
 #

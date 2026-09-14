@@ -413,32 +413,31 @@ class SafeArray(SAFEARRAY, IAliasableGenericWithPayload[WT],
     def value(self) -> list[WT]:
         dimensions = self.dimensions
         
-        match dimensions:
-            case 0:
-                return ()
-            case 1: 
-                size = self.get_size(1)
-                return self.get_data(size)
-            case _:
-                psaThis = self.ref()
-                lbounds = []
-                ubounds = []
-                
-                for dimension in range(1, dimensions + 1):
-                    lbound = LONG()
-                    hr = SafeArrayGetLBound(psaThis, dimension, byref(lbound))
-                    if FAILED(hr): raise COMError(hr)
-                    lbounds.append(lbound.value)
-                
-                for dimension in range(1, dimensions + 1):
-                    ubound = LONG()
-                    hr = SafeArrayGetUBound(psaThis, dimension, byref(ubound))
-                    if FAILED(hr): raise COMError(hr)
-                    ubounds.append(ubound.value)
-                
-                indices = (LONG * dimensions)(*lbounds)
-                row = self.get_row(psaThis, 0, indices, ubounds)
-                return row
+        if dimensions == 0:
+            return ()
+        elif dimensions == 1:
+            size = self.get_size(1)
+            return self.get_data(size)
+        else:
+            psaThis = self.ref()
+            lbounds = []
+            ubounds = []
+            
+            for dimension in range(1, dimensions + 1):
+                lbound = LONG()
+                hr = SafeArrayGetLBound(psaThis, dimension, byref(lbound))
+                if FAILED(hr): raise COMError(hr)
+                lbounds.append(lbound.value)
+            
+            for dimension in range(1, dimensions + 1):
+                ubound = LONG()
+                hr = SafeArrayGetUBound(psaThis, dimension, byref(ubound))
+                if FAILED(hr): raise COMError(hr)
+                ubounds.append(ubound.value)
+            
+            indices = (LONG * dimensions)(*lbounds)
+            row = self.get_row(psaThis, 0, indices, ubounds)
+            return row
             
     def get_type(self):
         item_type = self._item_type_

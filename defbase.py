@@ -1824,11 +1824,98 @@ class PtrArithmetic:
     def size(typ: type, count: int = 1) -> int:
         return sizeof(typ) * count
 
+class NullLibrary:
+    name: str
+    _name: str
+    handle: None
+    _handle: None
+    func_ptr: None
+    _FuncPtr: None
+    
+    def __init__(self, name: str):
+        self.name = name
+        self._name = name
+        self.handle = None
+        self._handle = None
+        self.func_ptr = None
+        self._FuncPtr = None
+
+    def __getattr__(self, name: str):
+        return NullFunction(self._name, name)
+        
+    def __getitem__(self, name_or_ordinal: int | str):
+        return NullFunction(self._name, name_or_ordinal)
+    
+    def foreign(self,
+                ret: type, 
+                *args: type, 
+                name: Optional[str] = None,
+                ordinal: Optional[int] = None,
+                class_method: bool = False,
+                result_function: Optional[Callable] = None,
+                intermediate_method: bool = False) -> Callable:
+        """
+        Foreign method declare
+        """
+        return foreign_optimized(ret, 
+                                 *args, 
+                                 library=self, 
+                                 name=name, 
+                                 ordinal=ordinal, 
+                                 class_method=class_method,
+                                 result_function=result_function,
+                                 intermediate_method=intermediate_method)
+
+def link_library(library: str, library_type: Type[LI] = W_CDLL, **kwargs):
+    """
+    Link library to the foreign libraries collection.
+    """
+    
+    if not isinstance(library_type, type):
+        raise ValueError('Library type must be Python type.')
+    if not issubclass(library_type, W_CDLL):
+        raise ValueError('Library type must be W_CDLL descendant.')
+    try:
+        if issubclass(library_type, W_CDLL):
+            instance = library_type(library, wt_link_api_up_stack=1+kwargs.get('wt_link_api_up_stack', 0))
+        else:
+            instance = library_type(library)
+    except Exception:
+        if _defb_state._defb_policy & DEFB_POLICY_RAISEONNULLLIBRARY:
+            raise
+        instance = NullLibrary(library)
+    _defb_state._linked_libraries[library] = instance
+
+def get_library(library: str, library_type: Type[LI] = W_CDLL, **kwargs) -> LI:
+    """
+    Get library from foreign libraries collection or
+    create new library of provided type.
+    """
+    if not isinstance(library_type, type):
+        raise ValueError('Library type must be Python type.')
+    if not issubclass(library_type, CDLL):
+        raise ValueError('Library type must be CDLL descendant.')
+    if library not in _defb_state._linked_libraries:
+        link_library(library, library_type, wt_link_api_up_stack=1+kwargs.get('wt_link_api_up_stack', 0))
+    return _defb_state._linked_libraries[library]
+
+def get_win_library(library: str) -> W_WinDLL:
+    """
+    Get library from foreign libraries collection or
+    create new library of `W_WinDLL` type.
+    """
+    return get_library(library, W_WinDLL, wt_link_api_up_stack=1)
+
 from ctypes import Union, c_wchar_p, c_int, addressof
 from .cpreproc import _CPreprocState
 
-ucrtbase = W_WinDLL('ucrtbase.dll')
-msvcrt = W_WinDLL('msvcrt.dll')
+ucrtbase = get_win_library('ucrtbase.dll')
+if isinstance(ucrtbase, NullLibrary):
+    ucrtbase = get_win_library('msvcr80.dll')
+ucrtbased = get_win_library('ucrtbased.dll')
+if isinstance(ucrtbased, NullLibrary):
+    ucrtbased = get_win_library('msvcr80d.dll')
+msvcrt = get_win_library('msvcrt.dll')
 
 suppress_WinWarning()
 
@@ -1848,7 +1935,7 @@ class AssertTool:
         """
         
     @staticmethod
-    @ucrtbase.foreign(c_int, c_int, c_wchar_p, c_int,
+    @ucrtbased.foreign(c_int, c_int, c_wchar_p, c_int,
                        c_wchar_p, c_wchar_p, 
                        name='_CrtDbgReportW')
     def CrtDbgReport(reportType: int, filename: str,
@@ -3248,88 +3335,6 @@ def unicode(wide: WT, ansi: WT) -> WT:
     if _CPreprocState._internal_cached_UNICODE: # internal optimization
         return wide
     return ansi
-
-class NullLibrary:
-    name: str
-    _name: str
-    handle: None
-    _handle: None
-    func_ptr: None
-    _FuncPtr: None
-    
-    def __init__(self, name: str):
-        self.name = name
-        self._name = name
-        self.handle = None
-        self._handle = None
-        self.func_ptr = None
-        self._FuncPtr = None
-
-    def __getattr__(self, name: str):
-        return NullFunction(self._name, name)
-        
-    def __getitem__(self, name_or_ordinal: int | str):
-        return NullFunction(self._name, name_or_ordinal)
-    
-    def foreign(self,
-                ret: type, 
-                *args: type, 
-                name: Optional[str] = None,
-                ordinal: Optional[int] = None,
-                class_method: bool = False,
-                result_function: Optional[Callable] = None,
-                intermediate_method: bool = False) -> Callable:
-        """
-        Foreign method declare
-        """
-        return foreign_optimized(ret, 
-                                 *args, 
-                                 library=self, 
-                                 name=name, 
-                                 ordinal=ordinal, 
-                                 class_method=class_method,
-                                 result_function=result_function,
-                                 intermediate_method=intermediate_method)
-
-def link_library(library: str, library_type: Type[LI] = W_CDLL, **kwargs):
-    """
-    Link library to the foreign libraries collection.
-    """
-    
-    if not isinstance(library_type, type):
-        raise ValueError('Library type must be Python type.')
-    if not issubclass(library_type, W_CDLL):
-        raise ValueError('Library type must be W_CDLL descendant.')
-    try:
-        if issubclass(library_type, W_CDLL):
-            instance = library_type(library, wt_link_api_up_stack=1+kwargs.get('wt_link_api_up_stack', 0))
-        else:
-            instance = library_type(library)
-    except Exception:
-        if _defb_state._defb_policy & DEFB_POLICY_RAISEONNULLLIBRARY:
-            raise
-        instance = NullLibrary(library)
-    _defb_state._linked_libraries[library] = instance
-
-def get_library(library: str, library_type: Type[LI] = W_CDLL, **kwargs) -> LI:
-    """
-    Get library from foreign libraries collection or
-    create new library of provided type.
-    """
-    if not isinstance(library_type, type):
-        raise ValueError('Library type must be Python type.')
-    if not issubclass(library_type, CDLL):
-        raise ValueError('Library type must be CDLL descendant.')
-    if library not in _defb_state._linked_libraries:
-        link_library(library, library_type, wt_link_api_up_stack=1+kwargs.get('wt_link_api_up_stack', 0))
-    return _defb_state._linked_libraries[library]
-
-def get_win_library(library: str) -> W_WinDLL:
-    """
-    Get library from foreign libraries collection or
-    create new library of `W_WinDLL` type.
-    """
-    return get_library(library, W_WinDLL, wt_link_api_up_stack=1)
 
 from types import ModuleType
 

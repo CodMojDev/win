@@ -29,7 +29,7 @@ from .winbase import LPSECURITY_ATTRIBUTES
 from .processthreadsapi import LPSTARTUPINFOW, LPPROCESS_INFORMATION, STARTUPINFOW, PROCESS_INFORMATION
 
 if cpreproc.pragma_once("_INC_SHELLAPI"):
-    shell32 = W_WinDLL("shell32.dll")
+    shell32 = get_win_library("shell32.dll")
     
     CommandLineToArgvW = declare(shell32.CommandLineToArgvW, LPWSTR, LPCWSTR, PINT)
 

@@ -21,8 +21,8 @@ from typing import Union
 from .defbase import *
 
 if cpreproc.pragma_once("_APISETLIBLOADER_"):
-    kernel32 = W_WinDLL("kernel32.dll")
-    user32  = W_WinDLL("user32.dll")
+    kernel32 = get_win_library("kernel32.dll")
+    user32 = get_win_library("user32.dll")
 
     # REGION *** Desktop Family or OneCore Family ***
 

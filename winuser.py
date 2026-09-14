@@ -26,8 +26,7 @@ from .winnt import (
 
 if cpreproc.pragma_once("_WINUSER_"):
     if cpreproc.ifndef("NOUSER"):
-
-        user32 = W_WinDLL("user32.dll")
+        user32 = get_win_library("user32.dll")
 
         LRESULT = LONG_PTR
 

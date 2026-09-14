@@ -445,9 +445,9 @@ class Theme(Handle):
 class VisualStyleElement:
     THEME_HANDLES: ClassVar[dict[str, Theme]] = {}
     
-    @staticmethod
-    def refresh(self):
-        self.THEME_HANDLES.clear()
+    @classmethod
+    def refresh(cls):
+        cls.THEME_HANDLES.clear()
     
     class_name: str
     part_id: int

@@ -24,7 +24,7 @@ if cpreproc.ifndef("__gl_h_"):
         cpreproc.define("__gl_h_")
         cpreproc.define("__GL_H__")
 
-        opengl32 = W_WinDLL("opengl32.dll")
+        opengl32 = get_win_library("opengl32.dll")
 
         """
         ** Copyright 1996 Silicon Graphics, Inc.

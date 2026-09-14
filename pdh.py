@@ -25,7 +25,7 @@ from .sdkddkver import WIN32_WINNT_WINXP
 from .winnt import UCHAR, PZZSTR, PZZWSTR
 
 if cpreproc.pragma_once("_PDH_H_"):
-    pdh = W_WinDLL("pdh.dll")
+    pdh = get_win_library("pdh.dll")
 
     # REGION *** Desktop Family and or PerfCounter Package ***
 

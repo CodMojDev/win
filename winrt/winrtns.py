@@ -34,23 +34,20 @@ class Windows(INamespace):
             """
             Registers and retrieves an instance of a specified type defined in a specified class ID.
             """
-            
-        # real implementation
-        @TemplateFunction[IT]
+        
         def ActivateInstance(activatableClassId: HSTRING, 
                              instance: IDoublePtr[IT], **kwargs) -> int:
             instance.contents = NULL
             pInspectable = IInspectable.NULL()
             hr = RoActivateInstance(activatableClassId, byref(pInspectable))
             if FAILED(hr): raise COMError(hr)
-            template: Template[IT] = get_template()
-            template_type = template.get_single_type()
-            template_ptr = template.get_pointer_type()
-            if template_type.iid() == IInspectable.iid():
-                instance.contents = static_cast[template_ptr](pInspectable)
+            pTy = PtrUtil.get_type(instance)
+            ty = PtrUtil.get_type(pTy)
+            if ty.iid() == IInspectable.iid():
+                instance.contents = static_cast[pTy](pInspectable)
             else:
                 hr = pInspectable.contents.QueryInterface(
-                    template_type.iid(), instance)
+                    ty.iid(), instance)
                 pInspectable.contents.Release()
                 if FAILED(hr): raise COMError(hr)
             return hr
@@ -82,12 +79,10 @@ class Windows(INamespace):
             """
             
         # real implementation
-        @TemplateFunction[IT]
         def GetActivationFactory(activatableClassId: HSTRING,
                                  factory: IDoublePtr[IT], **kwargs) -> int:
-            template: Template[IT] = get_template()
             return RoGetActivationFactory(activatableClassId, 
-                                          template.get_single_type().iid(),
+                                          PtrUtil.get_type(PtrUtil.get_type(factory)).iid(),
                                           factory)
     class Storage(INamespace):
         class Streams(INamespace):

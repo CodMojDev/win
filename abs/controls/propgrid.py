@@ -7,10 +7,16 @@ from win.abs.msgbox import *
 from win.abs.toolbar import *
 from win.abs.updown import *
 
-PGIO_REVERT = 0
-PGIO_DBLCLK = 1
-PGIO_COMMIT = 2
-PGIO_FOCUS  = 3
+# property grid item operations
+PGIO_REVERT       = 0
+PGIO_DBLCLK       = 1
+PGIO_COMMIT       = 2
+PGIO_FOCUS        = 3
+PGIO_THEMECHANGED = 4
+
+# property grid item preferences
+PGIP_NORMAL = 0
+PGIP_FORCEPAINT = 1
 
 class PropertyGridItem:
     name: str
@@ -62,6 +68,12 @@ class PropertyGridItem:
         """
         Destroy the property grid item.
         """
+        
+    def preferences(self) -> int:
+        """
+        Get the preferences of the property grid item.
+        """
+        return PGIP_NORMAL
     
     def __del__(self):
         self.destroy()
@@ -131,6 +143,9 @@ class PropertyGridItemString(PropertyGridItem):
                 self.view.on_item_updated.execute(self)
         elif op == PGIO_FOCUS:
             self.edit.focus()
+        elif op == PGIO_THEMECHANGED:
+            if self.view is not None and self.edit is not None:
+                self.edit.font = self.view.logical_name_font
             
     def destroy(self):
         if self.edit is not None:
@@ -213,6 +228,9 @@ class PropertyGridItemCombobox(PropertyGridItem):
                 self.view.on_item_updated.execute(self)
         elif op == PGIO_FOCUS:
             self.combobox.focus()
+        elif op == PGIO_THEMECHANGED:
+            if self.view is not None and self.combobox is not None:
+                self.combobox.font = self.view.logical_name_font
             
     def destroy(self):
         if self.combobox is not None:
@@ -330,6 +348,9 @@ class PropertyGridItemColor(PropertyGridItem):
             self.commit()
         elif op == PGIO_FOCUS:
             self.edit.focus()
+        elif op == PGIO_THEMECHANGED:
+            if self.view is not None and self.edit is not None:
+                self.edit.font = self.view.logical_name_font
             
     def destroy(self):
         if self.button is not None:
@@ -363,6 +384,9 @@ class PropertyGridItemColor(PropertyGridItem):
             self.original_text = self.text
         
         return True
+            
+    def preferences(self) -> int:
+        return PGIP_FORCEPAINT
 
 # property grid view hit-test definitions
 PGVHT_NONE = 0
@@ -447,18 +471,14 @@ class PropertyGridView(Window):
         self.on_command += self.gridview_on_command
         self.on_destroy += self.gridview_on_destroy
         self.on_left_button_double_click += self.gridview_on_left_button_double_click
+        self.on_theme_changed += self.gridview_on_theme_changed
+        self.on_sys_color_change += self.gridview_on_sys_color_change
         self.on_item_updated = MultiEvent()
         
         self.propname_width = 40
         self.directories = {}
         self.ht_map = []
         self.minimal = 0
-        
-        # setup property grid colors
-        self.directory_color = Color.BGR.string('#f0f0f0')
-        self.background_color = Color.BGR.string('#ffffff')
-        self.directory_name_color = Color.BGR.string("#000000")
-        self.select_color = Color.BGR.from_id(Color.ID.Highlight)
         
         self.directory_font = 'MS Shell Dlg'
         self.name_font = 'MS Shell Dlg'
@@ -468,32 +488,6 @@ class PropertyGridView(Window):
         
         # allow double clicks
         self.class_style = CS_DBLCLKS
-        
-        # switch the visual style elements
-        if isinstance(uxtheme, NullLibrary):
-            has_UxTheme = False
-        else:
-            try:
-                Theme.create(None, 'TREEVIEW')
-            except:
-                has_UxTheme = False
-            else:
-                has_UxTheme = True
-        if has_UxTheme:
-            try:
-                Theme.create(None, 'Explorer::TreeView')
-            except WinException:
-                has_ExplorerTreeView = False
-            else:
-                has_ExplorerTreeView = (VisualStyleElements.ExplorerTreeView.Glyph.CLOSED.defined() and
-                                        VisualStyleElements.ExplorerTreeView.Glyph.OPENED.defined())
-            if has_ExplorerTreeView:
-                self.vs_glyphclosed = VisualStyleElements.ExplorerTreeView.Glyph.CLOSED
-                self.vs_glyphopened = VisualStyleElements.ExplorerTreeView.Glyph.OPENED
-            else:
-                self.vs_glyphclosed = VisualStyleElements.TreeView.Glyph.CLOSED
-                self.vs_glyphopened = VisualStyleElements.TreeView.Glyph.OPENED
-        self.has_uxtheme = has_UxTheme
     
     def gridview_on_destroy(self):
         tables = WindowLoopUnit.current(False).accelerator_tables
@@ -529,14 +523,27 @@ class PropertyGridView(Window):
                     break
     
     def gridview_on_create(self) -> bool:
+        # init vertical scrollbar and its state
+        self.last_sb_position = 0
         self.vscroll.page = 1
         
-        self.setup_brushes()
-        self.setup_fonts()
-        self.setup_pens()
-        
-        self.last_sb_position = 0
+        # perform the theming initialization
+        self.reload_themes()
         return True
+    
+    def gridview_on_theme_changed(self):
+        self.reload_themes()
+        for row in self.rows():
+            if isinstance(row, PropertyGridItem):
+                row.operation(PGIO_THEMECHANGED)
+        self.invalidate()
+    
+    def setup_colors(self):
+        # setup property grid colors
+        self.directory_color = Color.BGR.string('#f0f0f0')
+        self.background_color = Color.BGR.string('#ffffff')
+        self.directory_name_color = Color.BGR.string("#000000")
+        self.select_color = Color.BGR.from_id(Color.ID.Highlight)
     
     def setup_brushes(self):
         self.directory_brush = Brush.create(self.directory_color)
@@ -553,6 +560,56 @@ class PropertyGridView(Window):
         if not self.has_uxtheme:
             self.pen_windowtext = Pen.create(PS_SOLID, 1, Color.BGR.from_id(Color.ID.WindowText))
             self.pen_buttonshadow = Pen.create(PS_SOLID, 1, Color.BGR.from_id(Color.ID.ButtonShadow))
+        else:
+            self.pen_windowtext = None
+            self.pen_buttonshadow = None
+    
+    def reload_themes(self):
+        # refresh the Theme handles cache
+        VisualStyleElement.refresh()
+        # check the uxtheme existence or readiness
+        if isinstance(uxtheme, NullLibrary):
+            has_UxTheme = False
+        else:
+            try:
+                Theme.create(None, 'TREEVIEW')
+            except WinException:
+                has_UxTheme = False
+            else:
+                has_UxTheme = True
+        # switch the visual style elements
+        if has_UxTheme:
+            try:
+                Theme.create(None, 'Explorer::TreeView')
+            except WinException:
+                has_ExplorerTreeView = False
+            else:
+                has_ExplorerTreeView = True
+            if has_ExplorerTreeView:
+                self.vs_glyphclosed = VisualStyleElements.ExplorerTreeView.Glyph.CLOSED
+                self.vs_glyphopened = VisualStyleElements.ExplorerTreeView.Glyph.OPENED
+            else:
+                self.vs_glyphclosed = VisualStyleElements.TreeView.Glyph.CLOSED
+                self.vs_glyphopened = VisualStyleElements.TreeView.Glyph.OPENED
+        self.has_uxtheme = has_UxTheme
+        
+        # reload colors
+        self.setup_colors()
+        # reload visual GDI components
+        self.setup_brushes()
+        self.setup_fonts()
+        self.setup_pens()
+    
+    def gridview_on_sys_color_change(self):
+        # refresh the color table array
+        Color.Table.array = None
+        # reload colors
+        self.setup_colors()
+        # reload brushes and pens
+        self.setup_brushes()
+        self.setup_pens()
+        # redraw the window
+        self.invalidate()
     
     def rows(self) -> list[tuple[str, bool] | PropertyGridItem]:
         result = []
@@ -664,11 +721,12 @@ class PropertyGridView(Window):
                 height = 23 - 1
                 rect = Rect.create(x, y, width, height)
                 row.measure(rect)
+                prefs = row.preferences()
                 
                 self.ht_map.append((rect, PGVHT_BUDDY, i))
                 row.host(self, rect)
                 if row.selected: row.enter()
-                else:
+                if prefs & PGIP_FORCEPAINT or not row.selected:
                     with dc.create_compatible_bitmap(rect.width, rect.height) as bitmap:
                         with dc.create_compatible() as mem_dc:
                             with mem_dc.select_ex(bitmap):
@@ -769,16 +827,16 @@ class PropertyGridView(Window):
             count = self.row_count()
             if self.minimal + self.SCROLL_Y_UNIT < count:
                 self.minimal += self.SCROLL_Y_UNIT
-                SetScrollPos(self, SB_VERT, GetScrollPos(self, SB_VERT)+1, TRUE)
+                self.vscroll.position += 1
         elif code == SB_LINEUP:
             if self.minimal - self.SCROLL_Y_UNIT >= 0:
                 self.minimal -= self.SCROLL_Y_UNIT
-                SetScrollPos(self, SB_VERT, GetScrollPos(self, SB_VERT)-1, TRUE)
+                self.vscroll.position -= 1
         elif code == SB_THUMBTRACK:
             diff = position - self.last_sb_position
             self.last_sb_position = position
             self.minimal += (diff*self.SCROLL_Y_UNIT)
-            SetScrollPos(self, SB_VERT, position, TRUE)
+            self.vscroll.position = position
         self.invalidate()
     
     def gridview_on_left_button_double_click(self, flags: int, x: int, y: int):
@@ -977,6 +1035,7 @@ class PropertyGrid(Window):
         self.on_create += self.grid_on_create
         self.on_notify += self.grid_on_notify
         self.on_command += self.grid_on_command
+        self.on_sys_color_change += self.grid_on_sys_color_change
         self.on_buddy_notify = MultiEvent()
         self.on_buddy_command = MultiEvent()
         self.styles.remove(WS_MAXIMIZEBOX, WS_MINIMIZEBOX)
@@ -1049,3 +1108,6 @@ class PropertyGrid(Window):
                 self.description.header = item.name
                 self.description.text = item.description
                 self.description.invalidate()
+                
+    def grid_on_sys_color_change(self):
+        self.grid_view.send(WM_SYSCOLORCHANGE)

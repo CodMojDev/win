@@ -22,7 +22,7 @@ from .com.unknwn import *
 from .winuser import SendMessage
 
 if cpreproc.pragma_once("_INC_COMMDLG"):
-    comdlg32 = W_WinDLL("comdlg32.dll")
+    comdlg32 = get_win_library("comdlg32.dll")
 
     #
     #  IPrintDialogCallback interface id used by PrintDlgEx.

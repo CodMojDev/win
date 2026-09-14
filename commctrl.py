@@ -26,7 +26,7 @@ from .winuser import *
 from .winnt import TEXT, SYSTEMTIME
 
 if cpreproc.pragma_once("_INC_COMMCTRL"):
-    comctl32 = W_WinDLL("comctl32.dll")
+    comctl32 = get_win_library("comctl32.dll")
 
     #
     # Users of this header may define any number of these constants to avoid

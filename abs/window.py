@@ -64,6 +64,8 @@ class Scrollbar:
         
         def __init__(self, scrollbar: 'Scrollbar', switch: int, state_index: int, antagonist_switch: int, antagonist_state_index: int):
             self.scrollbar = scrollbar
+            
+            self.state_index = state_index
             self.switch = switch
             
             self.antagonist_switch = antagonist_switch
@@ -103,8 +105,10 @@ class Scrollbar:
         self.window = window
         self.type = type
         
-        self.left = self.down = self.Button(self, ESB_DISABLE_LEFT, 5, ESB_DISABLE_RIGHT, 1)
-        self.right = self.up = self.Button(self, ESB_DISABLE_RIGHT, 1, ESB_DISABLE_LEFT, 5)
+        self.left = self.Button(self, ESB_DISABLE_LEFT, 5, ESB_DISABLE_RIGHT, 1)
+        self.down = self.Button(self, ESB_DISABLE_DOWN, 5, ESB_DISABLE_UP, 1)
+        self.right = self.Button(self, ESB_DISABLE_RIGHT, 1, ESB_DISABLE_LEFT, 5)
+        self.up = self.Button(self, ESB_DISABLE_UP, 1, ESB_DISABLE_DOWN, 5)
         
     def info(self) -> SCROLLBARINFO:
         """
@@ -145,8 +149,10 @@ class Scrollbar:
     
     @position.setter
     def position(self, position: int):
+        SetLastError(0)
         if not SetScrollPos(self.window, self.type, position, TRUE):
-            raise WinException()
+            code = GetLastError()
+            if code != 0: raise WinException(code)
     
     def get_scroll_info(self, mask: int) -> SCROLLINFO:
         """
@@ -932,6 +938,7 @@ class Window(Abs.Object, HWND):
     on_dwm_window_maximized_change: MultiEvent
     on_dwm_exile_frame: MultiEvent
     on_magnification_started: MultiEvent
+    on_sys_color_change: MultiEvent
     
     class_style: int
     last_message: MSG
@@ -1039,6 +1046,7 @@ class Window(Abs.Object, HWND):
         self.on_dwm_window_maximized_change = MultiEvent()
         self.on_dwm_exile_frame = MultiEvent()
         self.on_magnification_started = MultiEvent()
+        self.on_sys_color_change = MultiEvent()
         
         self.headless_init()
         
@@ -1860,6 +1868,10 @@ class Window(Abs.Object, HWND):
             if brush: # if not None or not NULL brush returned, then return it
                 return PtrUtil.get_address(brush)
             # otherwise let it fallback
+        elif msg == WM_SYSCOLORCHANGE: # the system colors is changed
+            # call the handler
+            self.on_sys_color_change.execute()
+            return 0 # message handled
         else:
             # unknown window message received
             result = self.on_unknown_message.execute(hwnd, msg, wParam, lParam) # trying to call all unknown message handlers
@@ -2649,7 +2661,7 @@ class Window(Abs.Object, HWND):
     def text(self) -> str:
         i = self.send(WM_GETTEXTLENGTH)
         p = create_unicode_buffer(i)
-        self.send(WM_GETTEXT, i, p)
+        self.send(WM_GETTEXT, i+1, p)
         return p.value
     
     @text.setter

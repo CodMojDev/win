@@ -23,7 +23,7 @@ from typing import (Callable)
 from .defbase import *
 
 if cpreproc.pragma_once("VER_H"):
-    version = W_WinDLL("version.dll")
+    version = get_win_library("version.dll")
 
     # REGION *** Desktop Family or OneCore Family ***
 

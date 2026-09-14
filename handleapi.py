@@ -16,6 +16,10 @@ from .defbase import *
 
 if cpreproc.pragma_once("_APISETHANDLE_"):
     kernel32 = get_win_library("kernel32.dll")
+    kernelbase = get_win_library("kernelbase.dll")
+    if isinstance(kernelbase, NullLibrary):
+        kernelbase = kernel32
+    
     #
     # Constants
     #
@@ -33,7 +37,7 @@ if cpreproc.pragma_once("_APISETHANDLE_"):
 
     # REGION *** Application Family or OneCore Family ***
 
-    CompareObjectHandles = declare(kernel32.CompareObjectHandles, BOOL, HANDLE, HANDLE)
+    CompareObjectHandles = declare(kernelbase.CompareObjectHandles, BOOL, HANDLE, HANDLE)
 
     # REGION ***
 

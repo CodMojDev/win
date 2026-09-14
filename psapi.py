@@ -9,8 +9,16 @@ from typing import (Callable)
 if cpreproc.pragma_once("_PSAPI_H_"):
     kernelbase = get_win_library("kernelbase.dll")
     kernel32 = get_win_library("kernel32.dll")
+    try:
+        psapi = get_win_library("psapi.dll")
+    except:
+        psapi = NullLibrary("psapi.dll")
 
     EnumProcesses = declare(kernelbase.EnumProcesses, BOOL, PDWORD, DWORD, LPDWORD)
+    if is_null(EnumProcesses):
+        EnumProcesses = declare(kernel32.K32EnumProcesses, BOOL, PDWORD, DWORD, LPDWORD)
+    if is_null(EnumProcesses):
+        EnumProcesses = declare(psapi.EnumProcesses, BOOL, PDWORD, DWORD, LPDWORD)
     # WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_APP | WINAPI_PARTITION_SYSTEM | WINAPI_PARTITION_GAMES)
 
     # REGION ***
@@ -20,17 +28,40 @@ if cpreproc.pragma_once("_PSAPI_H_"):
     EnumProcessModules = declare(kernelbase.EnumProcessModules, BOOL, HANDLE, POINTER(HMODULE), DWORD, LPDWORD)
     if is_null(EnumProcessModules):
         EnumProcessModules = declare(kernel32.K32EnumProcessModules, BOOL, HANDLE, POINTER(HMODULE), DWORD, LPDWORD)
+    if is_null(EnumProcessModules):
+        EnumProcessModules = declare(psapi.EnumProcessModules, BOOL, HANDLE, POINTER(HMODULE), DWORD, LPDWORD)
     EnumProcessModulesEx = declare(kernelbase.EnumProcessModulesEx, BOOL, HANDLE, POINTER(HMODULE), DWORD, LPDWORD, DWORD)
+    if is_null(EnumProcessModulesEx):
+        EnumProcessModulesEx = declare(kernel32.K32EnumProcessModulesEx, BOOL, HANDLE, POINTER(HMODULE), DWORD, LPDWORD, DWORD)
+    if is_null(EnumProcessModulesEx):
+        EnumProcessModulesEx = declare(psapi.EnumProcessModulesEx, BOOL, HANDLE, POINTER(HMODULE), DWORD, LPDWORD, DWORD)
 
     # REGION ***
 
     # REGION *** Application Family or OneCore Family or Games Family ***
 
     GetModuleBaseNameA = declare(kernelbase.GetModuleBaseNameA, DWORD, HANDLE, HMODULE, LPSTR, DWORD)
+    if is_null(GetModuleBaseNameA):
+        GetModuleBaseNameA = declare(kernel32.K32GetModuleBaseNameA, DWORD, HANDLE, HMODULE, LPSTR, DWORD)
+    if is_null(GetModuleBaseNameA):
+        GetModuleBaseNameA = declare(psapi.GetModuleBaseNameA, DWORD, HANDLE, HMODULE, LPSTR, DWORD)
     GetModuleBaseNameW = declare(kernelbase.GetModuleBaseNameW, DWORD, HANDLE, HMODULE, LPWSTR, DWORD)
+    if is_null(GetModuleBaseNameW):
+        GetModuleBaseNameW = declare(kernel32.K32GetModuleBaseNameW, DWORD, HANDLE, HMODULE, LPWSTR, DWORD)
+    if is_null(GetModuleBaseNameW):
+        GetModuleBaseNameW = declare(psapi.GetModuleBaseNameW, DWORD, HANDLE, HMODULE, LPWSTR, DWORD)
+        
     GetModuleBaseName = unicode(GetModuleBaseNameW, GetModuleBaseNameA)
     GetModuleFileNameExA = declare(kernelbase.GetModuleFileNameExA, DWORD, HANDLE, HMODULE, LPSTR, DWORD)
+    if is_null(GetModuleFileNameExA):
+        GetModuleFileNameExA = declare(kernel32.K32GetModuleFileNameExA, DWORD, HANDLE, HMODULE, LPSTR, DWORD)
+    if is_null(GetModuleFileNameExA):
+        GetModuleFileNameExA = declare(psapi.GetModuleFileNameExA, DWORD, HANDLE, HMODULE, LPSTR, DWORD)
     GetModuleFileNameExW = declare(kernelbase.GetModuleFileNameExW, DWORD, HANDLE, HMODULE, LPWSTR, DWORD)
+    if is_null(GetModuleFileNameExW):
+        GetModuleFileNameExW = declare(kernel32.K32GetModuleFileNameExW, DWORD, HANDLE, HMODULE, LPWSTR, DWORD)
+    if is_null(GetModuleFileNameExW):
+        GetModuleFileNameExW = declare(psapi.GetModuleFileNameExW, DWORD, HANDLE, HMODULE, LPWSTR, DWORD)
     GetModuleFileNameEx = unicode(GetModuleFileNameExW, GetModuleFileNameExA)
     # !UNICODE
 
@@ -51,12 +82,18 @@ if cpreproc.pragma_once("_PSAPI_H_"):
     GetModuleInformation = declare(kernelbase.GetModuleInformation, BOOL, HANDLE, HMODULE, LPMODULEINFO, DWORD)
     if is_null(GetModuleInformation):
         GetModuleInformation = declare(kernel32.K32GetModuleInformation, BOOL, HANDLE, HMODULE, LPMODULEINFO, DWORD)
+    if is_null(GetModuleInformation):
+        GetModuleInformation = declare(psapi.GetModuleInformation, BOOL, HANDLE, HMODULE, LPMODULEINFO, DWORD)
 
     # REGION ***
 
     # REGION *** Desktop Family or OneCore Family ***
 
     EmptyWorkingSet = declare(kernelbase.EmptyWorkingSet, BOOL, HANDLE)
+    if is_null(EmptyWorkingSet):
+        EmptyWorkingSet = declare(kernel32.K32EmptyWorkingSet, BOOL, HANDLE)
+    if is_null(EmptyWorkingSet):
+        EmptyWorkingSet = declare(psapi.EmptyWorkingSet, BOOL, HANDLE)
 
     # REGION ***
 
@@ -183,6 +220,10 @@ if cpreproc.pragma_once("_PSAPI_H_"):
     QueryWorkingSet = declare(kernelbase.QueryWorkingSet, BOOL, HANDLE, PVOID, DWORD)
     QueryWorkingSetEx = declare(kernelbase.QueryWorkingSetEx, BOOL, HANDLE, PVOID, DWORD)
     InitializeProcessForWsWatch = declare(kernelbase.InitializeProcessForWsWatch, BOOL, HANDLE)
+    if is_null(InitializeProcessForWsWatch):
+        InitializeProcessForWsWatch = declare(kernel32.K32InitializeProcessForWsWatch, BOOL, HANDLE)
+    if is_null(InitializeProcessForWsWatch):
+        InitializeProcessForWsWatch = declare(psapi.InitializeProcessForWsWatch, BOOL, HANDLE)
 
     class PSAPI_WS_WATCH_INFORMATION(CStructure):
         _fields_ = [
@@ -207,17 +248,39 @@ if cpreproc.pragma_once("_PSAPI_H_"):
         Flags: int
         
     GetWsChanges = declare(kernelbase.GetWsChanges, BOOL, HANDLE, DWORD)
+    if is_null(GetWsChanges):
+        GetWsChanges = declare(kernel32.K32GetWsChanges, BOOL, HANDLE, DWORD)
     GetWsChangesEx = declare(kernelbase.GetWsChangesEx, BOOL, HANDLE, PDWORD)
+    if is_null(GetWsChangesEx):
+        GetWsChangesEx = declare(kernel32.K32GetWsChangesEx, BOOL, HANDLE, PDWORD)
     GetMappedFileNameW = declare(kernelbase.GetMappedFileNameW, DWORD, HANDLE, LPVOID, LPWSTR, DWORD)
+    if is_null(GetMappedFileNameW):
+        GetMappedFileNameW = declare(kernel32.K32GetMappedFileNameW, DWORD, HANDLE, LPVOID, LPWSTR, DWORD)
     GetMappedFileNameA = declare(kernelbase.GetMappedFileNameA, DWORD, HANDLE, LPVOID, LPSTR, DWORD)
+    if is_null(GetMappedFileNameA):
+        GetMappedFileNameA = declare(kernel32.K32GetMappedFileNameA, DWORD, HANDLE, LPVOID, LPSTR, DWORD)
     GetMappedFileName = unicode(GetMappedFileNameW, GetMappedFileNameA)
     EnumDeviceDrivers = declare(kernelbase.EnumDeviceDrivers, BOOL, PLPVOID, DWORD, LPDWORD)
+    if is_null(EnumDeviceDrivers):
+        EnumDeviceDrivers = declare(kernel32.K32EnumDeviceDrivers, BOOL, PLPVOID, DWORD, LPDWORD)
     GetDeviceDriverBaseNameA = declare(kernelbase.GetDeviceDriverBaseNameA, DWORD, LPVOID, LPSTR, DWORD)
+    if is_null(GetDeviceDriverBaseNameA):
+        GetDeviceDriverBaseNameA = declare(kernel32.K32GetDeviceDriverBaseNameA, DWORD, LPVOID, LPSTR, DWORD)
     GetDeviceDriverBaseNameW = declare(kernelbase.GetDeviceDriverBaseNameW, DWORD, LPVOID, LPWSTR, DWORD)
+    if is_null(GetDeviceDriverBaseNameW):
+        GetDeviceDriverBaseNameW = declare(kernel32.K32GetDeviceDriverBaseNameW, DWORD, LPVOID, LPWSTR, DWORD)
     GetDeviceDriverBaseName = unicode(GetDeviceDriverBaseNameW, GetDeviceDriverBaseNameA)
     # !UNICODE
     GetDeviceDriverFileNameA = declare(kernelbase.GetDeviceDriverFileNameA, DWORD, LPVOID, LPSTR, DWORD)
+    if is_null(GetDeviceDriverFileNameA):
+        GetDeviceDriverFileNameA = declare(kernel32.K32GetDeviceDriverFileNameA, DWORD, LPVOID, LPSTR, DWORD)
+    if is_null(GetDeviceDriverFileNameA):
+        GetDeviceDriverFileNameA = declare(psapi.GetDeviceDriverFileNameA, DWORD, LPVOID, LPSTR, DWORD)
     GetDeviceDriverFileNameW = declare(kernelbase.GetDeviceDriverFileNameW, DWORD, LPVOID, LPWSTR, DWORD)
+    if is_null(GetDeviceDriverFileNameW):
+        GetDeviceDriverFileNameW = declare(kernel32.K32GetDeviceDriverFileNameW, DWORD, LPVOID, LPWSTR, DWORD)
+    if is_null(GetDeviceDriverFileNameW):
+        GetDeviceDriverFileNameW = declare(psapi.GetDeviceDriverFileNameW, DWORD, LPVOID, LPWSTR, DWORD)
     GetDeviceDriverFileName = unicode(GetDeviceDriverFileNameW, GetDeviceDriverFileNameA)
     # !UNICODE
     # WINAPI_FAMILY_PARTITION(WINAPI_PARTITION_DESKTOP | WINAPI_PARTITION_SYSTEM | WINAPI_PARTITION_GAMES)
@@ -283,6 +346,10 @@ if cpreproc.pragma_once("_PSAPI_H_"):
     PPROCESS_MEMORY_COUNTERS_EX = POINTER(PROCESS_MEMORY_COUNTERS_EX)
 
     GetProcessMemoryInfo = declare(kernelbase.GetProcessMemoryInfo, BOOL, HANDLE, PPROCESS_MEMORY_COUNTERS, DWORD)
+    if is_null(GetProcessMemoryInfo):
+        GetProcessMemoryInfo = declare(kernel32.K32GetProcessMemoryInfo, BOOL, HANDLE, PPROCESS_MEMORY_COUNTERS, DWORD)
+    if is_null(GetProcessMemoryInfo):
+        GetProcessMemoryInfo = declare(psapi.K32GetProcessMemoryInfo, BOOL, HANDLE, PPROCESS_MEMORY_COUNTERS, DWORD)
 
     # REGION ***
 
@@ -324,6 +391,10 @@ if cpreproc.pragma_once("_PSAPI_H_"):
     PPERFORMANCE_INFORMATION = POINTER(PERFORMANCE_INFORMATION)
 
     GetPerformanceInfo = declare(kernelbase.GetPerformanceInfo, BOOL, PPERFORMANCE_INFORMATION, DWORD)
+    if is_null(GetPerformanceInfo):
+        GetPerformanceInfo = declare(kernel32.K32GetPerformanceInfo, BOOL, PPERFORMANCE_INFORMATION, DWORD)
+    if is_null(GetPerformanceInfo):
+        GetPerformanceInfo = declare(psapi.GetPerformanceInfo, BOOL, PPERFORMANCE_INFORMATION, DWORD)
 
     # REGION ***
 

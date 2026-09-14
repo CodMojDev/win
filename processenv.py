@@ -17,7 +17,7 @@ from .minwindef import *
 from .winnt import LPWCH, LPCH
 
 if cpreproc.pragma_once("_PROCESSENV_"):
-    kernel32 = W_WinDLL("kernel32.dll")
+    kernel32 = get_win_library("kernel32.dll")
 
     # REGION *** Application Family or OneCore Family or Games Family ***
 

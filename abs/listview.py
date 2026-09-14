@@ -67,13 +67,18 @@ class ListView(Control):
                 column.iImage = image
                 column.mask |= LVCF_IMAGE
                 
-            if minimal_width is not None:
-                column.cxMin = minimal_width
-                column.mask |= LVCF_MINWIDTH
-                
-            if ideal_width is not None:
-                column.cxIdeal = ideal_width
-                column.mask |= LVCF_IDEALWIDTH
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                if minimal_width is not None:
+                    column.cxMin = minimal_width
+                    column.mask |= LVCF_MINWIDTH
+                    
+                if ideal_width is not None:
+                    column.cxIdeal = ideal_width
+                    column.mask |= LVCF_IDEALWIDTH
+                    
+                if default_width is not None:
+                    column.cxDefault = default_width
+                    column.mask |= LVCF_DEFAULTWIDTH
                 
             if format is not None:
                 column.fmt = format
@@ -82,10 +87,6 @@ class ListView(Control):
             if order is not None:
                 column.iOrder = order
                 column.mask |= LVCF_ORDER
-                
-            if default_width is not None:
-                column.cxDefault = default_width
-                column.mask |= LVCF_DEFAULTWIDTH
                 
             if sub_item is not None:
                 column.iSubItem = sub_item
@@ -96,16 +97,20 @@ class ListView(Control):
         
         def __getitem__(self, index: int) -> 'ListView.Columns.Column':
             column = ListView.Columns.Column(self.list_view)
-            column.mask = (LVCF_IMAGE | LVCF_FMT | LVCF_MINWIDTH | LVCF_WIDTH | LVCF_SUBITEM |
-                           LVCF_DEFAULTWIDTH | LVCF_IDEALWIDTH | LVCF_ORDER | LVCF_TEXT)
+            column.mask = (LVCF_IMAGE | LVCF_FMT | LVCF_WIDTH | LVCF_SUBITEM |
+                           LVCF_ORDER | LVCF_TEXT)
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                column.mask |= LVCF_DEFAULTWIDTH | LVCF_IDEALWIDTH | LVCF_MINWIDTH
             if not self.list_view.send(LVM_GETCOLUMNW, index, column.ref()):
                 raise IndexError(f'Invalid item index: {index}')
             column.index = index
             return column
         
         def __setitem__(self, index: int, column: 'ListView.Columns.Column'):
-            column.mask = (LVCF_IMAGE | LVCF_FMT | LVCF_MINWIDTH | LVCF_WIDTH | LVCF_SUBITEM |
-                           LVCF_DEFAULTWIDTH | LVCF_IDEALWIDTH | LVCF_ORDER | LVCF_TEXT)
+            column.mask = (LVCF_IMAGE | LVCF_FMT | LVCF_WIDTH | LVCF_SUBITEM |
+                           LVCF_ORDER | LVCF_TEXT)
+            if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+                column.mask |= LVCF_DEFAULTWIDTH | LVCF_IDEALWIDTH | LVCF_MINWIDTH
             if not self.list_view.send(LVM_SETCOLUMNW, index, column.ref()):
                 raise IndexError(f'Invalid item index: {index}')
         

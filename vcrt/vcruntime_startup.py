@@ -13,7 +13,7 @@ from .. import cpreproc
 if cpreproc.pragma_once("__VCRUNTIME_STARTUP_H__"):
     from ..minwindef import *
 
-    msvcrt = W_WinDLL("msvcrt.dll")
+    msvcrt = get_win_library("msvcrt.dll")
 
     _crt_argv_mode = INT
     _crt_argv_no_arguments = 0

@@ -19,7 +19,7 @@ from .defbase import *
 from .winnls import LPNLSVERSIONINFO
 
 if cpreproc.pragma_once("_APISETSTRING_"):
-    kernel32 = W_WinDLL("kernel32.dll")
+    kernel32 = get_win_library("kernel32.dll")
 
     # REGION *** Desktop or OneCore or Application or Games Family ***
 

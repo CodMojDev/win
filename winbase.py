@@ -2,7 +2,7 @@ from .basetsd import *
 
 from .winnt import *
 
-kernel32 = W_WinDLL("kernel32.dll")
+kernel32 = get_win_library("kernel32.dll")
 
 Yield = lambda: None
 

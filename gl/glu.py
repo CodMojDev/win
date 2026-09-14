@@ -21,7 +21,7 @@ if cpreproc.ifndef("__glu_h__"):
     if cpreproc.pragma_once("__GLU_H__"):
         cpreproc.define("__GLU_H__")
 
-        glu32 = W_WinDLL("glu32.dll")
+        glu32 = get_win_library("glu32.dll")
 
         """
         ** Copyright 1991-1993, Silicon Graphics, Inc.

@@ -7,7 +7,7 @@ from ..defbase import *
 
 from ..defbase_errordef import *
 
-kernel32 = W_WinDLL('kernel32.dll')
+kernel32 = get_win_library('kernel32.dll')
 
 @kernel32.foreign(HLOCAL, HLOCAL)
 def LocalFree(hMem: int) -> int: ...

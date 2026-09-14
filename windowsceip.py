@@ -20,7 +20,7 @@ from .sdkddkver import WIN32_WINNT_WIN8
 
 from .defbase import *
 
-kernel32 = W_WinDLL("kernel32.dll")
+kernel32 = get_win_library("kernel32.dll")
 
 # REGION *** Application Family or OneCore Family ***
 

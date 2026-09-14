@@ -11,7 +11,7 @@ from .defbase import *
 from typing import *
 
 class WinErrors:
-    _kernel32 = W_WinDLL('kernel32.dll')
+    _kernel32 = get_win_library('kernel32.dll')
     _FormatMessage = unicode(
         declare(_kernel32.FormatMessageW, DWORD, DWORD, LPCVOID, DWORD, DWORD, LPWSTR, DWORD),
         declare(_kernel32.FormatMessageA, DWORD, DWORD, LPCVOID, DWORD, DWORD, LPSTR, DWORD)

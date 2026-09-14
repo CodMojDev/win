@@ -19,9 +19,8 @@ from .fileapi import *
 # end_1_0
 
 if cpreproc.pragma_once("_TIMEZONEAPI_H_"):
-    
-    advapi32 = W_WinDLL("advapi32.dll")
-    kernel32 = W_WinDLL("kernel32.dll")
+    advapi32 = get_win_library("advapi32.dll")
+    kernel32 = get_win_library("kernel32.dll")
     
     # REGION *** Application Family or OneCore Family or Games Family ***
     

@@ -5,6 +5,7 @@
 from ...defbase_errordef import *
 from ...guiddef import *
 from .coredef import *
+from typing import Self
 
 RPC_CSTR = LPSTR
 RPC_WSTR = LPWSTR

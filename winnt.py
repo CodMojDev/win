@@ -271,9 +271,9 @@ if cpreproc.pragma_once("_WINNT_"):
         COMPARTMENT_ID = _COMPARTMENT_ID
         PCOMPARTMENT_ID = POINTER(COMPARTMENT_ID)
 
-    ucrtbase = W_WinDLL("ucrtbase.dll")
+    ucrtbase = get_win_library("ucrtbase.dll")
     _get_wide_winmain_command_line = declare(ucrtbase._get_wide_winmain_command_line, LPWSTR, VOID)
-        
+    
     LOGICAL = ULONG
     PLOGICALL = PULONG
     
@@ -753,60 +753,131 @@ if cpreproc.pragma_once("_WINNT_"):
                 ("ErrorSelector", WORD),
                 ("DataOffset", WORD),
                 ("DataSelector", WORD),
-                ("RegisterArea", UINT8 * 80),
+                ("RegisterArea", BYTE * 80),
                 ("Cr0NpxState", DWORD)
             ]
+            ControlWord: int
+            StatusWord: int
+            TagWord: int
+            ErrorOffset: int
+            ErrorSelector: int
+            DataOffset: int
+            DataSelector: int
+            RegisterArea: IArray[int]
+            Cr0NpxState: int
+
+        class FLOATING_SAVE_AREA(CStructure):
+            _fields_ = [
+                ("ControlWord", DWORD),
+                ("StatusWord", DWORD),
+                ("TagWord", DWORD),
+                ("ErrorOffset", DWORD),
+                ("ErrorSelector", DWORD),
+                ("DataOffset", DWORD),
+                ("DataSelector", DWORD),
+                ("RegisterArea", BYTE * 80),
+                ("Spare0", DWORD)
+            ]
+            ControlWord: int
+            StatusWord: int
+            TagWord: int
+            ErrorOffset: int
+            ErrorSelector: int
+            DataOffset: int
+            DataSelector: int
+            RegisterArea: IArray[int]
+            Spare0: int
 
         class _CONTEXT(CStructure):
-            _fields_ = [
-                ("P1Home", DWORD64),
-                ("P2Home", DWORD64),
-                ("P3Home", DWORD64),
-                ("P4Home", DWORD64),
-                ("P5Home", DWORD64),
-                ("P6Home", DWORD64),
-                ("ContextFlags", DWORD),
-                ("MxCsr", DWORD),
-                ("SegCs", WORD),
-                ("SegDs", WORD),
-                ("SegEs", WORD),
-                ("SegFs", WORD),
-                ("SegGs", WORD),
-                ("SegSs", WORD),
-                ("EFlags", DWORD),
-                ("Dr0", DWORD64),
-                ("Dr1", DWORD64),
-                ("Dr2", DWORD64),
-                ("Dr3", DWORD64),
-                ("Dr6", DWORD64),
-                ("Dr7", DWORD64),
-                ("Rax", DWORD64),
-                ("Rcx", DWORD64),
-                ("Rdx", DWORD64),
-                ("Rbx", DWORD64),
-                ("Rsp", DWORD64),
-                ("Rbp", DWORD64),
-                ("Rsi", DWORD64),
-                ("Rdi", DWORD64),
-                ("R8", DWORD64),
-                ("R9", DWORD64),
-                ("R10", DWORD64),
-                ("R11", DWORD64),
-                ("R12", DWORD64),
-                ("R13", DWORD64),
-                ("R14", DWORD64),
-                ("R15", DWORD64),
-                ("Rip", DWORD64),
-                ("FltSave", XMM_SAVE_AREA32),
-                ("VectorRegister", M128A * 26),
-                ("VectorControl", DWORD64),
-                ("DebugControl", DWORD64),
-                ("LastBranchToRip", DWORD64),
-                ("LastBranchFromRip", DWORD64),
-                ("LastExceptionToRip", DWORD64),
-                ("LastExceptionFromRip", DWORD64)
-            ]
+            if cpreproc.defined('_M_AMD64'):
+                _fields_ = [
+                    ("P1Home", DWORD64),
+                    ("P2Home", DWORD64),
+                    ("P3Home", DWORD64),
+                    ("P4Home", DWORD64),
+                    ("P5Home", DWORD64),
+                    ("P6Home", DWORD64),
+                    ("ContextFlags", DWORD),
+                    ("MxCsr", DWORD),
+                    ("SegCs", WORD),
+                    ("SegDs", WORD),
+                    ("SegEs", WORD),
+                    ("SegFs", WORD),
+                    ("SegGs", WORD),
+                    ("SegSs", WORD),
+                    ("EFlags", DWORD),
+                    ("Dr0", DWORD64),
+                    ("Dr1", DWORD64),
+                    ("Dr2", DWORD64),
+                    ("Dr3", DWORD64),
+                    ("Dr6", DWORD64),
+                    ("Dr7", DWORD64),
+                    ("Rax", DWORD64),
+                    ("Rcx", DWORD64),
+                    ("Rdx", DWORD64),
+                    ("Rbx", DWORD64),
+                    ("Rsp", DWORD64),
+                    ("Rbp", DWORD64),
+                    ("Rsi", DWORD64),
+                    ("Rdi", DWORD64),
+                    ("R8", DWORD64),
+                    ("R9", DWORD64),
+                    ("R10", DWORD64),
+                    ("R11", DWORD64),
+                    ("R12", DWORD64),
+                    ("R13", DWORD64),
+                    ("R14", DWORD64),
+                    ("R15", DWORD64),
+                    ("Rip", DWORD64),
+                    ("FltSave", XMM_SAVE_AREA32),
+                    ("VectorRegister", M128A * 26),
+                    ("VectorControl", DWORD64),
+                    ("DebugControl", DWORD64),
+                    ("LastBranchToRip", DWORD64),
+                    ("LastBranchFromRip", DWORD64),
+                    ("LastExceptionToRip", DWORD64),
+                    ("LastExceptionFromRip", DWORD64)
+                ]
+            elif cpreproc.defined('_M_IX86'):
+                _fields_ = [
+                    ("ContextFlags", DWORD),
+                    ("Dr0", DWORD),
+                    ("Dr1", DWORD),
+                    ("Dr2", DWORD),
+                    ("Dr3", DWORD),
+                    ("Dr6", DWORD),
+                    ("Dr7", DWORD),
+                    ("FloatSave", FLOATING_SAVE_AREA),
+                    ("SegGs", DWORD),
+                    ("SegFs", DWORD),
+                    ("SegEs", DWORD),
+                    ("SegDs", DWORD),
+                    ("Edi", DWORD),
+                    ("Esi", DWORD),
+                    ("Ebx", DWORD),
+                    ("Edx", DWORD),
+                    ("Ecx", DWORD),
+                    ("Eax", DWORD),
+                    ("Ebp", DWORD),
+                    ("Eip", DWORD),
+                    ("SegCs", DWORD),
+                    ("EFlags", DWORD),
+                    ("Esp", DWORD),
+                    ("SegSs", DWORD),
+                    ("ExtendedRegisters", BYTE * 512)
+                ]
             
+            ExtendedRegisters: IArray[int]
+            FloatSave: FLOATING_SAVE_AREA
+            Edi: int
+            Esi: int
+            Ebx: int
+            Edx: int
+            Ecx: int
+            Eax: int
+            Ebp: int
+            Eip: int
+            Esp: int
             VectorRegister: IArray[M128A]
             FltSave: XMM_SAVE_AREA32
             LastExceptionFromRip: int

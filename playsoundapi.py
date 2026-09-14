@@ -18,7 +18,7 @@ from .winnt import (BOOL, LPCSTR, UINT, LPCWSTR, DWORD, BYTE, HMODULE)
 from ctypes import windll
 
 if cpreproc.pragma_once("_PLAYSOUNDAPI_H_"):
-    winmm = W_WinDLL("winmm.dll")
+    winmm = get_win_library("winmm.dll")
 
     # REGION *** Desktop Family ***
 

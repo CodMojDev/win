@@ -13,10 +13,11 @@ from . import cpreproc
 
 if cpreproc.pragma_once("_WINGDI_"):
     if cpreproc.ifndef("NOGDI"):
-        gdi32 = W_WinDLL("gdi32.dll")
-        msimg32 = W_WinDLL("msimg32.dll")
-        winspool = W_WinDLL('winspool.drv')
-        opengl32 = W_WinDLL("opengl32.dll")
+        gdi32 = get_win_library("gdi32.dll")
+        msimg32 = get_win_library("msimg32.dll")
+        winspool = get_win_library('winspool.drv')
+        opengl32 = get_win_library("opengl32.dll")
+        
         if cpreproc.ifndef("NORASTEROPS"):
             # Binary raster ops
             R2_BLACK = 1 #  0

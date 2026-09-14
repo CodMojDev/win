@@ -31,8 +31,8 @@ class HSTRING(HANDLE):
     _allocated: bool
     
     def __init__(self, string: TUnion['HSTRING', str] = None):
+        self._allocated = False
         if string is None: 
-            self._allocated = False
             return
         if isinstance(string, HSTRING):
             WindowsDuplicateString(string, byref(self))

@@ -236,7 +236,9 @@ class COMInterface(CStructure, IReferenceable, IUnpackable):
         
         def thunk(this, *args, **kwargs):
             thunk.__name__ = f'{virtual_table.name}_{function_name}_Thunk'
-            thunk.__qualname__ = thunk.__code__.co_name = thunk.__code__.co_qualname = thunk.__name__
+            thunk.__qualname__ = thunk.__code__.co_name = thunk.__name__
+            if hasattr(thunk.__code__, 'co_qualname'):
+                thunk.co_qualname = thunk.__name__
             dbg_trace(dbgplus_provider, f'UnusedThis={this}, This={self.virtual_table.name}')
             return getattr(self, function_name + '_Impl')(*args)
         

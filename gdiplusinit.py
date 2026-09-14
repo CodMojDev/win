@@ -21,10 +21,9 @@ from .minwindef import *
 from .defbase import *
 
 if cpreproc.pragma_once("_GDIPLUSINIT_H"):
-    
     from .gdiplustypes import Status
 
-    gdiplus = W_WinDLL("gdiplus.dll")
+    gdiplus = get_win_library("gdiplus.dll")
 
     # REGION *** Desktop Family ***
 

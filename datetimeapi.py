@@ -14,8 +14,7 @@ from .defbase import *
 from .winbase import *
 
 if cpreproc.pragma_once("_DATETIMEAPI_H_"):
-    
-    kernel32 = W_WinDLL("kernel32.dll")
+    kernel32 = get_win_library("kernel32.dll")
 
     # REGION *** Desktop Family or OneCore or Games Family ***
 

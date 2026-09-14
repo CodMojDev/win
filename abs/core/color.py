@@ -263,15 +263,15 @@ class Color:
         
         @property
         def r(self) -> int:
-            return self >> 16 & 0xff
+            return self.value >> 16 & 0xff
         
         @property
         def g(self) -> int:
-            return self >> 8 & 0xff
+            return self.value >> 8 & 0xff
         
         @property
         def b(self) -> int:
-            return self & 0xff
+            return self.value & 0xff
         
         @r.setter
         def r(self, r: int):
@@ -306,19 +306,19 @@ class Color:
         
         @property
         def a(self) -> int: 
-            return self & 0xff
+            return self.value & 0xff
 
         @property
         def r(self) -> int:
-            return self >> 24 & 0xff
+            return self.value >> 24 & 0xff
         
         @property
         def g(self) -> int:
-            return self >> 16 & 0xff
+            return self.value >> 16 & 0xff
         
         @property
         def b(self) -> int:
-            return self >> 8 & 0xff
+            return self.value >> 8 & 0xff
         
         @r.setter
         def r(self, r: int):
@@ -357,15 +357,15 @@ class Color:
         
         @property
         def b(self) -> int:
-            return self >> 16 & 0xff
+            return self.value >> 16 & 0xff
         
         @property
         def g(self) -> int:
-            return self >> 8 & 0xff
+            return self.value >> 8 & 0xff
         
         @property
         def r(self) -> int:
-            return self & 0xff
+            return self.value & 0xff
         
         @b.setter
         def b(self, b: int):
@@ -400,19 +400,19 @@ class Color:
         
         @property
         def b(self) -> int:
-            return self >> 24 & 0xff
+            return self.value >> 24 & 0xff
         
         @property
         def g(self) -> int:
-            return self >> 16 & 0xff
+            return self.value >> 16 & 0xff
         
         @property
         def r(self) -> int:
-            return self >> 8 & 0xff
+            return self.value >> 8 & 0xff
         
         @property
         def a(self) -> int:
-            return self & 0xff
+            return self.value & 0xff
         
         @b.setter
         def b(self, b: int):
@@ -448,19 +448,19 @@ class Color:
         
         @property
         def a(self) -> int:
-            return self >> 24 & 0xff
+            return self.value >> 24 & 0xff
         
         @property
         def r(self) -> int:
-            return self >> 16 & 0xff
+            return self.value >> 16 & 0xff
         
         @property
         def g(self) -> int:
-            return self >> 8 & 0xff
+            return self.value >> 8 & 0xff
         
         @property
         def b(self) -> int:
-            return self & 0xff
+            return self.value & 0xff
         
         @a.setter
         def a(self, a: int):
@@ -499,19 +499,19 @@ class Color:
         
         @property
         def a(self) -> int:
-            return self >> 24 & 0xff
+            return self.value >> 24 & 0xff
         
         @property
         def b(self) -> int:
-            return self >> 16 & 0xff
+            return self.value >> 16 & 0xff
         
         @property
         def g(self) -> int:
-            return self >> 8 & 0xff
+            return self.value >> 8 & 0xff
         
         @property
         def r(self) -> int:
-            return self & 0xff
+            return self.value & 0xff
         
         @a.setter
         def a(self, a: int):
@@ -916,7 +916,7 @@ class Color:
         MenuHighlight = 174
     
     class IColorTable:
-        _color_: type[Color.IColor]
+        _color_: type['Color.IColor']
         
         @staticmethod
         def ensure() -> list[int]:
@@ -926,7 +926,6 @@ class Color:
     
     class Table(IColorTable):
         array: list[int] | None = None
-        _color_ = Color.ARGB
         
         @staticmethod
         def ensure() -> list[int]:
@@ -1107,6 +1106,8 @@ class Color:
                 array[166] = -256
                 array[167] = -6632142
             return Color.Table.array
+        
+    Table._color_ = ARGB
         
 WT_COLOR = TypeVar('WT_COLOR', bound=Color.IColor)
 WT_COLORALPHA = TypeVar('WT_COLORALPHA', bound=Color.IColorAlpha)

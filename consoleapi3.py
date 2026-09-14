@@ -15,7 +15,7 @@ from .wincontypes import *
 from .defbase import *
 
 if cpreproc.pragma_once("_APISETCONSOLEL3_"):
-    kernel32 = W_WinDLL("kernel32.dll")
+    kernel32 = get_win_library("kernel32.dll")
 
     if cpreproc.ifndef("NOGDI"):
         from .wingdi import *

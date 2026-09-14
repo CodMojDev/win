@@ -26,8 +26,7 @@ from typing import (Callable)
 from .defbase import *
 
 if cpreproc.pragma_once("_PROCESSTHREADSAPI_H_"):
-    
-    kernel32 = W_WinDLL("kernel32.dll")
+    kernel32 = get_win_library("kernel32.dll")
     
     # REGION *** Application Family or OneCore Family or Games Family ***
 

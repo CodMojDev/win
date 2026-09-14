@@ -12,8 +12,7 @@ from .minwindef import *
 from .sdkddkver import WIN32_WINNT_WIN8
 
 if cpreproc.pragma_once("_WS_DEMO_LICENSING_H_"):
-    
-    oemlicense = W_WinDLL("oemlicense.dll")
+    oemlicense = get_win_librarys("oemlicense.dll")
 
     # REGION *** Desktop Family ***
 

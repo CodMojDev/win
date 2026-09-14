@@ -6,6 +6,7 @@ from win.winuser import user32
 import threading
 import traceback
 import queue
+import queue as queue2
 
 if TYPE_CHECKING:
     from .handle import CriticalSection, Win32Event
@@ -72,7 +73,7 @@ class Abs:
         WinAbs thread holder.
         """
         
-        queue: queue.Queue[tuple[str, ...]]
+        queue: queue2.Queue[tuple[str, ...]]
         lock: threading.Lock
         crit: 'CriticalSection'
         

@@ -19,7 +19,7 @@ from .winbase import (LPTHREAD_START_ROUTINE)
 from .winnt import WAITORTIMERCALLBACK
 
 if cpreproc.pragma_once("_THREADPOOLLEGACYAPISET_H_"):
-    kernel32 = W_WinDLL("kernel32.dll")
+    kernel32 = get_win_library("kernel32.dll")
     #
     # Thread pool API's
     #

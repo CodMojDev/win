@@ -45,24 +45,29 @@ if sys.version_info[0:2] == (3, 8) or typing.TYPE_CHECKING:
             return id(union)
         pfn_polyfill_type_or = PY_BINARY_FUNC(polyfill_type_or)
         _GLOBAL_REFS.append(pfn_polyfill_type_or)
-        tp_type.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
-        memset(tp_type.tp_as_number, 0, 36*sizeof(c_void_p))
+        if not tp_type.tp_as_number:
+            tp_type.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
+            memset(tp_type.tp_as_number, 0, 36*sizeof(c_void_p))
         tp_type.tp_as_number[15] = cast(pfn_polyfill_type_or, c_void_p).value
         tp_none = PyType_CAST_DEREF(type(None))
-        tp_none.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
-        memset(tp_none.tp_as_number, 0, 36*sizeof(c_void_p))
+        if not tp_none.tp_as_number:
+            tp_none.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
+            memset(tp_none.tp_as_number, 0, 36*sizeof(c_void_p))
         tp_none.tp_as_number[15] = cast(pfn_polyfill_type_or, c_void_p).value
         tp_specialform = PyType_CAST_DEREF(typing._SpecialForm)
-        tp_specialform.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
-        memset(tp_specialform.tp_as_number, 0, 36*sizeof(c_void_p))
+        if not tp_specialform.tp_as_number:
+            tp_specialform.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
+            memset(tp_specialform.tp_as_number, 0, 36*sizeof(c_void_p))
         tp_specialform.tp_as_number[15] = cast(pfn_polyfill_type_or, c_void_p).value
         tp_genericalias = PyType_CAST_DEREF(typing._GenericAlias)
-        tp_genericalias.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
-        memset(tp_genericalias.tp_as_number, 0, 36*sizeof(c_void_p))
+        if not tp_genericalias.tp_as_number:
+            tp_genericalias.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
+            memset(tp_genericalias.tp_as_number, 0, 36*sizeof(c_void_p))
         tp_genericalias.tp_as_number[15] = cast(pfn_polyfill_type_or, c_void_p).value
         tp_pycstructtype = PyType_CAST_DEREF(type(Structure))
-        tp_pycstructtype.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
-        memset(tp_pycstructtype.tp_as_number, 0, 36*sizeof(c_void_p))
+        if not tp_pycstructtype.tp_as_number:
+            tp_pycstructtype.tp_as_number = cast(PyObject_Malloc(36*sizeof(c_void_p)), POINTER(c_void_p))
+            memset(tp_pycstructtype.tp_as_number, 0, 36*sizeof(c_void_p))
         tp_pycstructtype.tp_as_number[15] = cast(pfn_polyfill_type_or, c_void_p).value
         tp_type.Reload()
         type_check = typing._type_check
