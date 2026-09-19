@@ -90,17 +90,17 @@ class ProgressBar(Control):
         self.send(PBM_SETSTEP, step)
         
     @property
-    def bk_color(self) -> int:
-        return self.send(PBM_GETBKCOLOR)
+    def bk_color(self) -> Color.BGR:
+        return Color.BGR(self.send(PBM_GETBKCOLOR))
     
     @bk_color.setter
-    def bk_color(self, bk_color: int):
-        self.send(PBM_SETBKCOLOR, lParam=bk_color)
+    def bk_color(self, bk_color: int | Color.IColor):
+        self.send(PBM_SETBKCOLOR, lParam=int(bk_color))
         
     @property
-    def color(self) -> int:
-        return self.send(PBM_GETBARCOLOR)
+    def color(self) -> Color.BGR:
+        return Color.BGR(self.send(PBM_GETBARCOLOR))
     
     @color.setter
-    def color(self, color: int):
-        self.send(PBM_SETBARCOLOR, lParam=color)
+    def color(self, color: int | Color.IColor):
+        self.send(PBM_SETBARCOLOR, lParam=int(color))

@@ -45,7 +45,7 @@ class TLBParser:
         VT_I4: 'ILong', VT_UI4: 'IUlong',
         VT_I8: 'IInt64', VT_UI8: 'IUint64',
         VT_UINT_PTR: 'IUintPtr', VT_INT_PTR: 'IIntPtr',
-        VT_BOOL: 'IBool64', 
+        VT_BOOL: 'IBool32', 
         VT_UNKNOWN: 'IPointer[IUnknown]', VT_DISPATCH: 'P.IDispatch',
         VT_DISPATCH | VT_PTR: 'IDoublePtr[IDispatch]',
         VT_UNKNOWN | VT_PTR: 'IDoublePtr[IUnknown]',

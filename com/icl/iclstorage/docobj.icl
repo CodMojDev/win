@@ -101,8 +101,8 @@ sd PAGERANGE
 sd PAGESET
 {
 	sf IUlong cbStruct
-	sf IBool64 fOddPages
-	sf IBool64 fEventPages
+	sf IBool32 fOddPages
+	sf IBool32 fEventPages
 	sf IUlong cPageRange
 	sf IArray[PAGERANGE]
 }

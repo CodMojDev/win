@@ -100,23 +100,22 @@ class PropertyGridItemString(PropertyGridItem):
             self.view = view
         if self.edit is None:
             self.unique_edit_id = random.randint(0, 1<<31)
-            self.edit = Edit(rect.width, rect.height, view, Identifiers[f'PropertyGridItemString->Edit-{self.unique_edit_id}'], text=self.text)
+            self.edit = Edit(rect.width - 4, rect.height, view, Identifiers[f'PropertyGridItemString->Edit-{self.unique_edit_id}'], text=self.text)
+            self.edit.on_nm_focus_changed += self.buddy_focused
             self.edit.style |= self.styles
-            self.edit.create(rect.x, rect.y)
-            self.edit.font = view.logical_name_font
+            self.edit.create(rect.x + 4, rect.y)
+            self.edit.font = view.logical_bold_name_font
         else:
-            self.edit.position = (rect.x, rect.y)
-            self.edit.size = (rect.width, rect.height)
+            self.edit.position = (rect.x + 4, rect.y)
+            self.edit.size = (rect.width - 4, rect.height)
             
     def paint(self, dc: DC):
-        rect = Rect.create(0, 0, self.rect.width, self.rect.height)
-        self.text = self.edit.text
-        if self.text != self.original_text:
+        if not self.edit.visible:
+            rect = Rect.create(0 + 4, 0, self.rect.width - 4, self.rect.height)
+            self.text = self.edit.text
             font = self.view.logical_bold_name_font
-        else:
-            font = self.view.logical_name_font
-        with dc.select_ex(font):
-            dc.draw_text(self.text, rect, DT_LEFT)
+            with dc.select_ex(font):
+                dc.draw_text(self.text, rect, DT_LEFT)
             
     def hide(self):
         if self.edit is not None and self.edit.visible:
@@ -151,6 +150,12 @@ class PropertyGridItemString(PropertyGridItem):
         if self.edit is not None:
             self.edit.hide()
     
+    def buddy_focused(self):
+        self.view.focus_gained = True
+        
+    def preferences(self) -> int:
+        return PGIP_FORCEPAINT
+    
 class PropertyGridItemCombobox(PropertyGridItem):
     variants: list[str]
     view: TUnion['PropertyGridView', None]
@@ -176,27 +181,25 @@ class PropertyGridItemCombobox(PropertyGridItem):
             self.view = view
         if self.combobox is None:
             self.unique_combobox_id = random.randint(0, 1<<31)
-            self.combobox = Combobox(rect.width, rect.height, view, Identifiers[f'PropertyGridItemCombobox->Combobox-{self.unique_combobox_id}'])
+            self.combobox = Combobox(rect.width - 4, rect.height, view, Identifiers[f'PropertyGridItemCombobox->Combobox-{self.unique_combobox_id}'])
+            self.combobox.on_nm_focus_changed += self.buddy_focused
             self.combobox.styles.add(CBS_DROPDOWNLIST)
-            self.combobox.create(rect.x, rect.y)
-            self.combobox.font = self.view.logical_name_font
+            self.combobox.create(rect.x + 4, rect.y)
+            self.combobox.font = self.view.logical_bold_name_font
             for variant in self.variants:
                 self.combobox.append(variant)
             self.combobox.current = self.default
             self.combobox.hide()
         else:
-            self.combobox.position = (rect.x, rect.y)
-            self.combobox.size = (rect.width, rect.height)
+            self.combobox.position = (rect.x + 4, rect.y)
+            self.combobox.size = (rect.width - 4, rect.height)
     
     def paint(self, dc: DC):
-        rect = Rect.create(0, 0, self.rect.width, self.rect.height)
+        rect = Rect.create(0 + 4, 0, self.rect.width - 4, self.rect.height)
         self.current = self.combobox.current
-        if self.current != self.default:
-            font = self.view.logical_bold_name_font
-        else:
-            font = self.view.logical_name_font
+        font = self.view.logical_bold_name_font
         with dc.select_ex(font):
-            dc.draw_text(self.combobox.text(self.current), rect, DT_LEFT)
+            dc.draw_text(self.combobox.text(self.current), rect, DT_SINGLELINE | DT_LEFT)
     
     def enter(self):
         self.combobox.show()
@@ -235,6 +238,9 @@ class PropertyGridItemCombobox(PropertyGridItem):
     def destroy(self):
         if self.combobox is not None:
             self.combobox.close()
+    
+    def buddy_focused(self):
+        self.view.focus_gained = True
 
 class LowercaseDict:
     def __init__(self, dictionary: dict[str, Any]):
@@ -252,6 +258,7 @@ class PropertyGridItemColor(PropertyGridItem):
     edit_mode: bool
     text: str
     original_text: str
+    pen_frame: Pen | None
     
     def __init__(self, name: str, 
                  color: Color.IColor = Color.BGR.from_id(Color.ID.Black),
@@ -265,24 +272,25 @@ class PropertyGridItemColor(PropertyGridItem):
         self.view = None
         self.edit = None
         self.edit_mode = False
+        self.pen_frame = None
+    
+    def setup_pens(self):
+        if self.pen_frame is None:
+            black = Color.BGR.from_id(Color.ID.Black)
+            self.pen_frame = Pen.create(PS_SOLID, 1, black)
     
     def paint(self, dc: DC):
-        black = Color.BGR.from_id(Color.ID.Black)
-        with Pen.create(PS_SOLID, 2, black) as pen:
-            with dc.select_ex(pen):
-                dc.frame(Rect.create(0, 0, 24, self.rect.height), Brush.stock(BLACK_BRUSH))
-                with Brush.create(self.color) as brush:
-                    dc.fill(Rect.create(2, 2, 24 - 2 - 2, self.rect.height - 2 - 2), brush)
-                    self.text = self.edit.text
-                    if self.text.strip():
-                        if self.color != self.original_color:
-                            font = self.view.logical_bold_name_font
-                        else:
-                            font = self.view.logical_name_font
-                        with dc.select_ex(font):
-                            dc.draw_text(self.text, Rect.create(
-                                24 + 2, 0, self.rect.width - 25 - 24 - 2, 
-                                self.rect.height), DT_LEFT)
+        with dc.select_ex(self.pen_frame):
+            dc.frame(Rect.create(0 + 1, 0 + 1, 20, self.rect.height - 1 - 1), Brush.stock(BLACK_BRUSH))
+            with Brush.create(self.color) as brush:
+                dc.fill(Rect.create(0 + 1 + 1, 0 + 1 + 1, 20 - 1 - 1, self.rect.height - 1 - 1 - 1 - 1), brush)
+                self.text = self.edit.text
+                if self.text.strip():
+                    font = self.view.logical_bold_name_font
+                    with dc.select_ex(font):
+                        dc.draw_text(self.text, Rect.create(
+                            1 + 20 + 8, 0, self.rect.width - 1 - 20 - 8 - 24, 
+                            self.rect.height), DT_SINGLELINE | DT_LEFT)
     
     def measure(self, rect: Rect):
         rect.right -= GetSystemMetrics(SM_CXVSCROLL)
@@ -294,22 +302,25 @@ class PropertyGridItemColor(PropertyGridItem):
             view.on_command += self.on_command
         if self.button is None:
             self.unique_button_id = random.randint(0, 1<<31)
-            self.button = Button(25, rect.height, view, Identifiers[f'PropertyGridItemColor->Color-Button-{self.unique_button_id}'], text='...')
-            self.button.create(rect.right-25, rect.y)
+            self.button = Button(24, rect.height, view, Identifiers[f'PropertyGridItemColor->Color-Button-{self.unique_button_id}'], text='...')
+            self.button.on_nm_focus_changed += self.buddy_focused
+            self.button.create(rect.right-24, rect.y)
             self.button.hide()
         else:
-            self.button.position = (rect.right-25, rect.y)
-            self.button.size = (25, rect.height)
+            self.button.position = (rect.right-24, rect.y)
+            self.button.size = (24, rect.height)
         if self.edit is None:
             self.unique_edit_id = random.randint(0, 1<<31)
-            self.edit = Edit(rect.width - 25 - 24 - 2, rect.height, view, Identifiers[f'PropertyGridItemColor->Edit-{self.unique_edit_id}'])
-            self.edit.create(rect.x + 24 + 2, rect.y)
-            self.edit.font = view.logical_name_font
+            self.edit = Edit(rect.width - 1 - 20 - 8 - 24, rect.height, view, Identifiers[f'PropertyGridItemColor->Edit-{self.unique_edit_id}'])
+            self.edit.on_nm_focus_changed += self.buddy_focused
+            self.edit.create(rect.x + 1 + 20 + 8, rect.y)
+            self.edit.font = view.logical_bold_name_font
+            self.edit.text = self.original_text
             self.edit.hide()
         else:
-            self.edit.position = (rect.x + 24 + 2, rect.y)
-            self.edit.size = (rect.width - 25 - 24 - 2, rect.height)
-            
+            self.edit.position = (rect.x + 1 + 20 + 8, rect.y)
+            self.edit.size = (rect.width - 1 - 20 - 8 - 24, rect.height)
+        
     def on_command(self, identifier: int, code: int, hwnd: int) -> bool:
         if identifier == Identifiers[f'PropertyGridItemColor->Color-Button-{self.unique_button_id}']:
             if code == BN_CLICKED:
@@ -387,6 +398,9 @@ class PropertyGridItemColor(PropertyGridItem):
             
     def preferences(self) -> int:
         return PGIP_FORCEPAINT
+    
+    def buddy_focused(self):
+        self.view.focus_gained = True
 
 # property grid view hit-test definitions
 PGVHT_NONE = 0
@@ -415,17 +429,23 @@ class PGVNMRC(NMHDR):
 
 class PropertyGridView(Window):
     SCROLL_Y_UNIT = 3
+    DIR_AREA_WIDTH = 14
+    DIR_AREA_HEIGHT = 17
+    DIR_BUTTON_VIRTUALRECT = Rect.create(2, 3, 10, 10)
     
     directories: dict[str, tuple[bool, bool, list[PropertyGridItem]]]
     ht_map: list[tuple[Rect, int, int | str]]
     propname_width: int
     minimal: int
     render_mode: int
+    focus_gained: bool
     
     directory_color: Color.BGR
     background_color: Color.BGR
     directory_name_color: Color.BGR
     select_color: Color.BGR
+    name_color: Color.BGR
+    select_name_color: Color.BGR
     
     directory_font: str
     name_font: str
@@ -435,7 +455,6 @@ class PropertyGridView(Window):
     vs_glyphclosed: VisualStyleElement
     
     pen_windowtext: Pen
-    pen_buttonshadow: Pen
     
     logical_directory_font: Font
     logical_name_font: Font
@@ -473,18 +492,19 @@ class PropertyGridView(Window):
         self.on_left_button_double_click += self.gridview_on_left_button_double_click
         self.on_theme_changed += self.gridview_on_theme_changed
         self.on_sys_color_change += self.gridview_on_sys_color_change
+        self.on_focus_changed += self.gridview_on_focus_changed
         self.on_item_updated = MultiEvent()
         
         self.propname_width = 40
         self.directories = {}
         self.ht_map = []
         self.minimal = 0
+        self.focus_gained = True
+        # render mode
+        self.render_mode = PGVRM_DIRECTORIES
         
         self.directory_font = 'MS Shell Dlg'
         self.name_font = 'MS Shell Dlg'
-        
-        # render mode
-        self.render_mode = PGVRM_DIRECTORIES
         
         # allow double clicks
         self.class_style = CS_DBLCLKS
@@ -522,6 +542,9 @@ class PropertyGridView(Window):
                     self.invalidate()
                     break
     
+    def gridview_on_focus_changed(self, window: Window):
+        self.focus_gained = True
+    
     def gridview_on_create(self) -> bool:
         # init vertical scrollbar and its state
         self.last_sb_position = 0
@@ -540,11 +563,13 @@ class PropertyGridView(Window):
     
     def setup_colors(self):
         # setup property grid colors
-        self.directory_color = Color.BGR.string('#f0f0f0')
-        self.background_color = Color.BGR.string('#ffffff')
-        self.directory_name_color = Color.BGR.string("#000000")
+        self.directory_color = Color.BGR.from_id(Color.ID.InactiveBorder)
+        self.background_color = Color.BGR.from_id(Color.ID.White)
+        self.directory_name_color = Color.BGR.from_id(Color.ID.GrayText)
         self.select_color = Color.BGR.from_id(Color.ID.Highlight)
-    
+        self.name_color = Color.BGR.from_id(Color.ID.ControlText)
+        self.select_name_color = Color.BGR.from_id(Color.ID.HighlightText)
+
     def setup_brushes(self):
         self.directory_brush = Brush.create(self.directory_color)
         self.select_color_brush = Brush.create(self.select_color)
@@ -552,17 +577,15 @@ class PropertyGridView(Window):
         self.directory_name_brush = Brush.create(self.directory_name_color)
 
     def setup_fonts(self):
-        self.logical_directory_font = Font.create(self.directory_font, 18, weight=FW_DEMIBOLD)
-        self.logical_name_font = Font.create(self.name_font, 20)
-        self.logical_bold_name_font = Font.create(self.name_font, 20, weight=FW_BOLD)
+        self.logical_directory_font = Font.create(self.directory_font, 14, weight=FW_DEMIBOLD)
+        self.logical_name_font = Font.create(self.name_font, 14)
+        self.logical_bold_name_font = Font.create(self.name_font, 14, weight=FW_BOLD)
     
     def setup_pens(self):
         if not self.has_uxtheme:
             self.pen_windowtext = Pen.create(PS_SOLID, 1, Color.BGR.from_id(Color.ID.WindowText))
-            self.pen_buttonshadow = Pen.create(PS_SOLID, 1, Color.BGR.from_id(Color.ID.ButtonShadow))
         else:
             self.pen_windowtext = None
-            self.pen_buttonshadow = None
     
     def reload_themes(self):
         # refresh the Theme handles cache
@@ -601,8 +624,6 @@ class PropertyGridView(Window):
         self.setup_pens()
     
     def gridview_on_sys_color_change(self):
-        # refresh the color table array
-        Color.Table.array = None
         # reload colors
         self.setup_colors()
         # reload brushes and pens
@@ -650,6 +671,8 @@ class PropertyGridView(Window):
         return result
     
     def on_paint(self, dc: PaintDC) -> bool:
+        # fill with the directory brush
+        dc.fill(self.client_rect, self.directory_brush)
         # clear the hit-test map
         self.ht_map.clear()
         # get the rows
@@ -675,7 +698,7 @@ class PropertyGridView(Window):
                     if y > view_height: continue # maximal extent
                     cx = dc.get_text_extent_point(row.name).cx
                     maximal_cx = max(cx, maximal_cx)
-                y += 24
+                y += self.DIR_AREA_HEIGHT
         if maximal_cx != 0:
             self.propname_width = maximal_cx + 10
             
@@ -690,35 +713,47 @@ class PropertyGridView(Window):
                 if y > view_height:
                     row.hide()
                     continue
-                self.ht_map.append((Rect.create(21, y, self.propname_width, 23), PGVHT_ITEM, i))
+                self.ht_map.append((Rect.create(self.DIR_AREA_WIDTH, y, self.propname_width, self.DIR_AREA_HEIGHT), PGVHT_ITEM, i))
                 
                 # fill the directory area background
-                dc.fill(Rect.create(0, y, 21, 23), self.directory_brush)
+                dc.fill(Rect.create(0, y, self.DIR_AREA_WIDTH, self.DIR_AREA_HEIGHT), self.directory_brush)
                 
                 with Pen.create(PS_SOLID, 1, self.directory_color) as pen:
                     with dc.select_ex(pen):
                         # draw the property name delimiter
-                        dc.move(21 + self.propname_width, y)
-                        dc.line(21 + self.propname_width, y+23)
+                        dc.move(self.DIR_AREA_WIDTH + self.propname_width, y)
+                        dc.line(self.DIR_AREA_WIDTH + self.propname_width, y+self.DIR_AREA_HEIGHT)
                         
                         # draw the lower horizontal delimiter
-                        dc.move(21, y + 23 - 1)
-                        dc.line(self.width, y + 23 - 1)
+                        dc.move(self.DIR_AREA_WIDTH, y + self.DIR_AREA_HEIGHT - 1)
+                        dc.line(self.width, y + self.DIR_AREA_HEIGHT - 1)
                 
-                name_rect = Rect.create(21, y, self.propname_width, 23 - 1 - 1)
+                bk_rect = Rect.create(self.DIR_AREA_WIDTH, y, self.propname_width, self.DIR_AREA_HEIGHT - 1)
+                name_rect = bk_rect.copy()
+                name_rect.offset(4, 0)
                 with dc.select_ex(self.logical_name_font):
                     if row.selected:
-                        dc.fill(name_rect, self.select_color_brush)
-                        with DC.TransactSelect(dc, Color.BGR.from_id(Color.ID.Highlight), dc.set_bk_color):
-                            with DC.TransactSelect(dc, Color.BGR.from_id(Color.ID.HighlightText), dc.set_text_color):
-                                dc.draw_text(row.name, name_rect, DT_LEFT)
+                        if not self.focus_gained:
+                            selection_brush = self.directory_brush
+                            selection_color = self.directory_color
+                            selection_name_color = self.name_color
+                        else:
+                            selection_brush = self.select_color_brush
+                            selection_color = self.select_color
+                            selection_name_color = self.select_name_color
+                        dc.fill(bk_rect, selection_brush)
+                        with DC.TransactSelect(dc, selection_color, dc.set_bk_color):
+                            with DC.TransactSelect(dc, selection_name_color, dc.set_text_color):
+                                dc.draw_text(row.name, name_rect, DT_SINGLELINE | DT_LEFT)
                     else:
+                        dc.fill(bk_rect, self.bk_brush)
                         with DC.TransactSelect(dc, self.background_color, dc.set_bk_color):
-                            dc.draw_text(row.name, name_rect, DT_LEFT)
+                            with DC.TransactSelect(dc, self.name_color, dc.set_text_color):
+                                dc.draw_text(row.name, name_rect, DT_SINGLELINE | DT_LEFT)
                 
-                x = 21 + 1 + self.propname_width
-                width = self.width - self.propname_width - 23 - 1
-                height = 23 - 1
+                x = self.DIR_AREA_WIDTH + 1 + self.propname_width
+                width = self.width - self.propname_width - self.DIR_AREA_HEIGHT - 1
+                height = self.DIR_AREA_HEIGHT - 1
                 rect = Rect.create(x, y, width, height)
                 row.measure(rect)
                 prefs = row.preferences()
@@ -743,7 +778,7 @@ class PropertyGridView(Window):
                 name, selected, visible = row
                 
                 # fill the directory rectangle with color
-                dc.fill(Rect.create(0, y, self.width, 23), self.directory_brush)
+                dc.fill(Rect.create(0, y, self.width, self.DIR_AREA_HEIGHT), self.directory_brush)
                 
                 # get the element glyph icon for visible state
                 if not visible:
@@ -754,7 +789,7 @@ class PropertyGridView(Window):
                     state = 1 # -
                 
                 # calculate directory button rectangle, append into HT map and draw
-                dirbutton_rect = Rect.create(0 + 1, y+3, 16, 16)
+                dirbutton_rect = Rect.create(0 + self.DIR_BUTTON_VIRTUALRECT.x, y + self.DIR_BUTTON_VIRTUALRECT.y, self.DIR_BUTTON_VIRTUALRECT.width, self.DIR_BUTTON_VIRTUALRECT.height)
                 self.ht_map.append((dirbutton_rect, PGVHT_DIRBUTTON, name))
                 self.draw_directory_button(state, dc, dirbutton_rect)
                 
@@ -762,21 +797,18 @@ class PropertyGridView(Window):
                 with dc.select_ex(self.logical_directory_font):
                     # calculate the directory name rectangle
                     cx = dc.get_text_extent_point(name).cx
-                    dir_rect = Rect.create(21, y, cx + 10, 23)
+                    dir_rect = Rect.create(self.DIR_AREA_WIDTH, y, cx + 10, self.DIR_AREA_HEIGHT)
                     self.ht_map.append((dir_rect, PGVHT_DIRECTORY, name))
                     
                     # draw the directory name with colors
                     with DC.TransactSelect(dc, self.directory_color, dc.set_bk_color):
                         with DC.TransactSelect(dc, self.directory_name_color, dc.set_text_color):
-                            dc.draw_text(name, Rect.create(21, y+4, self.width, 23 - 1 - 1), DT_LEFT)
+                            dc.draw_text(name, Rect.create(self.DIR_AREA_WIDTH+4, y+2, self.width, self.DIR_AREA_HEIGHT - 1 - 1), DT_LEFT|DT_SINGLELINE)
                     
                 # draw the selected directory rect state
                 if selected:
-                    with Pen.create(PS_DOT, 1, self.directory_name_color) as pen:
-                        with dc.select_ex(pen):
-                            with dc.select_ex(Brush.stock(NULL_BRUSH)):
-                                dc.rectangle(dir_rect)
-            y += 23
+                    dc.draw_focus_rect(dir_rect)
+            y += self.DIR_AREA_HEIGHT
         return True
     
     def draw_directory_button(self, state: int, dc: DC, rect: Rect):
@@ -788,9 +820,9 @@ class PropertyGridView(Window):
             element.draw_background(dc, rect)
         else:
             rect = Rect.create(rect.x + (rect.width - 9) // 2, rect.y + (rect.height - 9) // 2, 9, 9)
-            with dc.select_ex(self.pen_buttonshadow):
-                dc.rectangle(rect)
             with dc.select_ex(self.pen_windowtext):
+                with dc.select_ex(Brush.stock(NULL_BRUSH)):
+                    dc.rectangle(rect)
                 if state == 0: # +
                     x = rect.left+rect.width//2
                     dc.move(x, rect.top+2)
@@ -955,14 +987,30 @@ class PropertyGridView(Window):
             if pt in rc:
                 return (ht, v)
         return (PGVHT_NONE, None)
+    
+    def on_erase_background(self, dc: DC):
+        return True
 
 class PropertyGridDescription(Window):
+    text: str
+    header: str
+    header_font: str
+    logical_header_font: Font
+    text_font: str
+    logical_text_font: Font
+    edge_cx: int
+    edge_cy: int
+    color_background: Color.BGR
+    bk_brush: Brush
+    
     def __init__(self):
         super().__init__()
         self.styles.add(WS_BORDER, WS_CHILD, WS_VISIBLE)
         self.styles.remove(WS_OVERLAPPEDWINDOW)
         self.styles.add_ex(WS_EX_CLIENTEDGE)
         self.on_create += self.desc_on_create
+        self.on_sys_color_change += self.desc_on_sys_color_change
+        self.on_theme_changed += self.desc_on_theme_changed
         self.text = ''
         self.header = ''
         self.header_font = 'MS Shell Dlg'
@@ -971,14 +1019,26 @@ class PropertyGridDescription(Window):
         self.edge_cy = GetSystemMetrics(SM_CYEDGE)
         
     def desc_on_create(self) -> bool:
+        self.setup_fonts()
+        self.setup_colors()
+        self.setup_brushes()
+        return True
+    
+    def setup_fonts(self):
         self.logical_header_font = Font.create(self.header_font, 15, weight = FW_ULTRABOLD)
         self.logical_text_font = Font.create(self.text_font, 13)
-        return True
+    
+    def setup_colors(self):
+        self.color_background = Color.BGR.from_id(Color.ID.InactiveBorder)
+    
+    def setup_brushes(self):
+        self.bk_brush = Brush.create(self.color_background)
     
     def on_paint(self, dc: PaintDC) -> bool:
         with dc.select_ex(self.logical_header_font):
             height = dc.get_text_extent_point(self.header).cy
-            dc.text_out(self.edge_cx+5, self.edge_cy+4, self.header)
+            with DC.TransactSelect(dc, self.color_background, dc.set_bk_color):
+                dc.text_out(self.edge_cx+5, self.edge_cy+4, self.header)
         with dc.select_ex(self.logical_text_font):
             rc = self.client_rect
             dx, dy = self.edge_cx, self.edge_cy
@@ -992,8 +1052,13 @@ class PropertyGridDescription(Window):
                     if 5 + dx + size.cx >= rc.right:
                         dy += size.cy
                         dx = self.edge_cx
-                    dc.text_out(5 + dx, 4 + height + 6 + dy, word)
+                    with DC.TransactSelect(dc, self.color_background, dc.set_bk_color):
+                        dc.text_out(5 + dx, 4 + height + 6 + dy, word)
                     dx += size.cx + dc.get_text_extent_point(' ').cx
+        return True
+    
+    def on_erase_background(self, dc: DC) -> bool:
+        dc.fill(self.client_rect, self.bk_brush)
         return True
     
     def get_recommended_height(self, text: str, header: str):
@@ -1019,6 +1084,15 @@ class PropertyGridDescription(Window):
     def on_size(self, flags: int, width: int, height: int) -> bool:
         self.invalidate()
         return True
+    
+    def desc_on_sys_color_change(self):
+        self.setup_colors()
+        self.setup_brushes()
+        self.invalidate()
+        
+    def desc_on_theme_changed(self):
+        self.setup_fonts()
+        self.invalidate()
 
 PGS_OWNERBUDDY = 0x1
 
@@ -1029,6 +1103,8 @@ class PropertyGrid(Window):
     buddy: Window | None
     on_buddy_notify: MultiEvent
     on_buddy_command: MultiEvent
+    color_background: Color.BGR
+    bk_brush: Brush
     
     def __init__(self):
         super().__init__()
@@ -1036,6 +1112,8 @@ class PropertyGrid(Window):
         self.on_notify += self.grid_on_notify
         self.on_command += self.grid_on_command
         self.on_sys_color_change += self.grid_on_sys_color_change
+        self.on_focus_lost += self.grid_on_focus_lost
+        self.on_focus_changed += self.grid_on_focus_changed
         self.on_buddy_notify = MultiEvent()
         self.on_buddy_command = MultiEvent()
         self.styles.remove(WS_MAXIMIZEBOX, WS_MINIMIZEBOX)
@@ -1050,7 +1128,15 @@ class PropertyGrid(Window):
             self.grid_view.render_mode ^= (PGVRM_DIRECTORIES)
             self.grid_view.invalidate()
     
+    def setup_colors(self):
+        self.color_background = Color.BGR.from_id(Color.ID.InactiveBorder)
+    
+    def setup_brushes(self):
+        self.bk_brush = Brush.create(self.color_background)
+    
     def grid_on_create(self) -> bool:
+        self.setup_colors()
+        self.setup_brushes()
         if self.buddy is None and not (self.style & PGS_OWNERBUDDY):
             toolbar = Toolbar(self, Identifiers['PropertyGrid->Toolbar'])
             toolbar.create()
@@ -1110,4 +1196,21 @@ class PropertyGrid(Window):
                 self.description.invalidate()
                 
     def grid_on_sys_color_change(self):
+        Color.Table.array = None
+        self.setup_colors()
+        self.setup_brushes()
+        
         self.grid_view.send(WM_SYSCOLORCHANGE)
+        self.description.send(WM_SYSCOLORCHANGE)
+    
+    def on_erase_background(self, dc: DC) -> bool:
+        dc.fill(self.client_rect, self.bk_brush)
+        return True
+    
+    def grid_on_focus_lost(self, window: Window):
+        self.grid_view.focus_gained = False
+        self.grid_view.invalidate()
+        
+    def grid_on_focus_changed(self, window: Window):
+        self.grid_view.focus_gained = True
+        self.grid_view.invalidate()

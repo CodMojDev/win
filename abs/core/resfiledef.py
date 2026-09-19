@@ -257,7 +257,7 @@ class WARFile:
                 if resource.resource_id == item: return resource
         elif isinstance(item, str):
             for resource in self.resources:
-                if resource.string == resource: return resource
+                if resource.string == item: return resource
         else:
             return None
         return None
@@ -357,7 +357,7 @@ class WARFile:
         self.internal_apply_data_changes(changes)
     
     def data_set(self, offset: int, data: bytes):
-        self.internal_data_set()
+        self.internal_data_set(offset, data)
         self.save()
     
     def save(self):

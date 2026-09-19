@@ -33,11 +33,11 @@ from win import _defbase_ctypinit as _defb_ci
 # Win Abstractions Layer code Begins
 
 # WinAbs initialization procedure
-def init_common_controls():
+def init_common_controls(icc: int = ICC_WIN95_CLASSES):
     # initialize the INITCOMMONCONTROLSEX structure
     icex = INITCOMMONCONTROLSEX()
     icex.dwSize = sizeof(icex)
-    icex.dwICC = ICC_WIN95_CLASSES
+    icex.dwICC = icc
 
     # initialize the common controls (comctl32)
     if not InitCommonControlsEx(icex.ref()):
@@ -128,10 +128,10 @@ class Scrollbar:
     
     @property
     def range(self) -> tuple[int, int]:
-        iMax, iMin = UINT(), UINT()
-        if not GetScrollRange(self.window, self.type, byref(iMax), byref(iMin)):
+        iMin, iMax = UINT(), UINT()
+        if not GetScrollRange(self.window, self.type, byref(iMin), byref(iMax)):
             raise WinException()
-        return iMax.value, iMin.value
+        return iMin.value, iMax.value
     
     @range.setter
     def range(self, range: tuple[int, int]):
@@ -696,6 +696,11 @@ class Window(Abs.Object, HWND):
     """
     Class, wrapping functionality of Win32 Window.
     """
+    try:
+        WINABS_ICON = Icon.from_icon(os.path.normpath(os.path.join(os.path.dirname(__file__), 'data/win-abs.ico')))
+    except Exception as e:
+        WINABS_ICON = Icon.load(IDI_APPLICATION)
+    
     class Styles:
         window: 'Window'
         
@@ -939,6 +944,7 @@ class Window(Abs.Object, HWND):
     on_dwm_exile_frame: MultiEvent
     on_magnification_started: MultiEvent
     on_sys_color_change: MultiEvent
+    on_time_changed: MultiEvent
     
     class_style: int
     last_message: MSG
@@ -1047,6 +1053,7 @@ class Window(Abs.Object, HWND):
         self.on_dwm_exile_frame = MultiEvent()
         self.on_magnification_started = MultiEvent()
         self.on_sys_color_change = MultiEvent()
+        self.on_time_changed = MultiEvent()
         
         self.headless_init()
         
@@ -1263,7 +1270,7 @@ class Window(Abs.Object, HWND):
         wcex.cbSize = wcex.size()
         # standard icon/cursor loading
         if self._icon is None:
-            self._icon = Icon.load(IDI_APPLICATION)
+            self._icon = self.WINABS_ICON
         if self._cursor is None:
             self._cursor = Cursor.load(IDC_ARROW)
         # visual setting
@@ -1425,6 +1432,12 @@ class Window(Abs.Object, HWND):
     
     def on_control_color_dialog(self, dialog: 'Window', dc: DC) -> int | HANDLE | None:
         return None
+    
+    def on_get_icon(self, icon_type: int, dpi: int) -> int | HANDLE:
+        return self # sentinel value
+    
+    def on_set_icon(self, icon_type: int, icon: Icon | None) -> int | HANDLE:
+        return self # sentinel value
     
     # ** Main window procedure ** #
     def window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
@@ -1872,6 +1885,28 @@ class Window(Abs.Object, HWND):
             # call the handler
             self.on_sys_color_change.execute()
             return 0 # message handled
+        elif msg == WM_GETICON: # the window has to return the icon
+            # call the handler, wParam=nIconType, lParam=nDPI
+            result = self.on_get_icon(wParam, lParam)
+            if result is not self: # if sentinel value is not returned:
+                return result # then return it as icon handle
+            # otherwise let it fallback into default proc
+        elif msg == WM_SETICON: # the icon of a window is changed by external app
+            # wParam=nIconType, lParam=hIcon or NULL
+            if lParam == 0: # if setted to NULL, then
+                icon = None # icon = None
+            else: # otherwise it is handle
+                icon = Icon.foreign_owner(lParam)
+            # call the handler
+            result = self.on_set_icon(wParam, icon)
+            if result is self: pass # sentinel value, fallback to default handler
+            else: # message is handled
+                return result # return icon handle or NULL
+            # let it fallback into default proc
+        elif msg == WM_TIMECHANGE: # the system broadcasting time change to all windows
+            # call the handler
+            self.on_time_changed.execute()
+            return 0 # message is handled
         else:
             # unknown window message received
             result = self.on_unknown_message.execute(hwnd, msg, wParam, lParam) # trying to call all unknown message handlers
@@ -2345,7 +2380,8 @@ class Window(Abs.Object, HWND):
         SetLastError(0)
         result = GetWindowLongW(self, index)
         if not result: 
-            if GetLastError() != 0: raise WinException()
+            code = GetLastError()
+            if code != 0: raise WinException(code)
         return result
     
     def set_long(self, index: int, value: int):
@@ -2355,7 +2391,8 @@ class Window(Abs.Object, HWND):
         index = PtrUtil.get_address(index)
         SetLastError(0)
         if not SetWindowLongW(self, index, value):
-            if GetLastError() != 0: raise WinException()
+            code = GetLastError()
+            if code != 0: raise WinException(code)
     
     def get_long_ptr(self, index: int) -> int:
         """
@@ -2365,7 +2402,8 @@ class Window(Abs.Object, HWND):
         SetLastError(0)
         result = GetWindowLongPtrW(self, index)
         if not result: 
-            if GetLastError() != 0: raise WinException()
+            code = GetLastError()
+            if code != 0: raise WinException(code)
         return result
     
     def set_long_ptr(self, index: int, value: int):
@@ -2375,8 +2413,9 @@ class Window(Abs.Object, HWND):
         index = PtrUtil.get_address(index)
         SetLastError(0)
         if not SetWindowLongPtrW(self, index, value):
-            if GetLastError() != 0: raise WinException()
-            
+            code = GetLastError()
+            if code != 0: raise WinException(code)
+        
     def redraw(self, flags: int, region: RECT | Region=NULL):
         """
         Redraw the window.
@@ -3319,6 +3358,8 @@ class Control(Window):
             self.on_return = MultiEvent()
             self.on_nm_key_down = MultiEvent()
             self.on_capture_released = MultiEvent()
+            self.on_nm_focus_changed = MultiEvent()
+            self.on_nm_focus_lost = MultiEvent()
         
             # if parent is window and Abs-managed object, then subscribe on events
             if isinstance(parent, Window) and Abs.managed(parent):
@@ -3335,6 +3376,8 @@ class Control(Window):
     on_return: MultiEvent
     on_nm_key_down: MultiEvent
     on_capture_released: MultiEvent
+    on_nm_focus_changed: MultiEvent
+    on_nm_focus_lost: MultiEvent
     
     @staticmethod
     def id() -> int:
@@ -3412,6 +3455,10 @@ class Control(Window):
                 self.on_nm_key_down.execute(i_cast_structure(nm, NMKEY))
             elif code == NM_RELEASEDCAPTURE:
                 self.on_capture_released.execute()
+            elif code == NM_SETFOCUS:
+                self.on_nm_focus_changed.execute()
+            elif code == NM_KILLFOCUS:
+                self.on_nm_focus_lost.execute()
 
     def notify_parent(self, nm: NMHDR) -> int:
         """

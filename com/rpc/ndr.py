@@ -776,21 +776,21 @@ class MIDL_STUB_MESSAGE(CStructure):
     
     PointerLength: IUlong
     
-    fInDontFree: IBool64
-    fDontCallFreeInst: IBool64
-    fUnused1: IBool64
-    fHasReturn: IBool64
-    fHasExtensions: IBool64
-    fHasNewCorrDesc: IBool64
-    fIsIn: IBool64
-    fIsOut: IBool64
-    fIsOicf: IBool64
-    fBufferValid: IBool64
-    fHasMemoryValidateCallback: IBool64
-    fInFree: IBool64
-    fNeedMCCP: IBool64
-    fUnused2: IBool64
-    fUnused3: IBool64
+    fInDontFree: IBool32
+    fDontCallFreeInst: IBool32
+    fUnused1: IBool32
+    fHasReturn: IBool32
+    fHasExtensions: IBool32
+    fHasNewCorrDesc: IBool32
+    fIsIn: IBool32
+    fIsOut: IBool32
+    fIsOicf: IBool32
+    fBufferValid: IBool32
+    fHasMemoryValidateCallback: IBool32
+    fInFree: IBool32
+    fNeedMCCP: IBool32
+    fUnused2: IBool32
+    fUnused3: IBool32
     
     size_annotations(
         ('fInDontFree', 1),

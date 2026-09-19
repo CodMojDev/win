@@ -5,7 +5,10 @@ from win.defbase_allocator import *
 
 kernel32 = get_win_library('kernel32.dll')
 
-import socket
+try:
+    import socket
+except: 
+    socket = None
 import os
 import io
 
@@ -434,35 +437,36 @@ class StreamIO(io.IOBase):
     def seekable(self):
         return True
 
-class SocketIO(io.IOBase):
-    sock: socket.socket
-    
-    def __init__(self, sock: socket.socket):
-        self.sock = sock
+if socket is not None:
+    class SocketIO(io.IOBase):
+        sock: socket.socket
         
-    def readable(self) -> bool:
-        return True
-    
-    def writable(self) -> bool:
-        return True
-    
-    def seekable(self) -> bool:
-        return False
-    
-    def write(self, data: bytes) -> int:
-        return self.sock.send(data)
-    
-    def read(self, size: int = -1) -> bytes:
-        if size == -1:
-            data = b''
-            received = self.sock.recv(2048)
-            data += received
-            while len(received) == 2048:
+        def __init__(self, sock: socket.socket):
+            self.sock = sock
+            
+        def readable(self) -> bool:
+            return True
+        
+        def writable(self) -> bool:
+            return True
+        
+        def seekable(self) -> bool:
+            return False
+        
+        def write(self, data: bytes) -> int:
+            return self.sock.send(data)
+        
+        def read(self, size: int = -1) -> bytes:
+            if size == -1:
+                data = b''
                 received = self.sock.recv(2048)
                 data += received
-            return data
-        else:
-            return self.sock.recv(size)
+                while len(received) == 2048:
+                    received = self.sock.recv(2048)
+                    data += received
+                return data
+            else:
+                return self.sock.recv(size)
     
 class DelegatingStream(io.IOBase):
     incorporated_stream: io.IOBase

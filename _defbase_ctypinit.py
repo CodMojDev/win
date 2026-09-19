@@ -31,7 +31,7 @@ _GLOBAL_REFS: List[Any] = []
 
 mappingproxy = type(type.__dict__)
 
-PY_BINARY_FUNC = CFUNCTYPE(c_void_p, c_void_p, c_void_p)
+PY_BINARY_FUNC = PYFUNCTYPE(c_void_p, c_void_p, c_void_p)
 
 if sys.version_info[0:2] == (3, 8) or typing.TYPE_CHECKING:
     def polyfill_39plus_to_38():
@@ -355,17 +355,22 @@ class PyMemberDef(Structure):
     
 PyMemberDef_PTR = POINTER(PyMemberDef)
 
-getter = CFUNCTYPE(c_void_p, PyObject_PTR, c_void_p)
-setter = CFUNCTYPE(c_int, PyObject_PTR, PyObject_PTR, c_void_p)
+PY_GETTER = CFUNCTYPE(c_void_p, c_void_p, c_void_p)
+PY_SETTER = CFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p)
 
 class PyGetSetDef(Structure):
     _fields_ = [
         ('name', c_char_p),
-        ('getter', getter),
-        ('setter', setter),
+        ('getter', c_void_p),
+        ('setter', c_void_p),
         ('doc', c_char_p),
         ('closure', c_void_p)
     ]
+    name: bytes
+    getter: int
+    setter: int
+    doc: bytes
+    closure: int
     
 PyGetSetDef_PTR = POINTER(PyGetSetDef)
 
@@ -521,7 +526,11 @@ class PyTypeObject(PyVarObject[_CWT]):
         ('tp_members', PyMemberDef_PTR),
         ('tp_getset', PyGetSetDef_PTR),
         ('_tp_base', c_void_p),
-        ('tp_dict', PyMappingProxyObject_PTR)
+        ('tp_dict', PyMappingProxyObject_PTR),
+        ('unusedPtrs4', c_void_p * 2),
+        ('unusedSizeT4', c_ssize_t),
+        ('unusedPtrs5', c_void_p * 2),
+        ('tp_new', c_void_p)
     ]
     
     @property 
@@ -534,6 +543,8 @@ class PyTypeObject(PyVarObject[_CWT]):
     tp_basicsize: int
     tp_flags: int
     tp_as_number: IPointer[c_void_p]
+    tp_new: int
+    tp_getset: IPointer[PyGetSetDef]
     
     @property
     def type(self) -> Type[_CWT]:
@@ -1078,6 +1089,60 @@ def To_PyType_DEREFERENCED(typ: PyTypeObject[_CWT]) -> Type[_CWT]:
 def offsetof(typ: Type[Structure], field: str):
     return getattr(getattr(typ, field), 'offset')
 
+PY_TP_NEW_FUNC = PYFUNCTYPE(c_void_p, c_void_p, c_void_p, c_void_p)
+
+if sys.version_info >= (3, 14):
+    class CFieldObject(PyObject):
+        _fields_ = [
+            ('byte_offset', c_ssize_t),
+            ('byte_size', c_ssize_t),
+            ('index', c_ssize_t),
+            ('proto', PyObject_PTR),
+            ('getfunc', c_void_p),
+            ('setfunc', c_void_p),
+            ('anonymous', c_bool, 1),
+            ('bitfield_size', c_uint8),
+            ('bit_offset', c_uint8),
+            ('name', PyObject_PTR)
+        ]
+        byte_offset: int
+        byte_size: int
+        index: int
+        proto: IPointer[PyObject]
+        getfunc: int
+        setfunc: int
+        anonymous: bool
+        bitfield_size: int
+        bit_offset: int
+        name: IPointer[PyObject]
+else:
+    class CFieldObject(PyObject):
+        _fields_ = [
+            ('offset', c_ssize_t),
+            ('size', c_ssize_t),
+            ('index', c_ssize_t),
+            ('proto', PyObject_PTR),
+            ('getfunc', c_void_p),
+            ('setfunc', c_void_p),
+            ('anonymous', c_int)
+        ]
+        offset: int
+        size: int
+        index: int
+        proto: IPointer[PyObject]
+        getfunc: int
+        setfunc: int
+        anonymous: int
+        name: IPointer[PyObject]
+    
+CFieldObject_PTR = POINTER(CFieldObject)
+
+def CFieldObject_CAST(obj: _CWT) -> IPointer[CFieldObject]:
+    return cast(id(obj), CFieldObject_PTR)
+
+def CFieldObject_CAST_DEREF(obj: _CWT) -> CFieldObject:
+    return cast(id(obj), CFieldObject_PTR).contents
+
 def Init():
     SetTPFLAG(CArgObject, Py_TPFLAGS_BASETYPE)
     SetTPFLAG(bool, Py_TPFLAGS_BASETYPE)
@@ -1093,3 +1158,44 @@ def Init():
     
     for init_routine in _INIT_CHAIN:
         init_routine()
+    
+    PyCStructType = type(Structure)
+    UnionType = type(Union)
+    tp_PyCStructType = PyType_CAST_DEREF(PyCStructType)
+    tp_UnionType = PyType_CAST_DEREF(UnionType)
+    pfn_PyCStructType_new = cast(tp_PyCStructType.tp_new, PY_TP_NEW_FUNC)
+    pfn_UnionType_new = cast(tp_UnionType.tp_new, PY_TP_NEW_FUNC)
+    def patch_genericroutine_StructUnion(p_cls):
+        cls = cast(p_cls, py_object).value
+        fields = getattr(cls, '_fields_', None)
+        if fields is not None:
+            names = []
+            for field in fields:
+                names.append(field[0])
+            for name in names:
+                field_obj = getattr(cls, name, None)
+                if field_obj is None: continue
+                cfield = CFieldObject_CAST_DEREF(field_obj)
+                if cfield.proto:
+                    proto = cfield.proto.contents.object
+                    ty = getattr(proto, '_type_', None)
+                    if ty is not None:
+                        ty2 = getattr(ty, '_type_', None)
+                        if ty2 in ('u', 'c'):
+                            cfield.getfunc = None
+    def patch_PyCStructType_new(p_metacls, p_args, p_kwds):
+        p_cls = pfn_PyCStructType_new(p_metacls, p_args, p_kwds)
+        patch_genericroutine_StructUnion(p_cls)
+        return p_cls
+    def patch_UnionType_new(p_metacls, p_args, p_kwds):
+        p_cls = pfn_UnionType_new(p_metacls, p_args, p_kwds)
+        patch_genericroutine_StructUnion(p_cls)
+        return p_cls
+    pfn_patch_PyCStructType_new = PY_TP_NEW_FUNC(patch_PyCStructType_new)
+    pfn_patch_UnionType_new = PY_TP_NEW_FUNC(patch_UnionType_new)
+    _GLOBAL_REFS.append(pfn_patch_PyCStructType_new)
+    _GLOBAL_REFS.append(pfn_patch_UnionType_new)
+    tp_PyCStructType.tp_new = cast(pfn_patch_PyCStructType_new, c_void_p)
+    tp_UnionType.tp_new = cast(pfn_patch_UnionType_new, c_void_p)
+    tp_PyCStructType.Reload()
+    tp_UnionType.Reload()

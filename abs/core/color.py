@@ -172,9 +172,9 @@ class Color:
                 saturation = 0
             else:
                 saturation = delta / (1 - abs(2 * luminance - 1))
-            return Color.HSL(hue, luminance, saturation)
+            return Color.HSL(hue, saturation, luminance)
         
-        def copy(self) -> 'Color.IColor':
+        def copy(self) -> Self:
             return self.__class__(self.value)
         
         @property

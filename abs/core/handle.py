@@ -26,6 +26,9 @@ from .color import *
 # WinAbs geometric definitions
 from .geom import *
 
+# Date convert utility
+import datetime
+
 class BitGroup:
     value: int
     
@@ -949,7 +952,13 @@ class DC(Handle):
         Draw the 3D border.
         """
         self.draw_edge(rect, style & 0xf, sides | (style & 0xf))
-        
+    
+    def draw_line_3d(self, rect: RECT, style: int):
+        """
+        Draw the 3D border.
+        """
+        self.draw_edge(rect, style & 0xf, BF_LEFT | (style & 0xf))
+    
     def capabilities(self, index: int) -> int:
         """
         Get the device context capabilities.
@@ -1020,6 +1029,13 @@ class DC(Handle):
             memory.seek(0)
             # GdiDrawStream
             self.draw_stream(memory)
+            
+    def draw_focus_rect(self, rect: RECT):
+        """
+        Draw the focus rect.
+        """
+        if not DrawFocusRect(self, rect.ref()):
+            raise WinException()
 
 class Monitor(HMONITOR):
     @classmethod
@@ -1146,7 +1162,7 @@ class Brush(GDIObjectHandle):
     """
     
     @classmethod
-    def create(cls, color: int | Color.IColor, hatch: int | Color.IColor = None) -> 'Brush':
+    def create(cls, color: int | Color.IColor, hatch: int | None = None) -> 'Brush':
         """
         Create the brush.
         """
@@ -1155,7 +1171,7 @@ class Brush(GDIObjectHandle):
         if hatch is None:
             brush.value = CreateSolidBrush(int(color))
         else:
-            brush.value = CreateHatchBrush(int(color), int(hatch))
+            brush.value = CreateHatchBrush(hatch, int(color))
         if not brush.value:
             raise WinException()
         return brush
@@ -1721,7 +1737,7 @@ class Bitmap(GDIObjectHandle):
         """
         
         bitmap = cls()
-        if width == -1 and height == -1:
+        if width != -1 and height != -1:
             bitmap.value = CreateBitmap(width, height, planes, bit_count, bits)
             if not bitmap.value: raise WinException()
         return bitmap
@@ -2108,3 +2124,12 @@ class ConvertUtil:
     @staticmethod
     def filetime_to_int(ft: FILETIME) -> int:
         return UINT64.from_address(ft.addressof()).value
+    
+    @staticmethod
+    def filetime_to_datetime(ft: FILETIME) -> datetime.datetime:
+        us = (ConvertUtil.filetime_to_int(ft) - 116444736000000000) // 10
+        return datetime.datetime(1970, 1, 1) + datetime.timedelta(microseconds=us)
+
+    @staticmethod
+    def filetime_to_unix(ft: FILETIME) -> int:
+        return (ConvertUtil.filetime_to_int(ft) - 116444736000000000) // 10

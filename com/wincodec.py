@@ -242,7 +242,7 @@ class WICBitmapPattern(CStructure):
     Length: IUlong
     Pattern: PBYTE
     Mask: PBYTE
-    EndOfStream: IBool64
+    EndOfStream: IBool32
 
 WICBitmapInterpolationModeNearestNeighbor = 0
 WICBitmapInterpolationModeLinear = 1

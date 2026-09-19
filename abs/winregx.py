@@ -21,3 +21,35 @@ def CopyTree(key_src: winreg.HKEYType | int, subkey: str | None, key_dest: winre
     elif lStatus == ERROR_ACCESS_DENIED:
         raise PermissionError(errno.EACCES, win_errors[lStatus], subkey, lStatus)
     raise WinException(lStatus)
+
+class RegistryKeyIterator(Iterator):
+    def __init__(self, key: winreg.HKEYType):
+        self.key = key
+        self.i = 0
+    
+    def __iter__(self):
+        return self
+    
+    def __next__(self) -> str:
+        try:
+            return winreg.EnumKey(self.key, self.i)
+        except OSError:
+            raise StopIteration()
+        finally:
+            self.i += 1
+
+class RegistryValueIterator(Iterator):
+    def __init__(self, key: winreg.HKEYType):
+        self.key = key
+        self.i = 0
+    
+    def __iter__(self):
+        return self
+    
+    def __next__(self) -> tuple[str, Any, int]:
+        try:
+            return winreg.EnumValue(self.key, self.i)
+        except OSError:
+            raise StopIteration()
+        finally:
+            self.i += 1

@@ -90,7 +90,7 @@ __all__ = [
     "ISizeT", "ISignedSizeT",
     "IArrayFixedSize",
     "ICustomizable",
-    "IBool", "IBool64",
+    "IBool", "IBool32",
     "IFloat", "IDouble",
     "IInt32", "IUnsignedInt32",
     "IInt16", "IUnsignedInt16",
@@ -645,7 +645,7 @@ def profile_enable():
     """
     _defb_state._prev_profile = sys.getprofile()
     _defb_state._profile_enabled = True
-    sys.settrace(_profile_routine)
+    sys.setprofile(_profile_routine)
     
 def profile_disable():
     """
@@ -2652,7 +2652,7 @@ class IBool(IAliasable, ICustomizable, bool):
     _alias_ = c_bool
     _custom_ = bool
     
-class IBool64(IBool):
+class IBool32(IBool):
     """
     Typing alias to `BOOL` (`c_ulong`) with in-python type `bool`.
     """

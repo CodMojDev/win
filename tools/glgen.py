@@ -214,7 +214,7 @@ def gen_versions(p: SAXOpenGLSpecParser, v: list[str], d: str):
                            'khronos_int8_t = GLbyte\n'
                            'khronos_uint8_t = GLubyte\n'
                            'khronos_int16_t = GLshort\n'
-                           'khornos_uint16_t = GLushort\n'
+                           'khronos_uint16_t = GLushort\n'
                            'GLclampx = UINT32\n'
                            'GLeglClientBufferEXT = PVOID\n'
                            'GLeglImageOES = PVOID\n'

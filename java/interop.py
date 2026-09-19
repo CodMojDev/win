@@ -168,15 +168,13 @@ class JNIDescLRepr(IJniDescRepr):
         jnidesc = self.jnidesc
         
         if PtrUtil.is_pointer(argument):
-            jClass = env.FindClass(jnidesc.encode('ascii'))
+            jClass = JObject.construct(jnidesc)
             result = env.IsInstanceOf(argument, jClass)
             env.DeleteLocalRef(jClass)
             return result == JNI_TRUE
         if isinstance(argument, JObject):
-            jClass = env.FindClass(jnidesc.encode('ascii'))
-            result = env.IsInstanceOf(argument._object, jClass)
-            env.DeleteLocalRef(jClass)
-            return result == JNI_TRUE
+            jClass = JObject.construct(jnidesc)
+            return argument.instanceof(jClass)
         if jnidesc == 'java/lang/String':
             return isinstance(argument, str)
         if jnidesc == 'java/lang/Boolean':
@@ -599,7 +597,6 @@ class JObject(metaclass=JInteropMeta):
     """
     Object representing Java class.
     """
-    
     _interopCache: dict[str, jmethodID] = {}
     _classLoaders: list['JObject'] = []
     
@@ -1070,6 +1067,10 @@ class JObject(metaclass=JInteropMeta):
         env.DeleteLocalRef(jClass)
         raise RuntimeError(f'Not found class {nativeName}.')
     
+    def instanceof(self, t: type['JObject']) -> bool:
+        env = JObject._ensureEnv()
+        return env.IsInstanceOf(self._object, t._clazz) == JNI_TRUE
+    
 class CONSTANT:
     Class = 7
     Fieldref = 9
@@ -1173,17 +1174,17 @@ class ClassBuilder:
         return index
     
     def write_const_nameandtype(self, name: str, desc: str) -> int:
-        index = self.new_constant()
         nameIndex = self.write_const_utf8(name)
         descIndex = self.write_const_utf8(desc)
+        index = self.new_constant()
         self.writeu1(CONSTANT.NameAndType)
         self.writeu2(nameIndex)
         self.writeu2(descIndex)
         return index
     
     def write_const_methodref(self, name: str, desc: str, clazzIndex: int) -> int:
-        index = self.new_constant()
         nameAndTypeIndex = self.write_const_nameandtype(name, desc)
+        index = self.new_constant()
         self.writeu1(CONSTANT.Methodref)
         self.writeu2(clazzIndex)
         self.writeu2(nameAndTypeIndex)
@@ -1241,11 +1242,12 @@ class ClassBuilder:
         self.writeu2(self.CodeAttribute)
         codeLength = len(code)
         excTableLength = len(excTable)
-        self.writeu4(8 + codeLength + (excTableLength * 8) + 2)
+        self.writeu4(8 + codeLength + 2 + (excTableLength * 8) + 2)
         self.writeu2(maxStack)
         self.writeu2(maxLocals)
         self.writeu4(codeLength)
         self.write(code)
+        self.writeu2(len(excTable))
         for excEntry in excTable:
             startPc, endPc, handlerPc, catchType = excEntry
             self.writeu2(startPc)
@@ -1275,9 +1277,9 @@ def JNISignature(sig: str):
             for i, typ in enumerate(Types):
                 if typ is jboolean:
                     arguments.append(f_args[i+1] == JNI_TRUE)
-                elif arg in (jbyte, jshort, jint, jlong, jfloat, jdouble):
+                elif typ in (jbyte, jshort, jint, jlong, jfloat, jdouble):
                     arguments.append(f_args[i+1])
-                elif arg is jchar:
+                elif typ is jchar:
                     arguments.append(chr(f_args[i+1]))
                 else:
                     arguments.append(JObject.construct(jnidescReprs[i].jnidesc).from_object(f_args[i+1]))
@@ -1287,7 +1289,7 @@ def JNISignature(sig: str):
 
 def JSignature(*args):
     def _JSignature(f):        
-        callbackTypes = [THIS]
+        callbackTypes = [jobject]
         retType = None
         sig = '('
         ret = ''
@@ -1296,10 +1298,10 @@ def JSignature(*args):
             nonlocal ret, sig, callbackTypes, retType
             if i == 0:
                 ret = jnidesc
-                callbackTypes.append(ctype)
+                retType = ctype
             else:
                 sig += jnidesc
-                retType = ctype
+                callbackTypes.append(ctype)
         
         for i, arg in enumerate(args):
             if arg == 'boolean':
@@ -1324,13 +1326,13 @@ def JSignature(*args):
                 retType = VOID
                 ret = 'V'
             else:
-                add('L' + arg.replace('.', '/') + ';', PVOID, i)
+                add('L' + arg.replace('.', '/') + ';', jobject, i)
         
         sig += ')' + ret
         
         def _marshal_func(*f_args):
             arguments = [f._JInteropOwner.from_object(f_args[0])]
-            for i, arg in enumerate(args):
+            for i, arg in enumerate(args[1:]):
                 if arg == 'boolean':
                     arguments.append(f_args[i+1] == JNI_TRUE)
                 elif arg in ('byte', 'short', 'int', 'long', 'float', 'double'):
@@ -1343,8 +1345,9 @@ def JSignature(*args):
         
         f._JInteropSignature = sig
         f._JInteropCallback = CALLBACK(retType, *callbackTypes)(_marshal_func)
-        
-        return functools.wraps(f)(_marshal_func)
+        result = functools.wraps(f)(_marshal_func)
+        result._JInteropUnderlyingFunction = f
+        return result
         
     return _JSignature
 
@@ -1385,7 +1388,7 @@ def JClass(decl: str, super=None):
     
     def _JClass(cls):
         nonlocal super
-        cls.__annotations__['_JInteropFlags'] = int
+        #cls.__annotations__['_JInteropFlags'] = int
         type.__setattr__(cls, '_JInteropFlags', 0)
         for value in decl[:-1]:
             if value == 'public':
@@ -1413,14 +1416,19 @@ def JClass(decl: str, super=None):
             super = JObject.normalize_L_jnidesc(super)
         type.__setattr__(cls, '_JInteropSuper', super)
         type.__setattr__(cls, '_JInteropName', JObject.normalize_L_jnidesc(className))
+        type.__setattr__(cls, '_nativeName', JObject.normalize_L_jnidesc(className))
         
         for method in dir(cls):
             meth = getattr(cls, method)
             if JInteropIsMethod(meth):
                 if hasattr(meth, '_JInteropOwner'):
                     if JInteropIsOwner(meth, cls):
+                        if hasattr(meth, '_JInteropUnderlyingFunction'):
+                            meth._JInteropUnderlyingFunction._JInteropOwner = cls
                         meth._JInteropOwner = cls
                 else:
+                    if hasattr(meth, '_JInteropUnderlyingFunction'):
+                        meth._JInteropUnderlyingFunction._JInteropOwner = cls
                     meth._JInteropOwner = cls
         
         JInteropParseClass(cls)
@@ -1469,14 +1477,13 @@ def JInteropParseClass(cls):
     # aload_0
     # invokespecial java/lang/Object.<init>()V
     # return
-    builder.write_attribute_code(bytes([0x2a, 0xb7, ctorRef, 0xb1]), 2, 0, [])
+    builder.write_attribute_code(bytes([0x2a, 0xb7, ctorRef >> 8, ctorRef & 0xff, 0xb1]), 1, 1, [])
     for method, desc, access in methods:
-        builder.add_method(access, method, desc)
+        builder.add_method(access | JVM_ACC_NATIVE, method, desc)
     builder.begin_attributes()
     env = JObject._ensureEnv()
     clz.seek(0)
     content = clz.read()
-    print(content)
     buf = create_string_buffer(content)
     nativeName = create_string_buffer(cls._JInteropName.encode('ascii'))
     clazz = env.DefineClass(nativeName, NULL, i_cast(buf, PTR(jbyte)), clz.tell())

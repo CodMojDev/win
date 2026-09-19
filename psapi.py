@@ -139,7 +139,7 @@ if cpreproc.pragma_once("_PSAPI_H_"):
         WorkingSetInfo: IPointer[PSAPI_WORKING_SET_BLOCK]
         NumberOfEntries: int
         
-    array_after_structure(PSAPI_WORKING_SET_BLOCK, 'WorkingSetInfo', 
+    array_after_structure(PSAPI_WORKING_SET_INFORMATION, 'WorkingSetInfo', 
                           PSAPI_WORKING_SET_BLOCK)
     PPSAPI_WORKING_SET_INFORMATION = POINTER(PSAPI_WORKING_SET_INFORMATION)
 

@@ -24,6 +24,10 @@ class ButtonBase(Control):
                 self.on_click.execute()
             elif notify_code == BN_DOUBLECLICKED:
                 self.on_double_click.execute()
+            elif notify_code == BN_SETFOCUS:
+                self.on_nm_focus_changed.execute()
+            elif notify_code == BN_KILLFOCUS:
+                self.on_nm_focus_lost.execute()
             else:
                 return super().parent_window_on_command(identifier, notify_code, hwnd)
                 

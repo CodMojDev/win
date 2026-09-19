@@ -65,7 +65,7 @@ class FontDialog(Window):
             self.lpszStyle = create_unicode_buffer(256)
             if style is not None:
                 self.lpszStyle.value = style
-            self.choose_font.lpszStyle = i_cast(style, LPWSTR)
+            self.choose_font.lpszStyle = i_cast(self.lpszStyle, LPWSTR)
         
         # if size is given, when set it and adjust CF_LIMITSIZE
         if size is not None:

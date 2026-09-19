@@ -312,11 +312,6 @@ HTMLDlgFlag_Max = 2147483647
 _HTMLDlgFlag = INT
 
 @CStructure.make
-class tagSIZE(CStructure):
-    cx: ILong
-    cy: ILong
-
-@CStructure.make
 class _HTML_PAINT_XFORM(CStructure):
     eM11: IFloat
     eM12: IFloat
@@ -327,7 +322,7 @@ class _HTML_PAINT_XFORM(CStructure):
 
 @CStructure.make
 class _HTML_PAINT_DRAW_INFO(CStructure):
-    rcViewport: tagRECT
+    rcViewport: RECT
     hrgnUpdate: wireHRGN
     xform: _HTML_PAINT_XFORM
 
@@ -336,7 +331,7 @@ class _HTML_PAINTER_INFO(CStructure):
     lFlags: ILong
     lZOrder: ILong
     iidDrawObject: GUID
-    rcExpand: tagRECT
+    rcExpand: RECT
 
 HTMLPAINT_DRAWINFO_VIEWPORT = 1
 HTMLPAINT_DRAWINFO_UPDATEREGION = 2
@@ -2761,18 +2756,6 @@ class MIDL___MIDL_itf_mshtml_0001_0042_0007(CStructure):
     dwPageSize: IUlong
     dwOffset: IPointer[IUlong]
 
-@CStructure.make
-class tagPOINT(CStructure):
-    x: ILong
-    y: ILong
-
-@CStructure.make
-class tagRECT(CStructure):
-    left: ILong
-    top: ILong
-    right: ILong
-    bottom: ILong
-
 class IHTMLEventObj(IDispatch):
     virtual_table = COMVirtualTable.from_ancestor(IDispatch)
     _iid_ = IID("{3050F32D-98B5-11CF-BB82-00AA00BDCE0B}")
@@ -3743,14 +3726,14 @@ class IElementBehaviorRender(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{3050F4AA-98B5-11CF-BB82-00AA00BDCE0B}")
 
-    @virtual_table.com_function(wireHDC, LONG, PTR(tagRECT), LPUNKNOWN)
-    def Draw(self, hdc: wireHDC, lLayer: int, pRect: IPointer[tagRECT], pReserved: IPointer[IUnknown]) -> int: ...
+    @virtual_table.com_function(wireHDC, LONG, PTR(RECT), LPUNKNOWN)
+    def Draw(self, hdc: wireHDC, lLayer: int, pRect: IPointer[RECT], pReserved: IPointer[IUnknown]) -> int: ...
 
     @virtual_table.com_function(PLONG)
     def GetRenderInfo(self, plRenderInfo: IPointer[LONG]) -> int: ...
 
-    @virtual_table.com_function(PTR(tagPOINT), LPUNKNOWN, PLONG)
-    def HitTestPoint(self, pPoint: IPointer[tagPOINT], pReserved: IPointer[IUnknown], pbHit: IPointer[LONG]) -> int: ...
+    @virtual_table.com_function(PTR(POINT), LPUNKNOWN, PLONG)
+    def HitTestPoint(self, pPoint: IPointer[POINT], pReserved: IPointer[IUnknown], pbHit: IPointer[LONG]) -> int: ...
 
     virtual_table.build()
 
@@ -3763,8 +3746,8 @@ class IElementBehaviorSiteRender(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{3050F4A7-98B5-11CF-BB82-00AA00BDCE0B}")
 
-    @virtual_table.com_function(PTR(tagRECT))
-    def Invalidate(self, pRect: IPointer[tagRECT]) -> int: ...
+    @virtual_table.com_function(PTR(RECT))
+    def Invalidate(self, pRect: IPointer[RECT]) -> int: ...
 
     @virtual_table.com_function()
     def InvalidateRenderInfo(self) -> int: ...
@@ -23791,8 +23774,8 @@ class IActiveIMMApp(IUnknown):
     @virtual_table.com_function(PVOID, UINT, PTR(MIDL___MIDL_itf_mshtml_0001_0042_0009), PUINT)
     def GetRegisterWordStyleW(self, hKL: PVOID, nItem: int, pStyleBuf: IPointer[MIDL___MIDL_itf_mshtml_0001_0042_0009], puCopied: IPointer[UINT]) -> int: ...
 
-    @virtual_table.com_function(DWORD, PTR(tagPOINT))
-    def GetStatusWindowPos(self, hIMC: int, pptPos: IPointer[tagPOINT]) -> int: ...
+    @virtual_table.com_function(DWORD, PTR(POINT))
+    def GetStatusWindowPos(self, hIMC: int, pptPos: IPointer[POINT]) -> int: ...
 
     @virtual_table.com_function(wireHWND, PUINT)
     def GetVirtualKey(self, hWnd: wireHWND, puVirtualKey: IPointer[UINT]) -> int: ...
@@ -23848,8 +23831,8 @@ class IActiveIMMApp(IUnknown):
     @virtual_table.com_function(DWORD, LONG)
     def SetOpenStatus(self, hIMC: int, fOpen: int) -> int: ...
 
-    @virtual_table.com_function(DWORD, PTR(tagPOINT))
-    def SetStatusWindowPos(self, hIMC: int, pptPos: IPointer[tagPOINT]) -> int: ...
+    @virtual_table.com_function(DWORD, PTR(POINT))
+    def SetStatusWindowPos(self, hIMC: int, pptPos: IPointer[POINT]) -> int: ...
 
     @virtual_table.com_function(wireHWND, DWORD)
     def SimulateHotKey(self, hWnd: wireHWND, dwHotKeyID: int) -> int: ...
@@ -24022,8 +24005,8 @@ class IHTMLCaret(IUnknown):
     @virtual_table.com_function()
     def scrollIntoView(self) -> int: ...
 
-    @virtual_table.com_function(PTR(tagPOINT), LONG)
-    def GetLocation(self, pPoint: IPointer[tagPOINT], fTranslate: int) -> int: ...
+    @virtual_table.com_function(PTR(POINT), LONG)
+    def GetLocation(self, pPoint: IPointer[POINT], fTranslate: int) -> int: ...
 
     @virtual_table.com_function(PVOID)
     def GetCaretDirection(self, peDir: IPointer['_CARET_DIRECTION']) -> int: ...
@@ -24037,8 +24020,8 @@ class IDisplayPointer(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{3050F69E-98B5-11CF-BB82-00AA00BDCE0B}")
 
-    @virtual_table.com_function(tagPOINT, _COORD_SYSTEM, PTR(IHTMLElement), DWORD, PDWORD)
-    def moveToPoint(self, ptPoint: tagPOINT, eCoordSystem: int, pElementContext: IPointer[IHTMLElement], dwHitTestOptions: int, pdwHitTestResults: IPointer[DWORD]) -> int: ...
+    @virtual_table.com_function(POINT, _COORD_SYSTEM, PTR(IHTMLElement), DWORD, PDWORD)
+    def moveToPoint(self, ptPoint: POINT, eCoordSystem: int, pElementContext: IPointer[IHTMLElement], dwHitTestOptions: int, pdwHitTestResults: IPointer[DWORD]) -> int: ...
 
     @virtual_table.com_function(_DISPLAY_MOVEUNIT, LONG)
     def MoveUnit(self, eMoveUnit: int, lXPos: int) -> int: ...
@@ -24159,11 +24142,11 @@ class IDisplayServices(IUnknown):
     @virtual_table.com_function(DOUBLE_PTR(IDisplayPointer))
     def CreateDisplayPointer(self, ppDispPointer: IDoublePtr[IDisplayPointer]) -> int: ...
 
-    @virtual_table.com_function(PTR(tagRECT), _COORD_SYSTEM, _COORD_SYSTEM, PTR(IHTMLElement))
-    def TransformRect(self, pRect: IPointer[tagRECT], eSource: int, eDestination: int, pIElement: IPointer[IHTMLElement]) -> int: ...
+    @virtual_table.com_function(PTR(RECT), _COORD_SYSTEM, _COORD_SYSTEM, PTR(IHTMLElement))
+    def TransformRect(self, pRect: IPointer[RECT], eSource: int, eDestination: int, pIElement: IPointer[IHTMLElement]) -> int: ...
 
-    @virtual_table.com_function(PTR(tagPOINT), _COORD_SYSTEM, _COORD_SYSTEM, PTR(IHTMLElement))
-    def TransformPoint(self, pPoint: IPointer[tagPOINT], eSource: int, eDestination: int, pIElement: IPointer[IHTMLElement]) -> int: ...
+    @virtual_table.com_function(PTR(POINT), _COORD_SYSTEM, _COORD_SYSTEM, PTR(IHTMLElement))
+    def TransformPoint(self, pPoint: IPointer[POINT], eSource: int, eDestination: int, pIElement: IPointer[IHTMLElement]) -> int: ...
 
     @virtual_table.com_function(DOUBLE_PTR(IHTMLCaret))
     def GetCaret(self, ppCaret: IDoublePtr[IHTMLCaret]) -> int: ...
@@ -24171,8 +24154,8 @@ class IDisplayServices(IUnknown):
     @virtual_table.com_function(PTR(IMarkupPointer), PVOID)
     def getComputedStyle(self, pPointer: IPointer[IMarkupPointer], ppComputedStyle: IDoublePtr['IHTMLComputedStyle']) -> int: ...
 
-    @virtual_table.com_function(PTR(IHTMLElement), tagRECT)
-    def ScrollRectIntoView(self, pIElement: IPointer[IHTMLElement], rect: tagRECT) -> int: ...
+    @virtual_table.com_function(PTR(IHTMLElement), RECT)
+    def ScrollRectIntoView(self, pIElement: IPointer[IHTMLElement], rect: RECT) -> int: ...
 
     @virtual_table.com_function(PTR(IHTMLElement), PLONG)
     def HasFlowLayout(self, pIElement: IPointer[IHTMLElement], pfHasFlowLayout: IPointer[LONG]) -> int: ...
@@ -24459,8 +24442,8 @@ class IHTMLEditHost(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{3050F6A0-98B5-11CF-BB82-00AA00BDCE0B}")
 
-    @virtual_table.com_function(PTR(IHTMLElement), PTR(tagRECT), _ELEMENT_CORNER)
-    def SnapRect(self, pIElement: IPointer[IHTMLElement], prcNew: IPointer[tagRECT], eHandle: int) -> int: ...
+    @virtual_table.com_function(PTR(IHTMLElement), PTR(RECT), _ELEMENT_CORNER)
+    def SnapRect(self, pIElement: IPointer[IHTMLElement], prcNew: IPointer[RECT], eHandle: int) -> int: ...
 
     virtual_table.build()
 
@@ -24774,17 +24757,17 @@ class IHTMLPainter(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{3050F6A6-98B5-11CF-BB82-00AA00BDCE0B}")
 
-    @virtual_table.com_function(tagRECT, tagRECT, LONG, wireHDC, PVOID)
-    def Draw(self, rcBounds: tagRECT, rcUpdate: tagRECT, lDrawFlags: int, hdc: wireHDC, pvDrawObject: PVOID) -> int: ...
+    @virtual_table.com_function(RECT, RECT, LONG, wireHDC, PVOID)
+    def Draw(self, rcBounds: RECT, rcUpdate: RECT, lDrawFlags: int, hdc: wireHDC, pvDrawObject: PVOID) -> int: ...
 
-    @virtual_table.com_function(tagSIZE)
-    def onresize(self, size: tagSIZE) -> int: ...
+    @virtual_table.com_function(SIZE)
+    def onresize(self, size: SIZE) -> int: ...
 
     @virtual_table.com_function(PTR(_HTML_PAINTER_INFO))
     def GetPainterInfo(self, pInfo: IPointer[_HTML_PAINTER_INFO]) -> int: ...
 
-    @virtual_table.com_function(tagPOINT, PLONG, PLONG)
-    def HitTestPoint(self, pt: tagPOINT, pbHit: IPointer[LONG], plPartID: IPointer[LONG]) -> int: ...
+    @virtual_table.com_function(POINT, PLONG, PLONG)
+    def HitTestPoint(self, pt: POINT, pbHit: IPointer[LONG], plPartID: IPointer[LONG]) -> int: ...
 
     virtual_table.build()
 
@@ -24795,8 +24778,8 @@ class IHTMLPaintSite(IUnknown):
     @virtual_table.com_function()
     def InvalidatePainterInfo(self) -> int: ...
 
-    @virtual_table.com_function(PTR(tagRECT))
-    def InvalidateRect(self, prcInvalid: IPointer[tagRECT]) -> int: ...
+    @virtual_table.com_function(PTR(RECT))
+    def InvalidateRect(self, prcInvalid: IPointer[RECT]) -> int: ...
 
     @virtual_table.com_function(wireHRGN)
     def InvalidateRegion(self, rgnInvalid: wireHRGN) -> int: ...
@@ -24804,11 +24787,11 @@ class IHTMLPaintSite(IUnknown):
     @virtual_table.com_function(LONG, PTR(_HTML_PAINT_DRAW_INFO))
     def GetDrawInfo(self, lFlags: int, pDrawInfo: IPointer[_HTML_PAINT_DRAW_INFO]) -> int: ...
 
-    @virtual_table.com_function(tagPOINT, PTR(tagPOINT))
-    def TransformGlobalToLocal(self, ptGlobal: tagPOINT, pptLocal: IPointer[tagPOINT]) -> int: ...
+    @virtual_table.com_function(POINT, PTR(POINT))
+    def TransformGlobalToLocal(self, ptGlobal: POINT, pptLocal: IPointer[POINT]) -> int: ...
 
-    @virtual_table.com_function(tagPOINT, PTR(tagPOINT))
-    def TransformLocalToGlobal(self, ptLocal: tagPOINT, pptGlobal: IPointer[tagPOINT]) -> int: ...
+    @virtual_table.com_function(POINT, PTR(POINT))
+    def TransformLocalToGlobal(self, ptLocal: POINT, pptGlobal: IPointer[POINT]) -> int: ...
 
     @virtual_table.com_function(PLONG)
     def GetHitTestCookie(self, plCookie: IPointer[LONG]) -> int: ...
@@ -24837,8 +24820,8 @@ class IHTMLPainterOverlay(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{3050F7E3-98B5-11CF-BB82-00AA00BDCE0B}")
 
-    @virtual_table.com_function(tagRECT)
-    def onmove(self, rcDevice: tagRECT) -> int: ...
+    @virtual_table.com_function(RECT)
+    def onmove(self, rcDevice: RECT) -> int: ...
 
     virtual_table.build()
 
@@ -25581,8 +25564,8 @@ class IElementBehaviorFocus(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{3050F6B6-98B5-11CF-BB82-00AA00BDCE0B}")
 
-    @virtual_table.com_function(PTR(tagRECT))
-    def GetFocusRect(self, pRect: IPointer[tagRECT]) -> int: ...
+    @virtual_table.com_function(PTR(RECT))
+    def GetFocusRect(self, pRect: IPointer[RECT]) -> int: ...
 
     virtual_table.build()
 
@@ -25590,17 +25573,17 @@ class IElementBehaviorLayout(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{3050F6BA-98B5-11CF-BB82-00AA00BDCE0B}")
 
-    @virtual_table.com_function(LONG, tagSIZE, PTR(tagPOINT), PTR(tagPOINT), PTR(tagSIZE))
-    def GetSize(self, dwFlags: int, sizeContent: tagSIZE, pptTranslateBy: IPointer[tagPOINT], pptTopLeft: IPointer[tagPOINT], psizeProposed: IPointer[tagSIZE]) -> int: ...
+    @virtual_table.com_function(LONG, SIZE, PTR(POINT), PTR(POINT), PTR(SIZE))
+    def GetSize(self, dwFlags: int, sizeContent: SIZE, pptTranslateBy: IPointer[POINT], pptTopLeft: IPointer[POINT], psizeProposed: IPointer[SIZE]) -> int: ...
 
     @virtual_table.com_function(PLONG)
     def GetLayoutInfo(self, plLayoutInfo: IPointer[LONG]) -> int: ...
 
-    @virtual_table.com_function(LONG, PTR(tagPOINT))
-    def GetPosition(self, lFlags: int, pptTopLeft: IPointer[tagPOINT]) -> int: ...
+    @virtual_table.com_function(LONG, PTR(POINT))
+    def GetPosition(self, lFlags: int, pptTopLeft: IPointer[POINT]) -> int: ...
 
-    @virtual_table.com_function(PTR(tagSIZE), PTR(tagRECT))
-    def MapSize(self, psizeIn: IPointer[tagSIZE], prcOut: IPointer[tagRECT]) -> int: ...
+    @virtual_table.com_function(PTR(SIZE), PTR(RECT))
+    def MapSize(self, psizeIn: IPointer[SIZE], prcOut: IPointer[RECT]) -> int: ...
 
     virtual_table.build()
 
@@ -25623,8 +25606,8 @@ class IElementBehaviorSiteLayout(IUnknown):
     @virtual_table.com_function()
     def InvalidateSize(self) -> int: ...
 
-    @virtual_table.com_function(PTR(tagSIZE))
-    def GetMediaResolution(self, psizeResolution: IPointer[tagSIZE]) -> int: ...
+    @virtual_table.com_function(PTR(SIZE))
+    def GetMediaResolution(self, psizeResolution: IPointer[SIZE]) -> int: ...
 
     virtual_table.build()
 
@@ -25650,8 +25633,8 @@ class ISurfacePresenter(IUnknown):
     virtual_table = COMVirtualTable.from_ancestor(IUnknown)
     _iid_ = IID("{305106E2-98B5-11CF-BB82-00AA00BDCE0B}")
 
-    @virtual_table.com_function(UINT, PTR(tagRECT))
-    def Present(self, uBuffer: int, pDirty: IPointer[tagRECT]) -> int: ...
+    @virtual_table.com_function(UINT, PTR(RECT))
+    def Present(self, uBuffer: int, pDirty: IPointer[RECT]) -> int: ...
 
     @virtual_table.com_function(UINT, LPGUID, PVOID, PVOID)
     def GetBuffer(self, backBufferIndex: int, riid: IPointer[GUID], ppBuffer: IPointer[PVOID]) -> int: ...

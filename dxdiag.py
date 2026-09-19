@@ -74,7 +74,7 @@ if cpreproc.pragma_once("_DXDIAG_H_"):
         dwSize: IDword                # Size of this structure.
         dwDxDiagHeaderVersion: IDword # Pass in DXDIAG_DX9_SDK_VERSION.  This verifies 
                                       # the header and dll are correctly matched.
-        bAllowWHQLChecks: IBool64     # If true, allow dxdiag to check if drivers are 
+        bAllowWHQLChecks: IBool32     # If true, allow dxdiag to check if drivers are 
                                       # digital signed as logo'd by WHQL which may
                                       # connect via internet to update WHQL certificates.
         pReserved: IVoidPtr           # Reserved. Must be NULL. 

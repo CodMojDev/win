@@ -130,5 +130,9 @@ class Edit(Control):
                 self.on_edit_hscroll.execute()
             elif notify_code == EN_VSCROLL:
                 self.on_edit_vscroll.execute()
+            elif notify_code == EN_SETFOCUS:
+                self.on_nm_focus_changed.execute()
+            elif notify_code == EN_KILLFOCUS:
+                self.on_nm_focus_lost.execute()
             else:
                 super().parent_window_on_command(identifier, notify_code, hwnd)
