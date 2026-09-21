@@ -1,7 +1,7 @@
 from win.wingdi import *
 from win.winuser import *
 from typing import TypeVar
-from typing_extensions import Self
+from typing import Self
 from .geom import *
 
 class Color:
@@ -114,7 +114,7 @@ class Color:
             return self.__class__(self.value * value)
         
         def __truediv__(self, value):
-            return self.__class__(self.value / value)
+            return self.__class__(self.value // value)
         
         def __floordiv__(self, value):
             return self.__class__(self.value // value)

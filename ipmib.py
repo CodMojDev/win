@@ -44,6 +44,13 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("unused1", USHORT),
             ("wType", USHORT)
         ]
+        dwBCastAddr: int
+        dwReasmSize: int
+        dwIndex: int
+        unused1: int
+        dwAddr: int
+        dwMask: int
+        wType: int
     PMIB_IPADDRROW_XP = POINTER(MIB_IPADDRROW_XP)
 
     class MIB_IPADDRROW_W2K(CStructure):
@@ -56,6 +63,13 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("unused1", USHORT),
             ("unused2", USHORT)
         ]
+        dwBCastAddr: int
+        dwReasmSize: int
+        dwIndex: int
+        unused1: int
+        unused2: int
+        dwAddr: int
+        dwMask: int
     PMIB_IPADDRROW_W2K = POINTER(MIB_IPADDRROW_W2K)
 
     _version = cpreproc.get_version()
@@ -76,6 +90,8 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("dwNumEntries", DWORD),
             ("table", PMIB_UDPROW)
         ]
+        dwNumEntries: int
+        table: IPointer[MIB_UDPROW]
     PMIB_UDPTABLE = POINTER(MIB_UDPTABLE)
     SIZEOF_UDPTABLE = lambda X: MIB_UDPTABLE.table.offset + (X) * sizeof(MIB_UDPROW) + MIB_UDPTABLE._pack_
 
@@ -84,6 +100,8 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("dwNumEntries", DWORD),
             ("table", PMIB_IPADDRROW)
         ]
+        table: IPointer[MIB_IPADDRROW]
+        dwNumEntries: int
     PMIB_IPADDRTABLE = POINTER(MIB_IPADDRTABLE)
 
     SIZEOF_IPADDRTABLE = lambda X: (MIB_IPADDRTABLE.table.offset) + \
@@ -93,6 +111,7 @@ if cpreproc.pragma_once("_IPMIB_"):
         _fields_ = [
             ("dwValue", DWORD)
         ]
+        dwValue: int
     PMIB_IPFORWARDNUMBER = POINTER(MIB_IPFORWARDNUMBER)
 
     MIB_IPFORWARD_PROTO = NL_ROUTE_PROTOCOL;
@@ -136,6 +155,8 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("dwNumEntries", DWORD),
             ("table", PMIB_IPFORWARDROW)
         ]
+        dwNumEntries: int
+        table: IPointer[MIB_IPFORWARDROW]
     PMIB_IPFORWARDTABLE = POINTER(MIB_IPFORWARDTABLE)
 
     SIZEOF_IPFORWARDTABLE = lambda X: \
@@ -153,20 +174,30 @@ if cpreproc.pragma_once("_IPMIB_"):
         _fields_ = [
             ("dwIndex", IF_INDEX),
             ("dwPhysAddrLen", DWORD),
-            ("bPhysAddr", UCHAR * MAXLEN_PHYSADDR),
+            ("bPhysAddr", CHAR * MAXLEN_PHYSADDR),
             ("dwAddr", DWORD),
             ("Type", MIB_IPNET_TYPE)
         ]
+        bPhysAddr: ICharArray
+        dwPhysAddrLen: int
+        dwIndex: int
+        dwAddr: int
+        Type: int
     PMIB_IPNETROW_LH = POINTER(MIB_IPNETROW_LH)
 
     class MIB_IPNETROW_W2K(CStructure):
         _fields_ = [
             ("dwIndex", IF_INDEX),
             ("dwPhysAddrLen", DWORD),
-            ("bPhysAddr", UCHAR * MAXLEN_PHYSADDR),
+            ("bPhysAddr", CHAR * MAXLEN_PHYSADDR),
             ("dwAddr", DWORD),
             ("dwType", DWORD)
         ]
+        bPhysAddr: ICharArray
+        dwPhysAddrLen: int
+        dwIndex: int
+        dwAddr: int
+        dwType: int
     PMIB_IPNETROW_W2K = POINTER(MIB_IPNETROW_W2K)
     
     _version = cpreproc.get_version()
@@ -185,6 +216,8 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("dwNumEntries", DWORD),
             ("table", PMIB_IPNETROW)
         ]
+        dwNumEntries: int
+        table: IPointer[MIB_IPNETROW]
     PMIB_IPNETTABLE = POINTER(MIB_IPNETTABLE)
 
     SIZEOF_IPNETTABLE = lambda X: (MIB_IPNETTABLE.table.offset) + \
@@ -225,6 +258,30 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("dwNumAddr", DWORD),
             ("dwNumRoutes", DWORD)
         ]
+        dwInUnknownProtos: int
+        dwRoutingDiscards: int
+        dwForwDatagrams: int
+        dwInAddrErrors: int
+        dwReasmTimeout: int
+        dwInHdrErrors: int
+        dwOutRequests: int
+        dwOutDiscards: int
+        dwOutNoRoutes: int
+        dwFragCreates: int
+        dwDefaultTTL: int
+        dwInReceives: int
+        dwInDiscards: int
+        dwInDelivers: int
+        dwReasmReqds: int
+        dwReasmFails: int
+        dwFragFails: int
+        dwNumRoutes: int
+        Forwarding: int
+        dwReasmOks: int
+        dwFragOks: int
+        dwNumAddr: int
+        dwNumIf: int
+        
     PMIB_IPSTATS_LH = POINTER(MIB_IPSTATS_LH)
     
     class MIB_IPSTATS_W2K(CStructure):
@@ -253,6 +310,29 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("dwNumAddr", DWORD),
             ("dwNumRoutes", DWORD)
         ]
+        dwInUnknownProtos: int
+        dwRoutingDiscards: int
+        dwForwDatagrams: int
+        dwInAddrErrors: int
+        dwReasmTimeout: int
+        dwInHdrErrors: int
+        dwOutRequests: int
+        dwOutDiscards: int
+        dwOutNoRoutes: int
+        dwFragCreates: int
+        dwForwarding: int
+        dwDefaultTTL: int
+        dwInReceives: int
+        dwInDiscards: int
+        dwInDelivers: int
+        dwReasmReqds: int
+        dwReasmFails: int
+        dwFragFails: int
+        dwNumRoutes: int
+        dwReasmOks: int
+        dwFragOks: int
+        dwNumAddr: int
+        dwNumIf: int
     PMIB_IPSTATS_W2K = POINTER(MIB_IPSTATS_W2K)
     
     if _version >= WIN32_WINNT_VISTA:
@@ -263,19 +343,34 @@ if cpreproc.pragma_once("_IPMIB_"):
         PMIB_IPSTATS = PMIB_IPSTATS_W2K
 
     class MIBICMPSTATS(CStructure):
-        ("dwMsgs", DWORD),
-        ("dwErrors", DWORD),
-        ("dwDestUnreachs", DWORD),
-        ("dwTimeExcds", DWORD),
-        ("dwParmProbs", DWORD),
-        ("dwSrcQuenchs", DWORD),
-        ("dwRedirects", DWORD),
-        ("dwEchos", DWORD),
-        ("dwEchoReps", DWORD),
-        ("dwTimestamps", DWORD),
-        ("dwTimestampReps", DWORD),
-        ("dwAddrMasks", DWORD),
-        ("dwAddrMaskReps", DWORD)
+        _fields_ = [
+            ("dwMsgs", DWORD),
+            ("dwErrors", DWORD),
+            ("dwDestUnreachs", DWORD),
+            ("dwTimeExcds", DWORD),
+            ("dwParmProbs", DWORD),
+            ("dwSrcQuenchs", DWORD),
+            ("dwRedirects", DWORD),
+            ("dwEchos", DWORD),
+            ("dwEchoReps", DWORD),
+            ("dwTimestamps", DWORD),
+            ("dwTimestampReps", DWORD),
+            ("dwAddrMasks", DWORD),
+            ("dwAddrMaskReps", DWORD)
+        ]
+        dwTimestampReps: int
+        dwDestUnreachs: int
+        dwAddrMaskReps: int
+        dwSrcQuenchs: int
+        dwTimestamps: int
+        dwTimeExcds: int
+        dwParmProbs: int
+        dwRedirects: int
+        dwAddrMasks: int
+        dwEchoReps: int
+        dwErrors: int
+        dwEchos: int
+        dwMsgs: int
     PMIBICMPSTATS = POINTER(MIBICMPSTATS)
 
     class MIBICMPINFO(CStructure):
@@ -283,11 +378,14 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("icmpInStats", MIBICMPSTATS),
             ("icmpOutStats", MIBICMPSTATS)
         ]
+        icmpInStats: MIBICMPSTATS
+        icmpOutStats: MIBICMPSTATS
 
     class MIB_ICMP(CStructure):
         _fields_ = [
             ("stats", MIBICMPINFO)
         ]
+        stats: MIBICMPINFO
     PMIB_ICMP = POINTER(MIB_ICMP)
 
     class MIBICMPSTATS_EX_XPSP1(CStructure):
@@ -296,6 +394,9 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("dwErrors", DWORD),
             ("rgdwTypeCount", DWORD * 256)
         ]
+        rgdwTypeCount: IArray[int]
+        dwErrors: int
+        dwMsgs: int
     PMIBICMPSTATS_EX_XPSP1 = POINTER(MIBICMPSTATS_EX_XPSP1)
     
     MIBICMPSTATS_EX = MIBICMPSTATS_EX_XPSP1
@@ -306,6 +407,8 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("icmpInStats", MIBICMPSTATS_EX),
             ("icmpOutStats", MIBICMPSTATS_EX)
         ]
+        icmpOutStats: MIBICMPSTATS_EX_XPSP1
+        icmpInStats: MIBICMPSTATS_EX_XPSP1
     PMIB_ICMP_EX_XPSP1 = POINTER(MIB_ICMP_EX_XPSP1)
 
     MIB_ICMP_EX = MIB_ICMP_EX_XPSP1
@@ -383,6 +486,10 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("dwReserved", DWORD),
             ("dwReserved1", DWORD)
         ]
+        dwNextHopAddr: int
+        dwOutIfIndex: int
+        dwReserved1: int
+        dwReserved: int
     PMIB_IPMCAST_OIF_XP = POINTER(MIB_IPMCAST_OIF_XP)
 
     class MIB_IPMCAST_OIF_W2K(CStructure):
@@ -392,6 +499,10 @@ if cpreproc.pragma_once("_IPMIB_"):
             ("pvReserved", PVOID),
             ("dwReserved", DWORD)
         ]
+        dwNextHopAddr: int
+        dwOutIfIndex: int
+        dwReserved1: int
+        dwReserved: int
     PMIB_IPMCAST_OIF_W2K = POINTER(MIB_IPMCAST_OIF_W2K)
 
     if _version >= WIN32_WINNT_WINXP:
@@ -433,7 +544,7 @@ if cpreproc.pragma_once("_IPMIB_"):
     PMIB_MFE_TABLE = POINTER(MIB_MFE_TABLE)
 
     SIZEOF_BASIC_MIB_MFE         = \
-        (MIB_IPMCAST_MFE.Offset)
+        (MIB_IPMCAST_MFE.size())
 
     SIZEOF_MIB_MFE = lambda X:             \
         (SIZEOF_BASIC_MIB_MFE + ((X) * sizeof(MIB_IPMCAST_OIF)))

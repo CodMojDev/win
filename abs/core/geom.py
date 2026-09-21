@@ -422,6 +422,8 @@ class MARGINS(CStructure):
     cyTopHeight: int
     cyBottomHeight: int
     
+PMARGINS = LPMARGINS = PTR(MARGINS)
+    
 class Margins(MARGINS):
     def __str__(self) -> str:
         return f'{{{{{self.cxLeftWidth},{self.cxRightWidth}}},{{{self.cyTopHeight},{self.cyBottomHeight}}}}}'

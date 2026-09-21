@@ -8,7 +8,7 @@ from .psapi import *
 from .winnt import *
 
 from typing import TypeVar, ClassVar, TYPE_CHECKING
-from typing_extensions import Self
+from typing import Self
 from ctypes import _SimpleCData as SimpleCData
 from . import defbase as defb
 from .defbase import *

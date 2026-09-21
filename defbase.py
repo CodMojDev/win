@@ -12,10 +12,12 @@ from typing import (Callable, Any, List,
                     Type, Dict, Optional, ClassVar,
                     Protocol, overload, TYPE_CHECKING)
 from functools import wraps
-from typing_extensions import Self
 
-import typing_extensions as defb_tx
 import typing as defb_t
+try:
+    import typing_extensions as defb_tx
+except:
+    defb_tx = defb_t
 import types as defb_ty
 import warnings
 import ctypes
@@ -205,6 +207,8 @@ _defbase_ctypinit.Init()
 # # # # # # # # # # # # # # # # # # #
 # CPython-Specific part ends !!!    #
 # # # # # # # # # # # # # # # # # # #
+
+from typing import Self
 
 def pcall(f, *args, **kwargs) -> tuple[Any, BaseException]:
     try:
@@ -775,7 +779,7 @@ from ctypes import Structure, byref, POINTER as _POINTER, pointer, c_int, c_void
 from _ctypes import CFuncPtr
         
 from typing import Tuple, Mapping
-from typing_extensions import TypeAlias
+from typing import TypeAlias
 
 if TYPE_CHECKING:
     import _typeshed
@@ -1988,8 +1992,6 @@ def ASSERT(expr: bool):
             line = 'False'
         
         AssertTool.wassert(line, filename, lineno)
-    
-from typing_extensions import Self
 
 GenericAlias = type(Generic[WT])
 

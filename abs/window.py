@@ -89,7 +89,7 @@ class Scrollbar:
         
         @property
         def enabled(self) -> bool:
-            return self.scrollbar.info().rgstate[self.state_index] & 1
+            return (self.scrollbar.info().rgstate[self.state_index] & 1) == 1
         
     # scrollbar HWND and type (SB_VERT, SB_HORZ, SB_CTL)
     window: int | HWND
@@ -1089,12 +1089,16 @@ class Window(Abs.Object, HWND):
         pass
     
     def Window_on_nc_destroy(self):
+        # uninitialize Buffered Paint Manager
+        BufferedPaintManager.uninit()
         # notify the application cycle what one of application-hosted windows is destroyed
         app = WindowLoopUnit.current(running=False)
         app.windows -= 1
         app.notify()
         
     def Window_on_create(self):
+        # initialize Buffered Paint Manager
+        BufferedPaintManager.init()
         app = WindowLoopUnit.current(running=False)
         app.windows += 1 # add the application cycle windows count
         return True

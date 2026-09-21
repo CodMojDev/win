@@ -17,8 +17,6 @@ from typing import (TypeVar, Generic, Optional,
                     Mapping, Any, Dict,
                     AnyStr, Sequence, Type,
                     Iterable, Callable, List)
-from typing_extensions import Self, TypeAlias
-import typing_extensions
 import typing, ctypes
 
 if sys.version_info < (3, 8):
@@ -80,8 +78,45 @@ if sys.version_info[0:2] == (3, 8) or typing.TYPE_CHECKING:
                 raise
             return result
         typing._type_check = polyfill_typing_type_check
-        typing.TypeAlias = typing_extensions.TypeAlias
-        typing.Self = typing_extensions.Self
+        class _SpecialForm(typing._Final, _root=True):
+            __slots__ = ('_name', '__doc__', '_getitem')
+            def __init__(self, getitem):
+                self._getitem = getitem
+                self._name = getitem.__name__
+                self.__doc__ = getitem.__doc__
+            def __getattr__(self, item):
+                if item in {'__name__', '__qualname__'}:
+                    return self._name=
+                raise AttributeError(item)=
+            def __mro_entries__(self, bases):
+                raise TypeError(f"Cannot subclass {self!r}")=
+            def __repr__(self):
+                return f'typing.{self._name}'
+            def __reduce__(self):
+                return self._name
+            def __call__(self, *args, **kwds):
+                raise TypeError(f"Cannot instantiate {self!r}")
+            def __or__(self, other):
+                return typing.Union[self, other]
+            def __ror__(self, other):
+                return typing.Union[other, self]
+            def __instancecheck__(self, obj):
+                raise TypeError(f"{self} cannot be used with isinstance()")
+            def __subclasscheck__(self, cls):
+                raise TypeError(f"{self} cannot be used with issubclass()")
+            @typing._tp_cache
+            def __getitem__(self, parameters):
+                return self._getitem(self, parameters)
+        @_SpecialForm
+        def TypeAlias(self, parameters):
+            """TypeAlias"""
+            raise TypeError(f"{self} is not subscriptable")
+        @_SpecialForm
+        def Self(self, parameters):
+            """Self"""
+            raise TypeError(f"{self} is not subscriptable")
+        typing.TypeAlias = TypeAlias
+        typing.Self = Self
         ctypes.c_time_t = c_int32 if sizeof(c_void_p) == 4 else c_int64
     _INIT_CHAIN.append(polyfill_39plus_to_38)
 
@@ -520,7 +555,9 @@ class PyTypeObject(PyVarObject[_CWT]):
         ('unusedSizeT3', c_ssize_t),
         ('unusedPtrs', c_void_p * 4),
         ('tp_as_number', POINTER(c_void_p)),
-        ('unusedPtrs2', c_void_p * 8),
+        ('tp_as_sequence', POINTER(c_void_p)),
+        ('tp_as_mapping', POINTER(c_void_p)),
+        ('unusedPtrs2', c_void_p * 6),
         ('tp_flags', c_ulong),
         ('unusedPtrs3', c_void_p * 8),
         ('tp_members', PyMemberDef_PTR),
@@ -543,6 +580,8 @@ class PyTypeObject(PyVarObject[_CWT]):
     tp_basicsize: int
     tp_flags: int
     tp_as_number: IPointer[c_void_p]
+    tp_as_sequence: IPointer[c_void_p]
+    tp_as_mapping: IPointer[c_void_p]
     tp_new: int
     tp_getset: IPointer[PyGetSetDef]
     
@@ -872,15 +911,35 @@ class PyCArgObject(PyObject[_CWT]):
     
 PyCArgObject_PTR = POINTER(PyCArgObject)
     
-class PyCDataObject_HEADLESS(PyObject):
+class PyCDataObject(PyObject):
     _fields_ = [
-        ('b_ptr', c_char_p)
+        ('b_ptr', c_void_p),
+        ('b_needsfree', c_int),
+        ('b_base', PyObject_PTR),
+        ('b_size', c_ssize_t),
+        ('b_length', c_ssize_t),
+        ('b_index', c_ssize_t),
+        ('b_objects', PyObject_PTR),
+        ('b_value', c_ubyte * 16)
     ]
     
-    b_ptr: c_char_p
+    b_ptr: int
+    b_needsfree: int
+    b_base: IPointer[PyObject]
+    b_size: int
+    b_length: int
+    b_index: int
+    b_objects: IPointer[PyObject]
+    b_value: IArray[int]
     
-PyCDataObject_HEADLESS_PTR = POINTER(PyCDataObject_HEADLESS)
-    
+PyCDataObject_PTR = POINTER(PyCDataObject)
+
+def PyCDataObject_CAST(o: _CWT) -> IPointer[PyCDataObject]:
+    return cast(id(o), PyCDataObject_PTR)
+
+def PyCDataObject_CAST_DEREF(o: _CWT) -> PyCDataObject:
+    return cast(id(o), PyCDataObject_PTR).contents
+
 pythonapi._PyObject_GC_New.argtypes = [c_void_p]
 pythonapi._PyObject_GC_New.restype = PyObject_PTR
         
@@ -933,7 +992,7 @@ class ICData:
     _b_needsfree_: bool
     _objects: typing.Union[Mapping[Any, int], None]
     def __buffer__(self, flags: int, /) -> memoryview: ...
-    def __ctypes_from_outparam__(self, /) -> Self: ...
+    def __ctypes_from_outparam__(self, /): ...
     if sys.version_info >= (3, 14):
         __pointer_type__: type
 
@@ -958,7 +1017,7 @@ def Init_PyCArgObject(parg: IPointer[PyCArgObject[_CWT]], obj: ICData) -> _CWT:
     parg.contents.tag = b'P'
     parg.contents.pffi_type = cast(byref(ffi_pointer_type), c_void_p)
     arg._obj = obj
-    parg.contents.value.p = cast(cast(id(obj), PyCDataObject_HEADLESS_PTR).contents.b_ptr, c_void_p)
+    parg.contents.value.p = cast(cast(id(obj), PyCDataObject_PTR).contents.b_ptr, c_void_p)
     return arg
 
 def PyCArgObject_CAST(obj: ICArgObject) -> IPointer[PyCArgObject[ICArgObject]]:
@@ -1143,22 +1202,7 @@ def CFieldObject_CAST(obj: _CWT) -> IPointer[CFieldObject]:
 def CFieldObject_CAST_DEREF(obj: _CWT) -> CFieldObject:
     return cast(id(obj), CFieldObject_PTR).contents
 
-def Init():
-    SetTPFLAG(CArgObject, Py_TPFLAGS_BASETYPE)
-    SetTPFLAG(bool, Py_TPFLAGS_BASETYPE)
-    Get_PyMemberDef(CArgObject, '_obj').readonly = False
-    
-    t_mappingproxy = PyType_CAST_DEREF(mappingproxy)
-    t_mappingproxy.members = [PyMemberDef('m_proxy', _Py_T_OBJECT,
-                                          MProxy.offset('mapping'))]
-    t_mappingproxy.Reload()
-    t_codetype = PyType_CAST_DEREF(type(HasTPFLAG.__code__))
-    for member in t_codetype.members:
-        member.readonly = False
-    
-    for init_routine in _INIT_CHAIN:
-        init_routine()
-    
+def Init_StructureUnion_fields_patch():
     PyCStructType = type(Structure)
     UnionType = type(Union)
     tp_PyCStructType = PyType_CAST_DEREF(PyCStructType)
@@ -1199,3 +1243,61 @@ def Init():
     tp_UnionType.tp_new = cast(pfn_patch_UnionType_new, c_void_p)
     tp_PyCStructType.Reload()
     tp_UnionType.Reload()
+
+def Init_Array_indexing_patch():
+    tp_Array = PyType_CAST_DEREF(Array)
+    pfn_Array_subscript = cast(tp_Array.tp_as_mapping[1], PY_BINARY_FUNC)
+    def patch_Array_subscript(p_self, p_value):
+        value = cast(p_value, py_object).value
+        if isinstance(value, int):
+            self = cast(p_self, py_object).value
+            cdata: PyCDataObject = cast(p_self, PyCDataObject_PTR).contents
+            length = cdata.b_length
+            if value < 0:
+                offset = sizeof(self._type_) * value
+                b_ptr = cdata.b_ptr
+                cdata.b_ptr = b_ptr + offset
+                index = 0
+                p_result = pfn_Array_subscript(p_self, id(index))
+                cdata.b_ptr = b_ptr
+            elif value >= length:
+                cdata.b_length = value + 1
+                p_result = pfn_Array_subscript(p_self, p_value)
+                cdata.b_length = length
+            else:
+                p_result = pfn_Array_subscript(p_self, p_value)
+            return p_result
+        return pfn_Array_subscript(p_self, p_value)
+    pfn_patch_Array_subscript = PY_BINARY_FUNC(patch_Array_subscript)
+    _GLOBAL_REFS.append(pfn_patch_Array_subscript)
+    tp_Array.tp_as_mapping[1] = cast(pfn_patch_Array_subscript, c_void_p)
+    PyCArrayType = type(Array)
+    tp_PyCArrayType = PyType_CAST_DEREF(PyCArrayType)
+    pfn_PyCArrayType_new = cast(tp_PyCArrayType.tp_new, PY_TP_NEW_FUNC)
+    def patch_PyCArrayType_new(p_metacls, p_args, p_kwds):
+        p_result = pfn_PyCArrayType_new(p_metacls, p_args, p_kwds)
+        tp_result: PyTypeObject = cast(p_result, PyTypeObject_PTR).contents
+        tp_result.tp_as_mapping[1] = cast(pfn_patch_Array_subscript, c_void_p)
+        return p_result
+    pfn_patch_PyCArrayType_new = PY_TP_NEW_FUNC(patch_PyCArrayType_new)
+    _GLOBAL_REFS.append(pfn_patch_PyCArrayType_new)
+    tp_PyCArrayType.tp_new = cast(pfn_patch_PyCArrayType_new, c_void_p)
+
+def Init():
+    SetTPFLAG(CArgObject, Py_TPFLAGS_BASETYPE)
+    SetTPFLAG(bool, Py_TPFLAGS_BASETYPE)
+    Get_PyMemberDef(CArgObject, '_obj').readonly = False
+    
+    t_mappingproxy = PyType_CAST_DEREF(mappingproxy)
+    t_mappingproxy.members = [PyMemberDef('m_proxy', _Py_T_OBJECT,
+                                          MProxy.offset('mapping'))]
+    t_mappingproxy.Reload()
+    t_codetype = PyType_CAST_DEREF(type(HasTPFLAG.__code__))
+    for member in t_codetype.members:
+        member.readonly = False
+    
+    Init_StructureUnion_fields_patch()
+    Init_Array_indexing_patch()
+    
+    for init_routine in _INIT_CHAIN:
+        init_routine()

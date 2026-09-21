@@ -29,6 +29,7 @@ if cpreproc.pragma_once("_IFMIB_"):
         _fields_ = [
             ("dwValue", DWORD)
         ]
+        dwValue: int
     PMIB_IFNUMBER = POINTER(MIB_IFNUMBER)
 
 
@@ -50,7 +51,7 @@ if cpreproc.pragma_once("_IFMIB_"):
             ("dwMtu", DWORD),
             ("dwSpeed", DWORD),
             ("dwPhysAddrLen", DWORD),
-            ("bPhysAddr", UCHAR * MAXLEN_PHYSADDR),
+            ("bPhysAddr", CHAR * MAXLEN_PHYSADDR),
             ("dwAdminStatus", DWORD),
             ("dwOperStatus", INTERNAL_IF_OPER_STATUS),
             ("dwLastChange", DWORD),
@@ -67,8 +68,32 @@ if cpreproc.pragma_once("_IFMIB_"):
             ("dwOutErrors", DWORD),
             ("dwOutQLen", DWORD),
             ("dwDescrLen", DWORD),
-            ("bDescr", UCHAR * MAXLEN_IFDESCR)
+            ("bDescr", CHAR * MAXLEN_IFDESCR)
         ]
+        wszName: IWideCharArray
+        bPhysAddr: ICharArray
+        bDescr: ICharArray
+        dwInUnknownProtos: int
+        dwOutNUcastPkts: int
+        dwInNUcastPkts: int
+        dwOutUcastPkts: int
+        dwPhysAddrLen: int
+        dwAdminStatus: int
+        dwInUcastPkts: int
+        dwOutDiscards: int
+        dwOperStatus: int
+        dwLastChange: int
+        dwInDiscards: int
+        dwOutOctets: int
+        dwOutErrors: int
+        dwInOctets: int
+        dwInErrors: int
+        dwDescrLen: int
+        dwOutQLen: int
+        dwIndex: int
+        dwSpeed: int
+        dwType: int
+        dwMtu: int
     PMIB_IFROW = POINTER(MIB_IFROW)
 
     class MIB_IFTABLE(CStructure):
@@ -76,6 +101,8 @@ if cpreproc.pragma_once("_IFMIB_"):
             ("dwNumEntries", DWORD),
             ("table", MIB_IFROW * ANY_SIZE)
         ]
+        dwNumEntries: int
+        table: IPointer[MIB_IFROW]
     PMIB_IFTABLE = POINTER(MIB_IFTABLE)
 
     SIZEOF_IFTABLE = lambda X: MIB_IFTABLE.table.offset + (X) * sizeof(MIB_IFROW) + MIB_IFTABLE._pack_

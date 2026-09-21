@@ -14,6 +14,13 @@ def DrawThemeParentBackground(hwnd: int | HANDLE, hdc: int | HANDLE, prc: PRECT)
 @uxtheme.foreign(HTHEME, HWND, LPCWSTR)
 def OpenThemeData(hwnd: int | HANDLE, pszClassList: str | LPCWSTR) -> int: ...
 
+OTD_FORCE_RECT_SIZING = 0x0001
+OTD_NONCLIENT = 0x0002
+OTD_VALIDBITSS = (OTD_FORCE_RECT_SIZING | OTD_NONCLIENT)
+
+@uxtheme.foreign(HTHEME, HWND, LPCWSTR, DWORD)
+def OpenThemeDataEx(hwnd: int | HANDLE, pszClassList: str | LPCWSTR, dwFlags: int) -> int: ...
+
 @uxtheme.foreign(HRESULT, HTHEME)
 def CloseThemeData(hTheme: int | HANDLE): ...
 
@@ -29,6 +36,241 @@ def DrawThemeText(
 @uxtheme.foreign(HRESULT, HTHEME, HDC, INT, INT, LPCRECT, LPCRECT)
 def DrawThemeBackground(hTheme: int | HANDLE, hdc: int | HANDLE, iPartId: int, iStateId: int, 
                         pRect: IPointer[RECT], pClipRect: IPointer[RECT]) -> int: ...
+
+# Buffered Paint API
+
+HPAINTBUFFER = HANDLE
+HANIMATIONBUFFER = HANDLE
+
+@uxtheme.foreign(HRESULT)
+def BufferedPaintInit() -> int: ...
+
+BPBF_COMPATIBLEBITMAP = 0
+BPBF_DIB = 1
+BPBF_TOPDOWNDIB = 2
+BPBF_TOPDOWNMONODIB = 3
+BP_BUFFERFORMAT = DWORD
+
+BPPF_ERASE = 0x0001
+BPPF_NOCLIP = 0x0002
+BPPF_NONCLIENT = 0x0004
+
+class BP_PAINTPARAMS(CStructure):
+    _fields_ = [
+        ('cbSize', DWORD),
+        ('dwFlags', DWORD),
+        ('prcExclude', PRECT),
+        ('pBlendFunction', PBLENDFUNCTION)
+    ]
+    cbSize: int
+    dwFlags: int
+    prcExclude: IPointer[RECT]
+    pBlendFunction: IPointer[BLENDFUNCTION]
+
+PBP_PAINTPARAMS = PTR(BP_PAINTPARAMS)
+
+BPAS_NONE = 0
+BPAS_LINEAR = 1
+BPAS_CUBIC = 2
+BPAS_SINE = 3
+BP_ANIMATIONSTYLE = DWORD
+
+class BP_ANIMATIONPARAMS(CStructure):
+    _fields_ = [
+        ("cbSize", DWORD),
+        ("dwFlags", DWORD),
+        ("style", BP_ANIMATIONSTYLE),
+        ("dwDuration", DWORD)
+    ]
+    cbSize: int
+    dwFlags: int
+    style: int
+    dwDuration: int
+
+PBP_ANIMATIONPARAMS = PTR(BP_ANIMATIONPARAMS)
+
+@uxtheme.foreign(HPAINTBUFFER, HDC, PRECT, BP_BUFFERFORMAT, PBP_PAINTPARAMS, PTR(HDC))
+def BeginBufferedPaint(hdcTarget: WT_HANDLE, prcTarget: IPointer[RECT], dwFormat: int, pPaintParams: IPointer[BP_PAINTPARAMS], phdc: IPointer[HDC]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HPAINTBUFFER, BOOL)
+def EndBufferedPaint(hBufferedPaint: WT_HANDLE, fUpdateTarget: int) -> int: ...
+
+@uxtheme.foreign(HRESULT, HPAINTBUFFER, PTR(PRGBQUAD), PINT)
+def GetBufferedPaintBits(hBufferedPaint: WT_HANDLE, ppbBuffer: IDoublePtr[RGBQUAD], pcxRow: IPointer[INT]) -> int: ...
+
+@uxtheme.foreign(HDC, HPAINTBUFFER)
+def GetBufferedPaintDC(hBufferedPaint: WT_HANDLE) -> int: ...
+
+@uxtheme.foreign(HDC, HPAINTBUFFER)
+def GetBufferedPaintTargetDC(hBufferedPaint: WT_HANDLE) -> int: ...
+
+@uxtheme.foreign(HRESULT, HPAINTBUFFER, PRECT)
+def GetBufferedPaintTargetRect(hBufferedPaint: WT_HANDLE, prc: IPointer[RECT]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HPAINTBUFFER, PRECT)
+def BufferedPaintClear(hBufferedPaint: WT_HANDLE, prc: IPointer[RECT]) -> int: ...
+
+@uxtheme.foreign(BOOL, HWND, HDC)
+def BufferedPaintRenderAnimation(hwnd: WT_HANDLE, hdcTarget: WT_HANDLE) -> int: ...
+
+@uxtheme.foreign(HRESULT, HPAINTBUFFER, PRECT, BYTE)
+def BufferedPaintSetAlpha(hBufferedPaint: WT_HANDLE, prc: IPointer[RECT], alpha: int) -> int: ...
+
+@uxtheme.foreign(HRESULT, HWND)
+def BufferedPaintStopAllAnimations(hwnd: WT_HANDLE) -> int: ...
+
+@uxtheme.foreign(HRESULT)
+def BufferedPaintUnInit() -> int: ...
+
+@uxtheme.foreign(HANIMATIONBUFFER, HWND, HDC, PRECT, BP_BUFFERFORMAT, PBP_ANIMATIONPARAMS, PTR(HDC), PTR(HDC))
+def BeginBufferedAnimation(hwnd: WT_HANDLE, hdcTarget: WT_HANDLE, prcTarget: IPointer[RECT], dwFormat: int, pPaintParams: IPointer[BP_PAINTPARAMS], pAnimationParams: IPointer[BP_ANIMATIONPARAMS], phdcFrom: IPointer[HDC], phdcTo: IPointer[HDC]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HANIMATIONBUFFER, BOOL)
+def EndBufferedAnimation(hbpAnimation: WT_HANDLE, fUpdateTarget: int) -> int: ...
+
+class BufferedPaintManager:
+    initialized_threads: ClassVar[dict[int, int]] = {} # key - thread ID, value - refcount
+    enabled: ClassVar[bool] = True
+    if isinstance(uxtheme, NullLibrary):
+        enabled = False
+    elif is_null(BufferedPaintInit) or is_null(BufferedPaintUnInit):
+        enabled = False
+    
+    @staticmethod
+    def init():
+        if BufferedPaintManager.enabled:
+            thread_id = GetCurrentThreadId()
+            if thread_id in BufferedPaintManager.initialized_threads:
+                BufferedPaintManager.initialized_threads[thread_id] += 1
+            else:
+                hr = BufferedPaintInit()
+                if FAILED(hr):
+                    raise COMError(hr)
+                BufferedPaintManager.initialized_threads[thread_id] = 1
+            
+    @staticmethod
+    def uninit():
+        if BufferedPaintManager.enabled:
+            thread_id = GetCurrentThreadId()
+            if thread_id in BufferedPaintManager.initialized_threads:
+                value = BufferedPaintManager.initialized_threads[thread_id] - 1
+                if value == 0:
+                    del BufferedPaintManager.initialized_threads[thread_id]
+                    hr = BufferedPaintUnInit()
+                    if FAILED(hr):
+                        raise COMError(hr)
+                else:
+                    BufferedPaintManager.initialized_threads[thread_id] = value
+                    
+            else:
+                raise RuntimeError("Unbalanced BufferedPaintManager.uninit call")
+
+class BufferedAnimation(Handle):
+    @classmethod
+    def create(cls, window: int | HWND, 
+               dc: int | HANDLE, 
+               rect: RECT,
+               format: int = BPBF_COMPATIBLEBITMAP,
+               flags: int = 0,
+               exclude: RECT | None = None,
+               blend: BLENDFUNCTION | None = None,
+               style: int = BPAS_NONE,
+               duration: int = 0
+               ) -> tuple[Self, DC | None, DC | None]:
+        paintParams = BP_PAINTPARAMS()
+        paintParams.cbSize = BP_PAINTPARAMS.size()
+        paintParams.dwFlags = flags
+        if exclude is not None:
+            paintParams.prcExclude = exclude.ptr()
+        if blend is not None:
+            paintParams.pBlendFunction = blend.ptr()
+        animationParams = BP_ANIMATIONPARAMS()
+        animationParams.cbSize = BP_ANIMATIONPARAMS.size()
+        animationParams.style = style
+        animationParams.dwDuration = duration
+        dcFrom = DC()
+        dcTo = DC()
+        animation = cls(BeginBufferedAnimation(window, dc, rect.ref(), format, paintParams.ref(), animationParams.ref(), byref(dcFrom), byref(dcTo)))
+        if not animation:
+            raise WinException()
+        if not dcFrom:
+            dcFrom = None
+        if not dcTo:
+            dcTo = None
+        return animation, dcFrom, dcTo
+    
+    def close(self):
+        hr = EndBufferedAnimation(self, TRUE)
+        if FAILED(hr):
+            raise COMError(hr)
+        self._closed = True
+
+class BufferedPaintDC(DC):
+    handle: WT_HANDLE
+    
+    @classmethod
+    def create(cls, dc: int | HANDLE, 
+               rect: RECT, 
+               flags: int = BPPF_ERASE, 
+               exclude: RECT | None = None, 
+               blend: BLENDFUNCTION | None = None, 
+               format: int = BPBF_COMPATIBLEBITMAP) -> Self:
+        params = BP_PAINTPARAMS()
+        params.cbSize = BP_PAINTPARAMS.size()
+        params.dwFlags = flags
+        if exclude is not None:
+            params.prcExclude = exclude.ptr()
+        if blend is not None:
+            params.pBlendFunction = blend.ptr()
+        result = BufferedPaintDC()
+        result.handle = BeginBufferedPaint(dc, rect.ref(), format, params.ref(), byref(result))
+        if not result.handle or not result.value:
+            raise WinException()
+        return result
+    
+    def close(self):
+        if self.handle:
+            EndBufferedPaint(self.handle, TRUE)
+            self.handle = None
+        self.value = None
+        self._closed = True
+        
+    def clear(self, rect: RECT | None = None):
+        """
+        Clear the Buffered Paint DC.
+        """
+        if rect is None:
+            prc = None
+        else:
+            prc = rect.ref()
+        hr = BufferedPaintClear(self.handle, prc)
+        
+    def bits(self) -> tuple[IPointer[RGBQUAD], int]:
+        """
+        Get the bits of Buffered Paint DC.
+        """
+        pRgbQuad = PRGBQUAD()
+        cxRow = INT()
+        hr = GetBufferedPaintBits(self.handle, byref(pRgbQuad), byref(cxRow))
+        if FAILED(hr):
+            raise COMError(hr)
+        return pRgbQuad, cxRow.value
+    
+    def target(self) -> DC:
+        """
+        Get the Target DC of Buffered Paint DC.
+        """
+        return DC.foreign_owner(GetBufferedPaintTargetDC(self))
+    
+    def target_rect(self) -> Rect:
+        """
+        Get the Target Rect of Buffered Paint DC.
+        """
+        rect = Rect()
+        hr = GetBufferedPaintTargetRect(self, rect.ref())
+        if FAILED(hr):
+            raise COMError(hr)
+        return rect
 
 DTT_CALLBACK_PROC = WINAPI(INT, HDC, LPWSTR, INT, PRECT, UINT, LPARAM)
 
@@ -370,14 +612,94 @@ def IsThemeBackgroundPartiallyTransparent(hTheme: int, iPartId: int, iStateId: i
 @uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, LPCOLORREF)
 def GetThemeColor(hTheme: int, iPartId: int, iStateId: int, iPropId: int, pColor: IPointer[COLORREF]) -> int: ...
 
+@uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, INT, PDWORD)
+def GetThemeTransitionDuration(hTheme: int, iPartId: int, iStateId: int, iPropId: int, pdwDuration: IPointer[DWORD]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HDC, HTHEME, INT, INT, INT, PINT)
+def GetThemeMetric(hTheme: int, hdc: int, iPartId: int, iStateId: int, iPropId: int, piVal: IPointer[INT]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, PRECT)
+def GetThemeRect(hTheme: int, iPartId: int, iStateId: int, iPropId: int, pRect: IPointer[RECT]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, LPWSTR, INT)
+def GetThemeString(hTheme: int, iPartId: int, iStateId: int, pszBuff: WT_LPWSTR, cchMaxBuffChars: int) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, PINT)
+def GetThemeInt(hTheme: int, iPartId: int, iStateId: int, iPropId: int, piVal: IPointer[INT]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, HDC, INT, INT, INT, LPCRECT, LPMARGINS)
+def GetThemeMargins(hTheme: int, hdc: int, iPartId: int, iStateId: int, iPropId: int, prc: IPointer[RECT], pMargins: IPointer[MARGINS]) -> int: ...
+
+TS_MIN = 0
+TS_TRUE = 1
+TS_DRAW = 2
+THEMESIZE = DWORD
+
+@uxtheme.foreign(HRESULT, HTHEME, HDC, INT, INT, LPCRECT, THEMESIZE, PSIZE)
+def GetThemePartSize(hTheme: int, hdc: int, iPartId: int, iStateId: int, prc: IPointer[RECT], eSize: int, psz: IPointer[SIZE]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, HDC, INT, INT, PTEXTMETRICW)
+def GetThemeTextMetric(hTheme: int, hdc: int, iPartId: int, iStateId: int, ptm: IPointer[TEXTMETRICW]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, PVOID, PDWORD, HINSTANCE)
+def GetThemeStream(hTheme: int, iPartId: int, iStateId: int, iPropId: int, ppvStream: IPointer[PVOID], pcbStream: IPointer[DWORD], hInst: int) -> int: ...
+
+GBF_DIRECT = 0x0001
+GBF_COPY = 0x0002
+GBF_VALIDBITS = (GBF_DIRECT | GBF_COPY)
+
+@uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, ULONG, PTR(HBITMAP))
+def GetThemeBitmap(hTheme: int, iPartId: int, iStateId: int, iPropId: int, dwFlags: int, phBitmap: IPointer[HBITMAP]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, PINT)
+def GetThemeEnumValue(hTheme: int, iPartId: int, iStateId: int, iPropId: int, piVal: IPointer[INT]) -> int: ...
+
+if cpreproc.get_version() >= WIN32_WINNT_VISTA:
+    MAX_INTLIST_COUNT = 402
+else:
+    MAX_INTLIST_COUNT = 10
+    
+class INTLIST(CStructure):
+    _fields_ = [
+        ("iValueCount", INT),
+        ("iValues", MAX_INTLIST_COUNT)
+    ]
+    iValueCount: int
+    iValues: IArray[int]
+    
+PINTLIST = PTR(INTLIST)
+
+@uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, PINTLIST)
+def GetThemeIntList(hTheme: int, iPartId: int, iStateId: int, iPropId: int, pIntList: IPointer[INTLIST]) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, PBOOL)
+def GetThemeBool(hTheme: int, iPartId: int, iStateId: int, iPropId: int, pfVal: IPointer[BOOL]) -> int: ...
+
+@uxtheme.foreign(COLORREF, HTHEME, INT)
+def GetThemeSysColor(hTheme: int, iColorId: int) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, INT, LPWSTR, INT)
+def GetThemeSysString(hTheme: int, iStringId: int, pszStringBuff: WT_LPWSTR, cchMaxStringChars: int) -> int: ...
+
+@uxtheme.foreign(HRESULT, HTHEME, INT, PINT)
+def GetThemeSysInt(hTheme: int, iIntId: int, piVal: IPointer[INT]) -> int: ...
+
+@uxtheme.foreign(INT, HTHEME, INT)
+def GetThemeSysSize(hTheme: int, iSizeId: int) -> int: ...
+
 class Theme(Handle):
     """
     Class, representing Windows theme.
     """
+    _INT_LIST = INTLIST()
+    _STR_BUFFER = create_unicode_buffer(256)
     
     @classmethod
-    def create(cls, hwnd: int | HANDLE, class_list: str) -> 'Theme':
-        theme = cls(OpenThemeData(hwnd, class_list))
+    def create(cls, hwnd: int | HANDLE, class_list: str, flags: int = 0) -> 'Theme':
+        if not is_null(OpenThemeDataEx):
+            theme = cls(OpenThemeDataEx(hwnd, class_list, flags))
+        else:
+            theme = cls(OpenThemeData(hwnd, class_list))
         if not theme.value: raise WinException()
         return theme
     
@@ -403,12 +725,12 @@ class Theme(Handle):
         hr = DrawThemeTextEx(self, dc, part_id, state_id, text, len(text), flags, rect.ref(), options.ref())
         if FAILED(hr): raise COMError(hr)
         
-    def get_font(self, dc: int | HANDLE, part_id: int, state_id: int) -> LOGFONTW:
+    def get_font(self, part_id: int, state_id: int, prop_id: int = TMT_FONT, dc: int | HANDLE | None = None) -> LOGFONTW:
         """
         Get the themed font from theme file.
         """
         lf = LOGFONTW()
-        hr = GetThemeFont(self, dc, part_id, state_id, TMT_FONT, lf.ref())
+        hr = GetThemeFont(self, dc, part_id, state_id, prop_id, lf.ref())
         if FAILED(hr): raise COMError(hr)
         return lf
     
@@ -441,6 +763,144 @@ class Theme(Handle):
         hr = GetThemeColor(self, part_id, state_id, prop_id, byref(color))
         if FAILED(hr): raise COMError(hr)
         return Color.BGR(color.value)
+    
+    def get_transition_duration(self, part_id: int, state_id: int, prop_id: int = TMT_TRANSITIONDURATIONS) -> int:
+        """
+        Get the visual style animation transition duration which defined in theme.
+        """
+        duration = DWORD()
+        hr = GetThemeTransitionDuration(self, part_id, state_id, prop_id, byref(duration))
+        if FAILED(hr): raise COMError(hr)
+        return duration.value
+    
+    def get_metric(self, part_id: int, state_id: int, prop_id: int, dc: int | HANDLE | None = None) -> int:
+        """
+        Get the visual style metric which defined in theme.
+        """
+        value = INT()
+        hr = GetThemeMetric(self, dc, part_id, state_id, prop_id, byref(value))
+        if FAILED(hr): raise COMError(hr)
+        return value.value
+    
+    def get_integer(self, part_id: int, state_id: int, prop_id: int) -> int:
+        """
+        Get the visual style integer which defined in theme.
+        """
+        value = INT()
+        hr = GetThemeInt(self, part_id, state_id, prop_id, byref(value))
+        if FAILED(hr): raise COMError(hr)
+        return value.value
+    
+    def get_rect(self, part_id: int, state_id: int, prop_id: int) -> Rect:
+        """
+        Get the visual style rectangle from theme.
+        """
+        rect = Rect()
+        hr = GetThemeRect(self, part_id, state_id, prop_id, rect.ref())
+        if FAILED(hr): raise COMError(hr)
+        return rect
+    
+    def get_size(self, part_id: int, state_id: int, prop_id: int, type: int = TS_MIN, dc: int | HANDLE | None = None, rect: RECT | None = None) -> Size:
+        """
+        Get the visual style part size from theme.
+        """
+        size = Size()
+        hr = GetThemePartSize(self, dc, part_id, state_id, rect.ref() if rect is not None else NULL, type, size.ref())
+        if FAILED(hr): raise COMError(hr)
+        return size
+    
+    def get_system_integer(self, identifier: int) -> int:
+        """
+        Get the system integer from theme.
+        """
+        value = INT()
+        hr = GetThemeSysInt(self, identifier, byref(value))
+        if FAILED(hr): raise COMError(hr)
+        return value.value
+    
+    def get_system_color(self, identifier: int) -> Color.BGR:
+        """
+        Get the system color from theme.
+        """
+        return Color.BGR(GetThemeSysColor(self, identifier))
+    
+    def get_system_size(self, identifier: int) -> int:
+        """
+        Get the system size metric from theme.
+        """
+        return GetThemeSysSize(self, identifier)
+    
+    def get_text_metric(self, part_id: int, state_id: int, dc: int | HANDLE | None = None) -> TEXTMETRICW:
+        """
+        Get the text metric for visual style from theme.
+        """
+        tm = TEXTMETRICW()
+        hr = GetThemeTextMetric(self, dc, part_id, state_id, tm.ref())
+        if FAILED(hr): raise COMError(hr)
+    
+    def get_bitmap(self, part_id: int, state_id: int, prop_id: int = TMT_DIBDATA, flags: int = GBF_DIRECT) -> Bitmap | None:
+        """
+        Get the bitmap for visual style from theme.
+        """
+        bitmap = Bitmap()
+        hr = GetThemeBitmap(self, part_id, state_id, prop_id, flags, byref(bitmap))
+        if FAILED(hr): raise COMError(hr)
+        if not bitmap: return None
+        return bitmap
+    
+    def get_bool(self, part_id: int, state_id: int, prop_id: int) -> bool:
+        """
+        Get the boolean value for visual style from theme file.
+        """
+        value = BOOL()
+        hr = GetThemeBool(self, part_id, state_id, prop_id, byref(value))
+        if FAILED(hr): raise COMError(hr)
+        return value.value == TRUE
+    
+    def get_int_list(self, part_id: int, state_id: int, prop_id: int) -> list[int]:
+        """
+        Get the integer list for visual style, defined in theme file.
+        """
+        memset(self._INT_LIST, 0, sizeof(INTLIST))
+        hr = GetThemeIntList(self, part_id, state_id, prop_id, self._INT_LIST.ref())
+        if FAILED(hr): raise COMError(hr)
+        return list(i_cast(self._INT_LIST.iValues, PTR(INT * self._INT_LIST.iValueCount)).contents)
+    
+    def get_string(self, part_id: int, state_id: int, prop_id: int) -> str:
+        """
+        Get the string from visual style, defined in theme file.
+        """
+        self._STR_BUFFER[0] = '\x00'
+        hr = GetThemeString(self, part_id, state_id, self._STR_BUFFER, len(self._STR_BUFFER))
+        if FAILED(hr): raise COMError(hr)
+        return self._STR_BUFFER.value
+    
+    def get_system_string(self, identifier: int) -> str:
+        """
+        Get the system-wide string defined in theme file.
+        """
+        self._STR_BUFFER[0] = '\x00'
+        hr = GetThemeSysString(self, identifier, self._STR_BUFFER, len(self._STR_BUFFER))
+        if FAILED(hr): raise COMError(hr)
+        return self._STR_BUFFER.value
+    
+    def get_enum_value(self, part_id: int, state_id: int, prop_id: int) -> int:
+        """
+        Get the enumeration value for visual style from theme.
+        """
+        value = INT()
+        hr = GetThemeEnumValue(self, part_id, state_id, prop_id, byref(value))
+        if FAILED(hr): raise COMError(hr)
+        return value.value
+    
+    def get_margins(self, part_id: int, state_id: int, prop_id: int, dc: int | HANDLE | None = None, rect: RECT | None = None) -> Margins:
+        """
+        Get the margins for visual style from theme.
+        """
+        margins = Margins()
+        hr = GetThemeMargins(self, dc, part_id, state_id, prop_id, rect.ref() if rect is not None else NULL, margins.ref())
+        if FAILED(hr): raise COMError(hr)
+        return margins
 
 class VisualStyleElement:
     THEME_HANDLES: ClassVar[dict[str, Theme]] = {}
@@ -468,7 +928,7 @@ class VisualStyleElement:
                 theme = Theme.create(NULL, self.class_name)
                 self.THEME_HANDLES[self.class_name] = theme
         else:
-            theme = Theme.create(NULL, self.class_name)
+            theme = Theme.create(hwnd, self.class_name)
         return theme
     
     def draw_background(self, dc: DC, rc: RECT, hwnd: int | HANDLE | None = None):
@@ -483,11 +943,11 @@ class VisualStyleElement:
         """
         self.get(hwnd).draw_text(dc, self.part_id, self.state_id, text, flags, rect, options)
         
-    def get_font(self, dc: int | HANDLE, hwnd: int | HANDLE | None = None) -> LOGFONTW:
+    def get_font(self, dc: int | HANDLE | None = None, property_id: int = TMT_FONT, hwnd: int | HANDLE | None = None) -> LOGFONTW:
         """
-        Get the font of Visual Style element.
+        Get the font property of Visual Style element.
         """
-        return self.get(hwnd).get_font(dc, self.part_id, self.state_id)
+        return self.get(hwnd).get_font(self.part_id, self.state_id, property_id, None)
         
     def get_system_font(self, font_id: int, hwnd: int | HANDLE | None = None) -> LOGFONTW:
         """
@@ -509,9 +969,105 @@ class VisualStyleElement:
     
     def color(self, property_id: int, hwnd: int | HANDLE | None = None) -> Color.BGR:
         """
-        Get the color of the Visual Style Element.
+        Get the color property of the Visual Style Element.
         """
         return self.get(hwnd).get_color(self.part_id, self.state_id, property_id)
+ 
+    def transition_duration(self, property_id: int = TMT_TRANSITIONDURATIONS, hwnd: int | HANDLE | None = None) -> int:
+        """
+        Get the transition duration property of the Visual Style Element.
+        """
+        return self.get(hwnd).transition_duration(self.part_id, self.state_id, property_id)
+ 
+    def text_metric(self, dc: int | HANDLE | None = None, hwnd: int | HANDLE | None = None) -> TEXTMETRICW:
+        """
+        Get the text metric of the Visual Style Element.
+        """
+        return self.get(hwnd).get_text_metric(self.part_id, self.state_id, dc)
+    
+    def system_color(self, identifier: int, hwnd: int | HANDLE | None = None) -> Color.BGR:
+        """
+        Get the system color defined by Visual Style theme.
+        """
+        return self.get(hwnd).get_system_color(identifier)
+    
+    def rect(self, property_id: int, hwnd: int | HANDLE | None = None) -> Rect:
+        """
+        Get the rectangle property of the Visual Style Element.
+        """
+        return self.get(hwnd).get_rect(self.part_id, self.state_id, property_id)
+    
+    def string(self, property_id: int, hwnd: int | HANDLE | None = None) -> str:
+        """
+        Get the string property of the Visual Style Element.
+        """
+        return self.get(hwnd).get_string(self.part_id, self.state_id, property_id)
+    
+    def system_string(self, identifier: int, hwnd: int | HANDLE | None = None) -> str:
+        """
+        Get the system-wide string defined by Visual Style theme.
+        """
+        return self.get(hwnd).get_system_string(identifier)
+    
+    def boolean(self, property_id: int, hwnd: int | HANDLE | None = None) -> bool:
+        """
+        Get the boolean property of Visual Style Element.
+        """
+        return self.get(hwnd).get_bool(self.part_id, self.state_id, property_id)
+    
+    def integer(self, property_id: int, hwnd: int | HANDLE | None = None) -> int:
+        """
+        Get the integer property of Visual Style Element.
+        """
+        return self.get(hwnd).get_integer(self.part_id, self.state_id, property_id)
+    
+    def size(self, property_id: int, type: int = TS_MIN, dc: int | HANDLE | None = None, rect: RECT | None = None, hwnd: int | HANDLE | None = None) -> Size:
+        """
+        Get the size property of Visual Style Element.
+        """
+        return self.get(hwnd).get_size(self.part_id, self.state_id, property_id, type, dc, rect)
+    
+    def margins(self, property_id: int, hwnd: int | HANDLE | None = None) -> Margins:
+        """
+        Get the margins property of Visual Style Element.
+        """
+        return self.get(hwnd).get_margins(self.part_id, self.state_id, property_id)
+    
+    def system_integer(self, identifier: int, hwnd: int | HANDLE | None = None) -> int:
+        """
+        Get the system-wide integer value defined by Visual Style theme.
+        """
+        return self.get(hwnd).get_system_integer(identifier)
+    
+    def system_size(self, identifier: int, hwnd: int | HANDLE | None = None) -> int:
+        """
+        Get the system-wide size value defined by Visual Style theme.
+        """
+        return self.get(hwnd).get_system_size(identifier)
+ 
+    def bitmap(self, property_id: int = TMT_DIBDATA, flags: int = GBF_DIRECT, hwnd: int | HANDLE | None = None) -> Bitmap | None:
+        """
+        Get the bitmap property of Visual Style Element.
+        """
+        return self.get(hwnd).get_bitmap(self.part_id, self.state_id, property_id, flags)
+ 
+    def integer_list(self, property_id: int, hwnd: int | HANDLE | None = None) -> list[int]:
+        """
+        Get the integer list property of Visual Style Element.
+        """
+        return self.get(hwnd).get_int_list(self.part_id, self.state_id, property_id)
+    
+    def enum(self, property_id: int, hwnd: int | HANDLE | None = None) -> int:
+        """
+        Get the enum value property of Visual Style Element.
+        """
+        return self.get(hwnd).get_enum_value(self.part_id, self.state_id, property_id)
+    
+    def metric(self, property_id: int, dc: int | HANDLE | None = None, hwnd: int | HANDLE | None = None) -> int:
+        """
+        Get the metric property of Visual Style Element.
+        """
+        return self.get(hwnd).get_metric(self.part_id, self.state_id, property_id, dc)
  
 class VisualStyleElements:
     class Button:
