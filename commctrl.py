@@ -6017,16 +6017,19 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             # BUTTON STRUCTURES
 
             class BUTTON_SPLITINFO(CStructure):
+                """
+                NOTE: "size" renamed to "Size"
+                """
                 _fields_ = [
                     ('mask', UINT),
                     ('himlGlyph', HIMAGELIST),
                     ('uSplitStyle', UINT),
-                    ('size', SIZE)
+                    ('Size', SIZE)
                 ]
                 mask: int
                 himlGlyph: int
                 uSplitStyle: int
-                size: SIZE
+                Size: SIZE
             PBUTTON_SPLITINFO = BUTTON_SPLITINFO.PTR()
 
             # BUTTON MESSAGES

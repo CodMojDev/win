@@ -639,7 +639,7 @@ THEMESIZE = DWORD
 def GetThemePartSize(hTheme: int, hdc: int, iPartId: int, iStateId: int, prc: IPointer[RECT], eSize: int, psz: IPointer[SIZE]) -> int: ...
 
 @uxtheme.foreign(HRESULT, HTHEME, HDC, INT, INT, PTEXTMETRICW)
-def GetThemeTextMetric(hTheme: int, hdc: int, iPartId: int, iStateId: int, ptm: IPointer[TEXTMETRICW]) -> int: ...
+def exGetThemeTextMetrics(hTheme: int, hdc: int, iPartId: int, iStateId: int, ptm: IPointer[TEXTMETRICW]) -> int: ...
 
 @uxtheme.foreign(HRESULT, HTHEME, INT, INT, INT, PVOID, PDWORD, HINSTANCE)
 def GetThemeStream(hTheme: int, iPartId: int, iStateId: int, iPropId: int, ppvStream: IPointer[PVOID], pcbStream: IPointer[DWORD], hInst: int) -> int: ...
@@ -662,7 +662,7 @@ else:
 class INTLIST(CStructure):
     _fields_ = [
         ("iValueCount", INT),
-        ("iValues", MAX_INTLIST_COUNT)
+        ("iValues", INT * MAX_INTLIST_COUNT)
     ]
     iValueCount: int
     iValues: IArray[int]
@@ -835,7 +835,7 @@ class Theme(Handle):
         Get the text metric for visual style from theme.
         """
         tm = TEXTMETRICW()
-        hr = GetThemeTextMetric(self, dc, part_id, state_id, tm.ref())
+        hr = GetThemeTextMetrics(self, dc, part_id, state_id, tm.ref())
         if FAILED(hr): raise COMError(hr)
     
     def get_bitmap(self, part_id: int, state_id: int, prop_id: int = TMT_DIBDATA, flags: int = GBF_DIRECT) -> Bitmap | None:

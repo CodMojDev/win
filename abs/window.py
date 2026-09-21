@@ -20,9 +20,6 @@ from win.com.propdef import (PROPVARIANT, PROPERTYKEY,
                              IPropertyStore, LPPROPERTYSTORE,
                              LPPROPVARIANT, ole32)
 
-# random module for class name generation
-import random
-
 # imports from typing module
 from typing import Iterator
 

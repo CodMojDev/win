@@ -5495,8 +5495,10 @@ if cpreproc.pragma_once("_WINUSER_"):
             class MENUITEMTEMPLATEHEADER(CStructure):
                 _fields_ = [
                     ("versionNumber", WORD),
-                    ("offset", WORD)
+                    ("wOffset", WORD)
                 ]
+                versionNumber: int
+                wOffset: int
             PMENUITEMTEMPLATEHEADER = POINTER(MENUITEMTEMPLATEHEADER)
             
             class MENUITEMTEMPLATE(CStructure): # version 0
@@ -7331,10 +7333,10 @@ if cpreproc.pragma_once("_WINUSER_"):
             EDD_GET_DEVICE_INTERFACE_NAME = 0x00000001
             # WINVER >= 0x0500
             GetDisplayConfigBufferSizes = declare(user32.GetDisplayConfigBufferSizes, LONG, UINT32, PUINT32, PUINT32)
-            SetDisplayConfig = declare(user32.SetDisplayConfig, LONG, UINT32, POINTER(DISPLAYCONFIG_PATH_INFO), UINT32, POINTER(DISPLAYCONFIG_MODE_INFO), UINT32)
-            QueryDisplayConfig = declare(user32.QueryDisplayConfig, LONG, UINT32, PUINT32, POINTER(DISPLAYCONFIG_PATH_INFO), PUINT32, POINTER(DISPLAYCONFIG_MODE_INFO), POINTER(DISPLAYCONFIG_TOPOLOGY_ID))
-            DisplayConfigGetDeviceInfo = declare(user32.DisplayConfigGetDeviceInfo, LONG, POINTER(DISPLAYCONFIG_DEVICE_INFO_HEADER))
-            DisplayConfigSetDeviceInfo = declare(user32.DisplayConfigSetDeviceInfo, LONG, POINTER(DISPLAYCONFIG_DEVICE_INFO_HEADER))
+            #SetDisplayConfig = declare(user32.SetDisplayConfig, LONG, UINT32, POINTER(DISPLAYCONFIG_PATH_INFO), UINT32, POINTER(DISPLAYCONFIG_MODE_INFO), UINT32)
+            #QueryDisplayConfig = declare(user32.QueryDisplayConfig, LONG, UINT32, PUINT32, POINTER(DISPLAYCONFIG_PATH_INFO), PUINT32, POINTER(DISPLAYCONFIG_MODE_INFO), POINTER(DISPLAYCONFIG_TOPOLOGY_ID))
+            #DisplayConfigGetDeviceInfo = declare(user32.DisplayConfigGetDeviceInfo, LONG, POINTER(DISPLAYCONFIG_DEVICE_INFO_HEADER))
+            #DisplayConfigSetDeviceInfo = declare(user32.DisplayConfigSetDeviceInfo, LONG, POINTER(DISPLAYCONFIG_DEVICE_INFO_HEADER))
         # NOGDI
     # _WINGDI_
     SystemParametersInfoA = declare(user32.SystemParametersInfoA, BOOL, UINT, UINT, PVOID, UINT)

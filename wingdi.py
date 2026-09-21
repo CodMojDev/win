@@ -3063,21 +3063,22 @@ if cpreproc.pragma_once("_WINGDI_"):
             DISPLAYCONFIG_DEVICE_INFO_GET_SDR_WHITE_LEVEL             = 11
             DISPLAYCONFIG_DEVICE_INFO_FORCE_UINT32                = 0xFFFFFFFF
 
-
         # REGION ***
-
 
         # REGION *** Application Family ***
 
         class DISPLAYCONFIG_DEVICE_INFO_HEADER(CStructure):
+            """
+            NOTE: "size" renamed to "Size"
+            """
             _fields_ = [
                 ("type", DISPLAYCONFIG_DEVICE_INFO_TYPE),
-                ("size", UINT32),
+                ("Size", UINT32),
                 ("adapterId", LUID),
                 ("id", UINT32)
             ]
             type: int
-            size: int
+            Size: int
             adapterId: int
             id: int
 

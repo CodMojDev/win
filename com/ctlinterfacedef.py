@@ -300,11 +300,15 @@ LPOLECONTROLSITE = IOleControlSite.PTR()
 
 # }
 
+
 class PROPPAGEINFO(CStructure):
+    """
+    NOTE: "size" renamed to "Size"
+    """
     _fields_ = [
         ('cb', ULONG),
         ('pszTitle', LPOLESTR),
-        ('size', SIZE),
+        ('Size', SIZE),
         ('pszDocString', LPOLESTR),
         ('pszHelpFile', LPOLESTR),
         ('dwHelpContext', DWORD)
@@ -314,7 +318,7 @@ class PROPPAGEINFO(CStructure):
     pszHelpFile: LPOLESTR
     dwHelpContext: int
     pszTitle: LPOLESTR
-    size: SIZE
+    Size: SIZE
     cb: int
     
 LPPROPPAGEINFO = PROPPAGEINFO.PTR()

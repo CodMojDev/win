@@ -227,7 +227,7 @@ if cpreproc.pragma_once("_INC_MMSYSCOM"):
     MMSYSERR_NODRIVERCB = (MMSYSERR_BASE + 20) # driver does not call DriverCallback
     MMSYSERR_MOREDATA = (MMSYSERR_BASE + 21) # more data to be returned
     MMSYSERR_LASTERROR = (MMSYSERR_BASE + 21) # last error in range
-    HRDRVR = HANDLE
+    HDRVR = HANDLE
 
     """
     ***************************************************************************
@@ -247,7 +247,7 @@ if cpreproc.pragma_once("_INC_MMSYSCOM"):
     CALLBACK_THREAD = (CALLBACK_TASK) # thread ID replaces 16 bit task
     CALLBACK_EVENT = 0x00050000 # dwCallback is an EVENT Handle
     
-    DRVCALLBACK = CALLBACK(VOID, HRDRVR, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
+    DRVCALLBACK = CALLBACK(VOID, HDRVR, UINT, DWORD_PTR, DWORD_PTR, DWORD_PTR)
     LPDRVCALLBACK = PDRVCALLBACK = PTR(DRVCALLBACK)
     
     # REGION ***

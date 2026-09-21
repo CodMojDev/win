@@ -6,11 +6,15 @@
 
 ### Complex Type Library and C++/COM/WinAPI Bridge
 
-Win - is a project to Python-only (or 99%-only) way descript the Win32 API calling sets and associated with it Abstractions (see WinAbs layer)
+Win - is a project to Python-only (or 99%-only) way describe the Win32 API calling sets and associated with it Abstractions (see WinAbs layer).
 
 Win supports very large technologies list - Win32 API, .NET Framework / CLR Interop, Java / JVM Interop, COM API, Python RPC, Runtime C++ and C Libraries, CPython ABI, WinRT, GUI and System Abstractions.
 
 For a more precise understanding, I suggest consulting the library's source code and reviewing the terms and files below.
+
+Win supports very large and flexible list of Windows API versions, from NT 5.0 (hypothetically, Windows 2000) and NT 5.2 (tested, Windows Server 2003) to NT 10.0 (tested, Windows 10-11), from ReactOS (tested) to Wine (hypothetically).
+
+Win runs on all СPython versions from 3.8 to 3.14 inclusive.
 
 ### Main library terms
 

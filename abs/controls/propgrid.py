@@ -7,6 +7,8 @@ from win.abs.msgbox import *
 from win.abs.toolbar import *
 from win.abs.updown import *
 
+import random
+
 # property grid item operations
 PGIO_REVERT       = 0
 PGIO_DBLCLK       = 1

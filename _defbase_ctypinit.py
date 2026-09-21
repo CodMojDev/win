@@ -21,7 +21,7 @@ import typing, ctypes
 
 if sys.version_info < (3, 8):
     raise RuntimeError('Versions before 3.8 are not supported.')
-if sys.version_info > (3, 14):
+if sys.version_info >= (3, 15):
     raise RuntimeError('Versions after 3.14 are not supported.')
 
 _INIT_CHAIN: List[Callable[[], None]] = []
@@ -86,10 +86,10 @@ if sys.version_info[0:2] == (3, 8) or typing.TYPE_CHECKING:
                 self.__doc__ = getitem.__doc__
             def __getattr__(self, item):
                 if item in {'__name__', '__qualname__'}:
-                    return self._name=
-                raise AttributeError(item)=
+                    return self._name
+                raise AttributeError(item)
             def __mro_entries__(self, bases):
-                raise TypeError(f"Cannot subclass {self!r}")=
+                raise TypeError(f"Cannot subclass {self!r}")
             def __repr__(self):
                 return f'typing.{self._name}'
             def __reduce__(self):
@@ -390,8 +390,8 @@ class PyMemberDef(Structure):
     
 PyMemberDef_PTR = POINTER(PyMemberDef)
 
-PY_GETTER = CFUNCTYPE(c_void_p, c_void_p, c_void_p)
-PY_SETTER = CFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p)
+PY_GETTER = PYFUNCTYPE(c_void_p, c_void_p, c_void_p)
+PY_SETTER = PYFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p)
 
 class PyGetSetDef(Structure):
     _fields_ = [
@@ -1205,6 +1205,7 @@ def CFieldObject_CAST_DEREF(obj: _CWT) -> CFieldObject:
 def Init_StructureUnion_fields_patch():
     PyCStructType = type(Structure)
     UnionType = type(Union)
+    CField = type(PyTypeObject.tp_flags)
     tp_PyCStructType = PyType_CAST_DEREF(PyCStructType)
     tp_UnionType = PyType_CAST_DEREF(UnionType)
     pfn_PyCStructType_new = cast(tp_PyCStructType.tp_new, PY_TP_NEW_FUNC)
@@ -1219,6 +1220,7 @@ def Init_StructureUnion_fields_patch():
             for name in names:
                 field_obj = getattr(cls, name, None)
                 if field_obj is None: continue
+                if not isinstance(field_obj, CField): continue
                 cfield = CFieldObject_CAST_DEREF(field_obj)
                 if cfield.proto:
                     proto = cfield.proto.contents.object
