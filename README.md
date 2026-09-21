@@ -1,6 +1,16 @@
+<p align="center">
+  <img alt="Win Library" src="https://github.com/user-attachments/assets/a2ed1d3c-47ee-4f98-a4f7-60bf470c891c" />
+</p>
+
+---
+
 ### Complex Type Library and C++/COM/WinAPI Bridge
 
-Contains many file definitions, WinAPI, COM, base NET/CoreCLR interaction, WinRT, inter-process and many-many more cool features. See the library source code for reference. Library is written in pure Python.
+Win - is a project to Python-only (or 99%-only) way descript the Win32 API calling sets and associated with it Abstractions (see WinAbs layer)
+
+Win supports very large technologies list - Win32 API, .NET Framework / CLR Interop, Java / JVM Interop, COM API, Python RPC, Runtime C++ and C Libraries, CPython ABI, WinRT, GUI and System Abstractions.
+
+For a more precise understanding, I suggest consulting the library's source code and reviewing the terms and files below.
 
 ### Main library terms
 
