@@ -2490,6 +2490,461 @@ if cpreproc.pragma_once("_WINNT_"):
         FAILED_ACCESS_ACE_FLAG = (0x80)
         TRUST_PROTECTED_FILTER_ACE_FLAG = (0x40)
 
+        class ACCESS_ALLOWED_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PACCESS_ALLOWED_ACE = PTR(ACCESS_ALLOWED_ACE)
+
+        class ACCESS_DENIED_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PACCESS_DENIED_ACE = PTR(ACCESS_DENIED_ACE)
+
+        class SYSTEM_AUDIT_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PSYSTEM_AUDIT_ACE = PTR(SYSTEM_AUDIT_ACE)
+
+        class SYSTEM_ALARM_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PSYSTEM_ALARM_ACE = PTR(SYSTEM_ALARM_ACE)
+
+        class SYSTEM_RESOURCE_ATTRIBUTE_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+                # Sid followed by CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PSYSTEM_RESOURCE_ATTRIBUTE_ACE = PTR(SYSTEM_RESOURCE_ATTRIBUTE_ACE)
+        
+        class SYSTEM_SCOPED_POLICY_ID_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PSYSTEM_SCOPED_POLICY_ID_ACE = PTR(SYSTEM_SCOPED_POLICY_ID_ACE)
+
+        class SYSTEM_MANDATORY_LABEL_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PSYSTEM_MANDATORY_LABEL_ACE = PTR(SYSTEM_MANDATORY_LABEL_ACE)
+
+        class SYSTEM_PROCESS_TRUST_LABEL_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PSYSTEM_PROCESS_TRUST_LABEL_ACE = PTR(SYSTEM_PROCESS_TRUST_LABEL_ACE)
+
+        class SYSTEM_ACCESS_FILTER_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+                # Filter Condition follows the SID
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PSYSTEM_ACCESS_FILTER_ACE = PTR(SYSTEM_ACCESS_FILTER_ACE)
+        
+        SYSTEM_MANDATORY_LABEL_NO_WRITE_UP         = 0x1
+        SYSTEM_MANDATORY_LABEL_NO_READ_UP          = 0x2
+        SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP       = 0x4
+
+        SYSTEM_MANDATORY_LABEL_VALID_MASK    = (SYSTEM_MANDATORY_LABEL_NO_WRITE_UP   | \
+                                                SYSTEM_MANDATORY_LABEL_NO_READ_UP    | \
+                                                SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP)
+
+        # Placeholder value that allows all ranges
+        SYSTEM_PROCESS_TRUST_LABEL_VALID_MASK      = 0x00ffffff
+        SYSTEM_PROCESS_TRUST_NOCONSTRAINT_MASK     = 0xffffffff
+        SYSTEM_ACCESS_FILTER_VALID_MASK            = 0x00ffffff
+        SYSTEM_ACCESS_FILTER_NOCONSTRAINT_MASK     = 0xffffffff
+        # end_ntifs
+        
+        class ACCESS_ALLOWED_OBJECT_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("Flags", DWORD),
+                ("ObjectType", GUID),
+                ("InheritedObjectType", GUID),
+                ("SidStart", DWORD)
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            Flags: int
+            ObjectType: GUID
+            InheritedObjectType: GUID
+            SidStart: int
+        PACCESS_ALLOWED_OBJECT_ACE = PTR(ACCESS_ALLOWED_OBJECT_ACE)
+        
+        class ACCESS_DENIED_OBJECT_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("Flags", DWORD),
+                ("ObjectType", GUID),
+                ("InheritedObjectType", GUID),
+                ("SidStart", DWORD)
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            Flags: int
+            ObjectType: GUID
+            InheritedObjectType: GUID
+            SidStart: int
+        PACCESS_DENIED_OBJECT_ACE = PTR(ACCESS_DENIED_OBJECT_ACE)
+        
+        class SYSTEM_AUDIT_OBJECT_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("Flags", DWORD),
+                ("ObjectType", GUID),
+                ("InheritedObjectType", GUID),
+                ("SidStart", DWORD)
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            Flags: int
+            ObjectType: GUID
+            InheritedObjectType: GUID
+            SidStart: int
+        PSYSTEM_AUDIT_OBJECT_ACE = PTR(SYSTEM_AUDIT_OBJECT_ACE)
+        
+        class SYSTEM_ALARM_OBJECT_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("Flags", DWORD),
+                ("ObjectType", GUID),
+                ("InheritedObjectType", GUID),
+                ("SidStart", DWORD)
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            Flags: int
+            ObjectType: GUID
+            InheritedObjectType: GUID
+            SidStart: int
+        PSYSTEM_ALARM_OBJECT_ACE = PTR(SYSTEM_ALARM_OBJECT_ACE)
+            
+        #
+        # Callback ace support in post Win2000
+        # Resource managers can put their own data after Sidstart + Length of the sid
+        #
+
+        class ACCESS_ALLOWED_CALLBACK_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+                # Opaque resource manager specific data
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PACCESS_ALLOWED_CALLBACK_ACE = PTR(ACCESS_ALLOWED_CALLBACK_ACE)
+
+        class ACCESS_DENIED_CALLBACK_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+                # Opaque resource manager specific data
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PACCESS_DENIED_CALLBACK_ACE = PTR(ACCESS_DENIED_CALLBACK_ACE)
+
+        class SYSTEM_AUDIT_CALLBACK_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+                # Opaque resource manager specific data
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PSYSTEM_AUDIT_CALLBACK_ACE = PTR(SYSTEM_AUDIT_CALLBACK_ACE)
+
+        class SYSTEM_ALARM_CALLBACK_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("SidStart", DWORD)
+                # Opaque resource manager specific data
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            SidStart: int
+        PSYSTEM_ALARM_CALLBACK_ACE = PTR(SYSTEM_ALARM_CALLBACK_ACE)
+        
+        class ACCESS_ALLOWED_CALLBACK_OBJECT_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("Flags", DWORD),
+                ("ObjectType", GUID),
+                ("InheritedObjectType", GUID),
+                ("SidStart", DWORD)
+                # Opaque resource manager specific data
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            Flags: int
+            ObjectType: GUID
+            InheritedObjectType: GUID
+            SidStart: int
+        PACCESS_ALLOWED_CALLBACK_OBJECT_ACE = PTR(ACCESS_ALLOWED_CALLBACK_OBJECT_ACE)
+        
+        class ACCESS_DENIED_CALLBACK_OBJECT_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("Flags", DWORD),
+                ("ObjectType", GUID),
+                ("InheritedObjectType", GUID),
+                ("SidStart", DWORD)
+                # Opaque resource manager specific data
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            Flags: int
+            ObjectType: GUID
+            InheritedObjectType: GUID
+            SidStart: int
+        PACCESS_DENIED_CALLBACK_OBJECT_ACE = PTR(ACCESS_DENIED_CALLBACK_OBJECT_ACE)
+        
+        class SYSTEM_AUDIT_CALLBACK_OBJECT_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("Flags", DWORD),
+                ("ObjectType", GUID),
+                ("InheritedObjectType", GUID),
+                ("SidStart", DWORD)
+                # Opaque resource manager specific data
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            Flags: int
+            ObjectType: GUID
+            InheritedObjectType: GUID
+            SidStart: int
+        PSYSTEM_AUDIT_CALLBACK_OBJECT_ACE = PTR(SYSTEM_AUDIT_CALLBACK_OBJECT_ACE)
+        
+        class SYSTEM_ALARM_CALLBACK_OBJECT_ACE(CStructure):
+            _fields_ = [
+                ("Header", ACE_HEADER),
+                ("Mask", ACCESS_MASK),
+                ("Flags", DWORD),
+                ("ObjectType", GUID),
+                ("InheritedObjectType", GUID),
+                ("SidStart", DWORD)
+                # Opaque resource manager specific data
+            ]
+            Header: ACE_HEADER
+            Mask: int
+            Flags: int
+            ObjectType: GUID
+            InheritedObjectType: GUID
+            SidStart: int
+        PSYSTEM_ALARM_CALLBACK_OBJECT_ACE = PTR(SYSTEM_ALARM_CALLBACK_OBJECT_ACE)
+        
+        SE_OWNER_DEFAULTED               = (0x0001)
+        SE_GROUP_DEFAULTED               = (0x0002)
+        SE_DACL_PRESENT                  = (0x0004)
+        SE_DACL_DEFAULTED                = (0x0008)
+        SE_SACL_PRESENT                  = (0x0010)
+        SE_SACL_DEFAULTED                = (0x0020)
+        SE_DACL_AUTO_INHERIT_REQ         = (0x0100)
+        SE_SACL_AUTO_INHERIT_REQ         = (0x0200)
+        SE_DACL_AUTO_INHERITED           = (0x0400)
+        SE_SACL_AUTO_INHERITED           = (0x0800)
+        SE_DACL_PROTECTED                = (0x1000)
+        SE_SACL_PROTECTED                = (0x2000)
+        SE_RM_CONTROL_VALID              = (0x4000)
+        SE_SELF_RELATIVE                 = (0x8000)
+        
+        #
+        # Currently define Flags for "OBJECT" ACE types.
+        #
+
+        ACE_OBJECT_TYPE_PRESENT           = 0x1
+        ACE_INHERITED_OBJECT_TYPE_PRESENT = 0x2
+
+        #
+        #  The following declarations are used for setting and querying information
+        #  about and ACL.  First are the various information classes available to
+        #  the user.
+        #
+
+        AclRevisionInformation = 1
+        AclSizeInformation = 2
+        ACL_INFORMATION_CLASS = DWORD
+
+        #
+        #  This record is returned/sent if the user is requesting/setting the
+        #  AclRevisionInformation
+        #
+
+        class ACL_REVISION_INFORMATION(CStructure):
+            _fields_ = [
+                ("AclRevision", DWORD)
+            ]
+            AclRevision: int
+        PACL_REVISION_INFORMATION = PTR(ACL_REVISION_INFORMATION)
+        
+        #
+        #  This record is returned if the user is requesting AclSizeInformation
+        #
+        
+        class ACL_SIZE_INFORMATION(CStructure):
+            _fields_ = [
+                ("AceCount", DWORD),
+                ("AclBytesInUse", DWORD),
+                ("AclBytesFree", DWORD)
+            ]
+            AceCount: int
+            AclBytesInUse: int
+            AclBytseFree: int
+        
+        PACL_SIZE_INFORMATION = PTR(ACL_SIZE_INFORMATION)
+        
+        ########################################################################
+        ##                                                                    ##
+        ##                             SECURITY_DESCRIPTOR                    ##
+        ##                                                                    ##
+        ########################################################################
+        #
+        #  Define the Security Descriptor and related data types.
+        #  This is an opaque data structure.
+        #
+
+        # begin_wdm
+        #
+        # Current security descriptor revision value
+        #
+        
+        SECURITY_DESCRIPTOR_REVISION = 1
+        SECURITY_DESCRIPTOR_REVISION1 = 1
+        
+        class SECURITY_DESCRIPTOR_RELATIVE(CStructure):
+            _fields_ = [
+                ("Revision", BYTE),
+                ("Sbz1", BYTE),
+                ("Control", SECURITY_DESCRIPTOR_CONTROL),
+                ("Owner", DWORD),
+                ("Group", DWORD),
+                ("Sacl", DWORD),
+                ("Dacl", DWORD)
+            ]
+            Revision: int
+            Sbz1: int
+            Control: SECURITY_DESCRIPTOR_CONTROL
+            Owner: int
+            Group: int
+            Sacl: int
+            Dacl: int
+        PSECURITY_DESCRIPTOR_RELATIVE = PTR(SECURITY_DESCRIPTOR_RELATIVE)
+        
+        class SECURITY_DESCRIPTOR(CStructure):
+            _fields_ = [
+                ("Revision", BYTE),
+                ("Sbz1", BYTE),
+                ("Control", SECURITY_DESCRIPTOR_CONTROL),
+                ("Owner", DWORD),
+                ("Group", DWORD),
+                ("Sacl", DWORD),
+                ("Dacl", DWORD)
+            ]
+            Revision: int
+            Sbz1: int
+            Control: SECURITY_DESCRIPTOR_CONTROL
+            Owner: int
+            Group: int
+            Sacl: int
+            Dacl: int
+        PISECURITY_DESCRIPTOR = PTR(SECURITY_DESCRIPTOR)
+        
+        SECURITY_DESCRIPTOR_MIN_LENGTH = sizeof(SECURITY_DESCRIPTOR)
+        
+        class SECURITY_OBJECT_AI_PARAMS(CStructure):
+            _fields_ = [
+                ("Size", DWORD), # Set to sizeof(SECURITY_OBJECT_AI_PARAMS)
+                ("ConstraintMask", DWORD)
+            ]
+            Size: int
+            ConstraintMask: int
+            
+        PSECURITY_OBJECT_AI_PARAMS = PTR(SECURITY_OBJECT_AI_PARAMS)
+        
+        ########################################################################
+        ##                                                                    ##
+        ##               Object Type list for AccessCheckByType               ##
+        ##                                                                    ##
+        ########################################################################
+        
+        class OBJECT_TYPE_LIST(CStructure):
+            _fields_ = [
+                ("Level", WORD),
+                ("Sbz", WORD),
+                ("ObjectType", PGUID)
+            ]
+            Level: int
+            Sbz: int
+            ObjectType: IPointer[GUID]
+            
+        POBJECT_TYPE_LIST = PTR(OBJECT_TYPE_LIST)
+
         _SECURITY_IMPERSONATION_LEVEL = INT
         if True:
             SecurityAnonymous = 0

@@ -2329,6 +2329,16 @@ class CStructure(Structure):
                 from .defbase_allocator import CLocalAllocator
                 _defb_state._local_allocator = allocator = CLocalAllocator()
         return i_cast(allocator.allocate(size), cls.PTR()).contents
+    
+    @classmethod
+    def customsize(cls, size: int) -> Self:
+        """
+        Allocate the current structure by user-defined size (ctypes allocation).
+        """
+        buffer = (c_ubyte*size)()
+        struct = i_cast(buffer, cls.PTR()).contents
+        struct._defb_internal_membuffer = buffer
+        return struct
 
     def address(self) -> int:
         """
