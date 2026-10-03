@@ -17,6 +17,7 @@ from .defbase import *
 
 if cpreproc.pragma_once("_APISETREALTIME_"):
     kernel32 = get_win_library("kernel32.dll")
+    kernelbase = get_win_library("kernelbase.dll")
 
     # REGION *** Desktop Family or OneCore Family ***
 
@@ -29,13 +30,13 @@ if cpreproc.pragma_once("_APISETREALTIME_"):
 
     # REGION *** Application Family or OneCore Family ***
 
-    QueryInterruptTimePrecise = declare(kernel32.QueryInterruptTimePrecise, VOID, PULONGLONG)
-    QueryUnbiasedInterruptTimePrecise = declare(kernel32.QueryUnbiasedInterruptTimePrecise, VOID, PULONGLONG)
-    QueryInterruptTime = declare(kernel32.QueryInterruptTime, VOID, PULONGLONG)
-    QueryUnbiasedInterruptTime = declare(kernel32.QueryUnbiasedInterruptTime, BOOL, PULONGLONG)
-    QueryAuxiliaryCounterFrequency = declare(kernel32.QueryAuxiliaryCounterFrequency, HRESULT, PULONGLONG)
-    ConvertAuxiliaryCounterToPerformanceCounter = declare(kernel32.ConvertAuxiliaryCounterToPerformanceCounter, HRESULT, ULONGLONG, PULONGLONG, PULONGLONG)
-    ConvertPerformanceCounterToAuxiliaryCounter = declare(kernel32.ConvertPerformanceCounterToAuxiliaryCounter, HRESULT, ULONGLONG, PULONGLONG, PULONGLONG)
+    QueryInterruptTimePrecise = declare(kernelbase.QueryInterruptTimePrecise, VOID, PULONGLONG)
+    QueryUnbiasedInterruptTimePrecise = declare(kernelbase.QueryUnbiasedInterruptTimePrecise, VOID, PULONGLONG)
+    QueryInterruptTime = declare(kernelbase.QueryInterruptTime, VOID, PULONGLONG)
+    QueryUnbiasedInterruptTime = declare(kernelbase.QueryUnbiasedInterruptTime, BOOL, PULONGLONG)
+    QueryAuxiliaryCounterFrequency = declare(kernelbase.QueryAuxiliaryCounterFrequency, HRESULT, PULONGLONG)
+    ConvertAuxiliaryCounterToPerformanceCounter = declare(kernelbase.ConvertAuxiliaryCounterToPerformanceCounter, HRESULT, ULONGLONG, PULONGLONG, PULONGLONG)
+    ConvertPerformanceCounterToAuxiliaryCounter = declare(kernelbase.ConvertPerformanceCounterToAuxiliaryCounter, HRESULT, ULONGLONG, PULONGLONG, PULONGLONG)
 
     # REGION ***
 # _APISETREALTIME_

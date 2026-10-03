@@ -14,11 +14,11 @@
 from . import cpreproc
 
 if cpreproc.pragma_once("_ACLUI_H_"):
-    aclui = get_win_library("aclui.dll")
-    
     from .prsht import *
     from .com.objinterfacedef import *
     from .accctrl import *
+    aclui = get_win_library("aclui.dll")
+    
     # from .authz import *
     
     # REGION *** Desktop Family ***

@@ -21,7 +21,7 @@ class CAssembly:
             line = line.strip()
             if not line or line.startswith(";"):
                 continue
-            line = line.split(";")[0].strip()
+            line = line.split(";")[0].strip() 
             for byte in line.split():
                 if len(byte) == 1:
                     byte = "0" + byte

@@ -51,6 +51,14 @@ class Combobox(Control):
             return None
         return text.value
     
+    @property
+    def item_height(self) -> int:
+        return self.send(CB_GETITEMHEIGHT, 0, -1)
+    
+    @item_height.setter
+    def item_height(self, item_height: int):
+        self.send(CB_SETITEMHEIGHT, 0, item_height)
+    
     def parent_window_on_command(self, identifier: int, notify_code: int, hwnd: int):
         if identifier == self.identifier:
             if notify_code == CBN_SETFOCUS:

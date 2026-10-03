@@ -335,14 +335,13 @@ LPENUMSTATSTG = IEnumSTATSTG.PTR()
 class RemSNB(CStructure):
     _fields_ = [
         ('ulCntStr', ULONG),
-        ('ulCntChar', ULONG)
+        ('ulCntChar', ULONG),
+        ('rgString', OLECHAR * 1)
     ]
     
-    rgString: LPOLESTR
+    rgString: IWideCharArray
     ulCntChar: int
     ulCntStr: int
-
-array_after_structure(RemSNB, 'rgString', OLECHAR)
 
 SNB = PTR(LPOLESTR)
 wireSNB = RemSNB.PTR()
@@ -486,15 +485,14 @@ class DVTARGETDEVICE(CStructure):
         ('tdDeviceNameOffset', WORD),
         ('tdPortNameOffset', WORD),
         ('tdExtDevmodeOffset', WORD),
+        ('tdData', BYTE * 1)
     ]
     
     tdDriverNameOffset: int
     tdDeviceNameOffset: int
     tdPortNameOffset: int
-    tdData: PBYTE
+    tdData: IArray[int]
     tdSize: int
-
-array_after_structure(DVTARGETDEVICE, 'tdData', byte)
 
 CLIPFORMAT = WORD
 
@@ -611,7 +609,8 @@ class RemSTGMEDIUM(CStructure):
         ('dwHandleType', DWORD),
         ('pData', ULONG),
         ('pUnkForRelease', ULONG),
-        ('cbData', ULONG)
+        ('cbData', ULONG),
+        ('data', byte * 1)
     ]
     
     pUnkForRelease: int
@@ -620,9 +619,7 @@ class RemSTGMEDIUM(CStructure):
     tymed: int
     
     cbData: int
-    data: PBYTE
-    
-array_after_structure(RemSTGMEDIUM, 'data', byte)
+    data: IArray[int]
 
 HMETAFILEPICT = HANDLE
 

@@ -264,17 +264,17 @@ class wireSAFEARRAY(CStructure):
         ('fFeatures', USHORT),
         ('cbElements', ULONG),
         ('cLocks', ULONG),
-        ('uArrayStructs', SAFEARRAYUNION)
+        ('uArrayStructs', SAFEARRAYUNION),
+        ('rgsaBound', SAFEARRAYBOUND * 1)
     ]
     
-    rgsaBound: IPointer[SAFEARRAYBOUND]
+    rgsaBound: IArray[SAFEARRAYBOUND]
     uArrayStructs: SAFEARRAYUNION
     cbElements: int
     fFeatures: int
     cLocks: int
     cDims: int
-    
-array_after_structure(wireSAFEARRAY, 'rgsaBound', SAFEARRAYBOUND)
+
 wirePSAFEARRAY = wireSAFEARRAY.PTR()
 
 class SAFEARRAY(CStructure, IReferenceable):
@@ -283,10 +283,11 @@ class SAFEARRAY(CStructure, IReferenceable):
         ('fFeatures', USHORT),
         ('cbElements', ULONG),
         ('cLocks', ULONG),
-        ('pvData', PVOID)
+        ('pvData', PVOID),
+        ('rgsaBound', SAFEARRAYBOUND * 1)
     ]
     
-    rgsaBound: IPointer[SAFEARRAYBOUND]
+    rgsaBound: IArray[SAFEARRAYBOUND]
     cbElements: int
     fFeatures: int
     pvData: PVOID
@@ -302,8 +303,6 @@ class SAFEARRAY(CStructure, IReferenceable):
     @classmethod
     def allow_reference(cls, value):
         return isinstance(value, cls)
-    
-array_after_structure(SAFEARRAY, 'rgsaBound', SAFEARRAYBOUND)
 
 LPSAFEARRAY = SAFEARRAY.PTR()
 
@@ -576,14 +575,13 @@ class TYPEDESC(CStructure):
 class ARRAYDESC(CStructure):
     _fields_ = [
         ('tdescElem', TYPEDESC),
-        ('cDims', USHORT)
+        ('cDims', USHORT),
+        ('rgbounds', SAFEARRAYBOUND * 1)
     ]
     
-    rgbounds: IPointer[SAFEARRAYBOUND]
+    rgbounds: IArray[SAFEARRAYBOUND]
     tdescElem: TYPEDESC
     cDims: int
-    
-array_after_structure(ARRAYDESC, 'rgbounds', SAFEARRAYBOUND)
 
 class PARAMDESCEX(CStructure):
     _fields_ = [

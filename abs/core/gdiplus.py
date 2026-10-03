@@ -34,7 +34,7 @@ def GdipDeleteGraphics(graphics: LPGPGFX | int) -> int: ...
 def GdipCreateFontFromDC(hdc: int | HANDLE, font: IPointer[LPGPFONT]) -> int: ...
 
 @gdiplus.foreign(GPSTATUS, HDC, LPLOGFONTW, PTR(LPGPFONT))
-def GdipCreateFontFromLogfontW(hdc: int | HANDLE, logfont: IPointer[LOGFONT], font: IPointer[LPGPFONT]) -> int: ...
+def GdipCreateFontFromLogfontW(hdc: int | HANDLE, logfont: IPointer[LOGFONTW], font: IPointer[LPGPFONT]) -> int: ...
 
 @gdiplus.foreign(GPSTATUS, LPGPFONT, PTR(LPGPFONT))
 def GdipCloneFont(font: LPGPFONT | int, cloneFont: IPointer[LPGPFONT]) -> int: ...
@@ -301,12 +301,12 @@ class GdipError(RuntimeError):
         AccessDenied: E_ACCESSDENIED,
         UnknownImageFormat: HRESULT(0x88982F07).value, # WINCODEC_ERR_UNKNOWNIMAGEFORMAT
         FontFamilyNotFound: HRESULT(0x88985002).value, # DWRITE_E_NOFONT
-        FontStyle: HRESULT(0x88985009).value, # DWRITE_E_UNSUPPORTEDOPERATION
+        FontStyleNotFound: HRESULT(0x88985009).value, # DWRITE_E_UNSUPPORTEDOPERATION
         NotTrueTypeFont: HRESULT(0x88985000).value, # DWRITE_E_FILEFORMAT
         UnsupportedGdiplusVersion: HRESULT(0x88982F0B).value, # WINCODEC_ERR_UNSUPPORTEDVERSION
         PropertyNotFound: E_INVALIDARG,
         PropertyNotSupported: E_INVALIDARG,
-        ProfileNotFound: MAKE_HRESULT(SEVERITY_ERORR, FACILITY_WIN32, ERROR_PROFILE_NOT_FOUND),
+        ProfileNotFound: MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, ERROR_PROFILE_NOT_FOUND),
         GdiplusNotInitialized: HRESULT(0x88982F0C).value # WINCODEC_ERR_NOTINITIALIZED
     }
     
@@ -328,7 +328,7 @@ class Gdiplus:
             raise GdipError(status)
         
     @staticmethod
-    def shutdown(self):
+    def shutdown():
         """
         Uninitialize the GDI+.
         """
@@ -378,18 +378,24 @@ class Gdiplus:
             Create the GDI+ font from `win.abs.core.handle.DC` or `HDC`.
             """
             font = Gdiplus.Font()
-            status = GdipCreateFontFromDC(dc, byref(dc))
+            status = GdipCreateFontFromDC(dc, byref(font))
             if status != Ok:
                 raise GdipError(status)
             return font
         
         @classmethod
-        def from_font(cls, font: int | HANDLE) -> 'Gdiplus.Font':
+        def from_font(cls, font: int | HANDLE, dc: int | HANDLE | None = None) -> 'Gdiplus.Font':
             """
             Create the GDI+ font from `win.abs.core.handle.Font` or `HFONT`.
             """
-            with DC.create_compatible(None) as dc:
-                return cls.from_dc(dc)
+            if dc is None:
+                dc = DC.create_compatible(None)
+            lf = GDIObjectHandle.foreign_owner(font).object
+            font = Gdiplus.Font()
+            status = GdipCreateFontFromLogfontW(dc, lf.ref(), byref(font))
+            if status != Ok:
+                raise GdipError(status)
+            return font
         
         @classmethod
         def indirect(cls, logfont: LOGFONTW) -> 'Gdiplus.Font':
@@ -569,6 +575,8 @@ class Gdiplus:
         
         def close(self):
             status = GdipDeletePrivateFontCollection(byref(self))
+            if status != Ok:
+                raise GdipError(status)
             self._closed = True
         
         @overload
@@ -595,7 +603,7 @@ class Gdiplus:
                 if isinstance(v, MemoryIO):
                     status = GdipPrivateAddMemoryFont(self, v.memory_address+v.memory_position, v.memory_size-v.memory_position)
                 else:
-                    status = GdipPrivateAddFontFile(self, name)
+                    status = GdipPrivateAddFontFile(self, v)
             else:
                 buffer, length = args
                 status = GdipPrivateAddMemoryFont(self, buffer, length)
@@ -620,7 +628,7 @@ class Gdiplus:
         The GDI+ pen.
         """
         @classmethod
-        def create(cls, value: int | IColor, width: float = 1.0, unit: int = UnitPixel) -> 'Gdiplus.Pen':
+        def create(cls, value: int | Color.IColor, width: float = 1.0, unit: int = UnitPixel) -> 'Gdiplus.Pen':
             """
             Create the GDI+ pen from ARGB color, width and unit enumeration.
             """
@@ -682,6 +690,8 @@ class Gdiplus:
         @unit.setter
         def unit(self, unit: int):
             status = GdipSetPenUnit(self, unit)
+            if status != Ok:
+                raise GdipError(status)
             
         @property
         def miter_limit(self) -> float:

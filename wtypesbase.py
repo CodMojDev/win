@@ -310,56 +310,50 @@ if cpreproc.pragma_once():
     # Simple blobs.
     
     class BYTE_BLOB(CStructure):
-        _fields_ = [('clSize', ULONG)]
+        _fields_ = [('clSize', ULONG), ('abData', BYTE * 1)]
         
-        abData: PBYTE
+        abData: IArray[int]
         
-    array_after_structure(BYTE_BLOB, 'abData', BYTE)
     UP_BYTE_BLOB = BYTE_BLOB.PTR()
     
     class WORD_BLOB(CStructure):
-        _fields_ = [('clSize', ULONG)]
+        _fields_ = [('clSize', ULONG), ('asData', WORD * 1)]
         
-        asData: PWORD
+        asData: IArray[int]
     
-    array_after_structure(WORD_BLOB, 'asData', WORD)
     UP_WORD_BLOB = WORD_BLOB.PTR()
     
     class DWORD_BLOB(CStructure):
-        _fields_ = [('clSize', ULONG)]
+        _fields_ = [('clSize', ULONG), ('alData', DWORD * 1)]
         
-        alData: PDWORD
+        alData: IArray[int]
     
-    array_after_structure(DWORD_BLOB, 'alData', DWORD)
     UP_DWORD_BLOB = DWORD_BLOB.PTR()
     
     # Flagged blobs.
     
     class FLAGGED_BYTE_BLOB(CStructure):
-        _fields_ = [('fFlags', ULONG), ('clSize', ULONG)]
+        _fields_ = [('fFlags', ULONG), ('clSize', ULONG), ('abData', BYTE * 1)]
         
-        abData: PBYTE
+        abData: IArray[int]
         fFlags: int
     
-    array_after_structure(FLAGGED_BYTE_BLOB, 'abData', BYTE)
     UP_FLAGGED_BYTE_BLOB = FLAGGED_BYTE_BLOB.PTR()
     
     class FLAGGED_WORD_BLOB(CStructure):
-        _fields_ = [('fFlags', ULONG), ('clSize', ULONG)]
+        _fields_ = [('fFlags', ULONG), ('clSize', ULONG), ('asData', WORD * 1)]
         
-        asData: PWORD
+        asData: IArray[int]
         fFlags: int
     
-    array_after_structure(FLAGGED_WORD_BLOB, 'asData', WORD)
     UP_FLAGGED_WORD_BLOB = FLAGGED_WORD_BLOB.PTR()
     
     class FLAGGED_DWORD_BLOB(CStructure):
-        _fields_ = [('fFlags', ULONG), ('clSize', ULONG)]
+        _fields_ = [('fFlags', ULONG), ('clSize', ULONG), ('alData', WORD * 1)]
         
-        alData: PDWORD
+        alData: IArray[int]
         fFlags: int
     
-    array_after_structure(FLAGGED_DWORD_BLOB, 'abData', DWORD)
     UP_FLAGGED_DWORD_BLOB = FLAGGED_DWORD_BLOB.PTR()
     
     # Frequently used helpers with sized pointers.

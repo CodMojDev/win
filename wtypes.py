@@ -19,21 +19,21 @@ if cpreproc.pragma_once() or TYPE_CHECKING:
     class RemHGLOBAL(CStructure):
         _fields_ = [
             ('fNullHGlobal', LONG),
-            ('cbData', ULONG)
+            ('cbData', ULONG),
+            ('data', BYTE * 1)
         ]
         
         fNullHGlobal: int
         cbData: int
-        data: PBYTE
-    
-    array_after_structure(RemHGLOBAL, 'data', BYTE)
+        data: IArray[int]
     
     class RemHMETAFILEPICT(CStructure):
         _fields_ = [
             ('mm', LONG),
             ('xExt', LONG),
             ('yExt', LONG),
-            ('cbData', ULONG)
+            ('cbData', ULONG),
+            ('data', BYTE * 1)
         ]
         
         cbData: int
@@ -42,40 +42,31 @@ if cpreproc.pragma_once() or TYPE_CHECKING:
         xExt: int
         yExt: int
         mm: int
-        
-    array_after_structure(RemHMETAFILEPICT, 'data', BYTE)
+        data: IArray[int]
     
     class RemHENHMETAFILE(CStructure):
-        _fields_ = [('cbData', ULONG)]
+        _fields_ = [('cbData', ULONG), ('data', BYTE * 1)]
         
         cbData: int
-        data: PBYTE
-        
-    array_after_structure(RemHENHMETAFILE, 'data', BYTE)
+        data: IArray[int]
     
     class RemHBITMAP(CStructure):
-        _fields_ = [('cbData', ULONG)]
+        _fields_ = [('cbData', ULONG), ('data', BYTE * 1)]
         
         cbData: int
-        data: PBYTE
-        
-    array_after_structure(RemHBITMAP, 'data', BYTE)
+        data: IArray[int]
     
     class RemHPALETTE(CStructure):
-        _fields_ = [('cbData', ULONG)]
+        _fields_ = [('cbData', ULONG), ('data', BYTE * 1)]
         
         cbData: int
-        data: PBYTE
-        
-    array_after_structure(RemHPALETTE, 'data', BYTE)
+        data: IArray[int]
     
     class RemBRUSH(CStructure):
-        _fields_ = [('cbData', ULONG)]
+        _fields_ = [('cbData', ULONG), ('data', BYTE * 1)]
         
         cbData: int
-        data: PBYTE
-        
-    array_after_structure(RemBRUSH, 'data', BYTE)
+        data: IArray[int]
     
     byte = c_byte
     c_long = c_long
@@ -103,14 +94,13 @@ if cpreproc.pragma_once() or TYPE_CHECKING:
     class LOGPALETTE(CStructure):
         _fields_ = [
             ("palVersion", WORD),
-            ("palNumEntries", WORD)
+            ("palNumEntries", WORD),
+            ("palPalEntry", PALETTEENTRY * 1)
         ]
         
-        palPalEntry: IPointer[PALETTEENTRY]
+        palPalEntry: IArray[PALETTEENTRY]
         palNumEntries: int
         palVersion: int
-    
-    array_after_structure(LOGPALETTE, 'palPalEntry', PALETTEENTRY)
         
     PLOGPALETTE = POINTER(LOGPALETTE)
     NPLOGPALETTE = PLOGPALETTE
@@ -342,10 +332,10 @@ if cpreproc.pragma_once() or TYPE_CHECKING:
             ('bmWidthBytes', LONG),
             ('bmPlanes', WORD),
             ('bmBitsPixel', WORD),
-            ('cbSize', ULONG)
+            ('cbSize', ULONG),
+            ('pBuffer', byte * 1)
         ]
         
-        pBuffer: IPointer[byte]
         bmWidthBytes: int
         bmBitsPixel: int
         bmHeight: int
@@ -353,8 +343,7 @@ if cpreproc.pragma_once() or TYPE_CHECKING:
         bmWidth: int
         bmType: int
         cbSize: int
-        
-    array_after_structure(userBITMAP, 'pBuffer', byte)
+        pBuffer: IArray[int]
     
     class userHBITMAP(CStructure):
         class U(CUnion):

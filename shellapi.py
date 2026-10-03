@@ -1506,17 +1506,18 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
                 return SendMessage(hwnd, NCM_GETADDRESS, 0, cast(pv, PVOID).value)
             
             if cpreproc.ifdef("__IPHLPAPI_H__"):
-                from .iphlpapi import PNET_ADDRESS_INFO_
-                class NC_ADDRESS(CStructure):
-                    _fields_ = [
-                        ("pAddrInfo", PNET_ADDRESS_INFO_), # defined in iphlpapi.h
-                        ("PortNumber", USHORT),
-                        ("PrefixLength", BYTE)
-                    ]
-                    pAddrInfo: IPointer[NET_ADDRESS_INFO]
-                    PortNumber: int
-                    PrefixLength: int
-                PNC_ADDRESS = POINTER(NC_ADDRESS)
+                from . import iphlpapi
+                if hasattr(iphlpapi, 'NET_ADDRESS_INFO'):
+                    class NC_ADDRESS(CStructure):
+                        _fields_ = [
+                            ("pAddrInfo", iphlpapi.PNET_ADDRESS_INFO_), # defined in iphlpapi.h
+                            ("PortNumber", USHORT),
+                            ("PrefixLength", BYTE)
+                        ]
+                        pAddrInfo: IPointer[iphlpapi.NET_ADDRESS_INFO]
+                        PortNumber: int
+                        PrefixLength: int
+                    PNC_ADDRESS = POINTER(NC_ADDRESS)
 
                 # NCM_SETALLOWTYPE sets the type of addresses that the control will allow.
                 # The address flags are defined in iphlpapi.h

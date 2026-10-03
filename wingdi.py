@@ -999,21 +999,22 @@ if cpreproc.pragma_once("_WINGDI_"):
             # Clipboard Metafile Picture Structure
 
             class HANDLETABLE(CStructure):
-                _fields_ = []
-                objectHandle: IPointer[HGDIOBJ]
-            array_after_structure(HANDLETABLE, 'objectHandle', HGDIOBJ)
+                _fields_ = [
+                    ("objectHandle", HGDIOBJ * 1)
+                ]
+                objectHandle: IArray[int]
             PHANDLETABLE = POINTER(HANDLETABLE)
             LPHANDLETABLE = PHANDLETABLE
 
             class METARECORD(CStructure):
                 _fields_ = [
                     ("rdSize", DWORD),
-                    ("rdFunction", WORD)
+                    ("rdFunction", WORD),
+                    ("rdParm", WORD * 1)
                 ]
                 rdSize: int
                 rdFunction: int
-                rdParm: IPointer[WORD]
-            array_after_structure(METARECORD, 'rdParm', WORD)
+                rdParm: IArray[int]
 
             # REGION ***
 
@@ -1071,12 +1072,12 @@ if cpreproc.pragma_once("_WINGDI_"):
             class ENHMETARECORD(CStructure):
                 _fields_ = [
                     ("iType", DWORD), # Record type EMR_XXX
-                    ("nSize", DWORD) # Record size in bytes
+                    ("nSize", DWORD), # Record size in bytes
+                    ("dParm", DWORD * 1)
                 ]
                 iType: int
                 nSize: int
-                dParm: IPointer[DWORD] # Parameters
-            array_after_structure(ENHMETARECORD, 'dParm', DWORD)
+                dParm: IArray[int] # Parameters
             PENHMETARECORD = POINTER(ENHMETARECORD)
             LPENHMETARECORD = PENHMETARECORD
 
@@ -1495,7 +1496,8 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("elpBrushStyle", UINT),
                 ("elpColor", COLORREF),
                 ("elpHatch", ULONG_PTR),
-                ("elpNumEntries", DWORD)
+                ("elpNumEntries", DWORD),
+                ("elpStyleEntry", DWORD * 1)
             ]
             elpPenStyle: int
             elpWidth: int
@@ -1503,8 +1505,7 @@ if cpreproc.pragma_once("_WINGDI_"):
             elpColor: int
             elpHatch: int
             elpNumEntries: int
-            elpStyleEntry: IPointer[DWORD]
-        array_after_structure(EXTLOGPEN, 'elpStyleEntry', DWORD)
+            elpStyleEntry: IArray[int]
         PEXTLOGPEN = POINTER(EXTLOGPEN)
         NPEXTLOGPEN = PEXTLOGPEN
         LPEXTLOGPEN = PEXTLOGPEN
@@ -1529,8 +1530,7 @@ if cpreproc.pragma_once("_WINGDI_"):
             elpColor: int
             elpHatch: int
             elpNumEntries: int
-            elpStyleEntry: IPointer[DWORD]
-        array_after_structure(EXTLOGPEN, 'elpStyleEntry', DWORD)
+            elpStyleEntry: IArray[int]
         PEXTLOGPEN32 = POINTER(EXTLOGPEN32)
         NPEXTLOGPEN32 = PEXTLOGPEN32
         LPEXTLOGPEN32 = PEXTLOGPEN32
@@ -1553,12 +1553,12 @@ if cpreproc.pragma_once("_WINGDI_"):
         class LOGPALETTE(CStructure):
             _fields_ = [
                 ("palVersion", WORD),
-                ("palNumEntries", WORD)
+                ("palNumEntries", WORD),
+                ("palPalEntry", PALETTEENTRY * 1)
             ]
             palVersion: int
             palNumEntries: int
-            palPalEntry: IPointer[PALETTEENTRY]
-        array_after_structure(LOGPALETTE, 'palPalEntry', PALETTEENTRY)
+            palPalEntry: IArray[PALETTEENTRY]
         PLOGPALETTE = POINTER(LOGPALETTE)
         NPLOGPALETTE = PLOGPALETTE
         LPLOGPALETTE = PLOGPALETTE
@@ -3356,11 +3356,11 @@ if cpreproc.pragma_once("_WINGDI_"):
 
         class RGNDATA(CStructure):
             _fields_ = [
-                ("rdh", RGNDATAHEADER)
+                ("rdh", RGNDATAHEADER),
+                ("Buffer", CHAR * 1)
             ]
             rdh: RGNDATAHEADER
             Buffer: ICharArray
-        array_after_structure(RGNDATA, 'Buffer', CHAR)
         PRGNDATA = POINTER(RGNDATA)
         NPRGNDATA = PRGNDATA
         LPRGNDATA = PRGNDATA
@@ -3674,12 +3674,12 @@ if cpreproc.pragma_once("_WINGDI_"):
         class TTPOLYCURVE(CStructure):
             _fields_ = [
                 ("wType", WORD),
-                ("cpfx", WORD)
+                ("cpfx", WORD),
+                ("apfx", POINTFX * 1)
             ]
             wType: int
             cpfx: int
-            apfx: IPointer[POINTFX]
-        array_after_structure(TTPOLYCURVE, 'apfx', POINTFX)
+            apfx: IArray[POINTFX]
         LPTTPOLYCURVE = POINTER(TTPOLYCURVE)
 
         class TTPOLYGONHEADER(CStructure):
@@ -4200,12 +4200,13 @@ if cpreproc.pragma_once("_WINGDI_"):
                 ("flAccel", DWORD),
                 ("cGlyphsSupported", DWORD),
                 ("cRanges", DWORD),
+                ("ranges", WCRANGE * 1)
             ]
             cbThis: int
             flAccel: int
             cGlyphsSupported: int
             cRanges: int
-        array_after_structure(GLYPHSET, 'ranges', WCRANGE)
+            ranges: IArray[WCRANGE]
         PGLYPHSET = POINTER(GLYPHSET)
         LPGLYPHSET = PGLYPHSET
 

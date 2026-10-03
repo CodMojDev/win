@@ -5252,13 +5252,12 @@ if cpreproc.pragma_once("_WINNT_"):
         
         class IMAGE_IMPORT_BY_NAME(CStructure):
             _fields_ = [
-                ('Hint', WORD)
+                ('Hint', WORD),
+                ('Name', CHAR * 1)
             ]
             
             Name: ICharArray
             Hint: int
-            
-        array_after_structure(IMAGE_IMPORT_BY_NAME, 'Name', CHAR)
         
         PIMAGE_IMPORT_BY_NAME = IMAGE_IMPORT_BY_NAME.PTR()
         

@@ -63,7 +63,7 @@ class ListHeader(Control):
             """
             return ListHeader.Item(self.hdr, self.hdr.send(HDM_ORDERTOINDEX, order))
     
-        def get(self, mask: int | None = None) -> HDITEM:
+        def get(self, mask: int | None = None) -> HDITEMW:
             """
             Get the information about list header item.
             """
@@ -86,7 +86,7 @@ class ListHeader(Control):
                     delattr(hdi, '_buffer_cache')
             return hdi
     
-        def set(self, item: HDITEM, mask: int | None = None) -> HDITEM:
+        def set(self, item: HDITEMW, mask: int | None = None) -> HDITEMW:
             """
             Get the information about list header item.
             """
@@ -99,7 +99,7 @@ class ListHeader(Control):
             if not self.hdr.send(HDM_SETITEM, self.index, item.ref()):
                 raise WinException()
     
-        def insert(self, item: HDITEM, index: int = -1) -> 'ListHeader.Item':
+        def insert(self, item: HDITEMW, index: int = -1) -> 'ListHeader.Item':
             """
             Get the information about list header item.
             """
@@ -141,8 +141,8 @@ class ListHeader(Control):
         super().__init__()
     
     def headless_init(self):
-        self.items = Items()
-        self.filter = Filter()
+        self.items = self.Items()
+        self.filter = self.Filter()
         
     def hit(self, x: int, y: int) -> tuple[int, Item | None]:
         """

@@ -18,6 +18,7 @@ from typing import (TypeVar, Generic, Optional,
                     AnyStr, Sequence, Type,
                     Iterable, Callable, List)
 import typing, ctypes
+import traceback
 
 if sys.version_info < (3, 8):
     raise RuntimeError('Versions before 3.8 are not supported.')
@@ -29,12 +30,52 @@ _GLOBAL_REFS: List[Any] = []
 
 mappingproxy = type(type.__dict__)
 
+PY_SINGLE_FUNC = PYFUNCTYPE(c_void_p, c_void_p)
+PY_SINGLE_WITH_ERR_FUNC = PYFUNCTYPE(c_int, c_void_p)
 PY_BINARY_FUNC = PYFUNCTYPE(c_void_p, c_void_p, c_void_p)
+PY_BINARY_WITH_ERR_FUNC = PYFUNCTYPE(c_int, c_void_p, c_void_p)
+PY_TERNARY_FUNC = PYFUNCTYPE(c_void_p, c_void_p, c_void_p, c_void_p)
+PY_TERNARY_WITH_ERR_FUNC = PYFUNCTYPE(c_int, c_void_p, c_void_p, c_void_p)
 
-if sys.version_info[0:2] == (3, 8) or typing.TYPE_CHECKING:
-    def polyfill_39plus_to_38():
+class POLYFILL_SpecialForm(typing._Final, _root=True):
+    __slots__ = ('_name', '__doc__', '_getitem')
+    def __init__(self, getitem):
+        self._getitem = getitem
+        self._name = getitem.__name__
+        self.__doc__ = getitem.__doc__
+    def __getattr__(self, item):
+        if item in {'__name__', '__qualname__'}:
+            return self._name
+        raise AttributeError(item)
+    def __mro_entries__(self, bases):
+        raise TypeError(f"Cannot subclass {self!r}")
+    def __repr__(self):
+        return f'typing.{self._name}'
+    def __reduce__(self):
+        return self._name
+    def __call__(self, *args, **kwds):
+        raise TypeError(f"Cannot instantiate {self!r}")
+    def __or__(self, other):
+        return typing.Union[self, other]
+    def __ror__(self, other):
+        return typing.Union[other, self]
+    def __instancecheck__(self, obj):
+        raise TypeError(f"{self} cannot be used with isinstance()")
+    def __subclasscheck__(self, cls):
+        raise TypeError(f"{self} cannot be used with issubclass()")
+    @typing._tp_cache
+    def __getitem__(self, parameters):
+        return self._getitem(self, parameters)
+if sys.version_info < (3, 11):
+    def polyfill_311plus_to_38_39_310():
+        if sys.version_info >= (3, 8):
+            if sys.version_info >= (3, 9):
+                import typing_extensions
+            else:
+                MProxy_Access(type.__dict__)['__class_getitem__'] = classmethod(lambda cls, item: typing._GenericAlias(cls, item))
+if sys.version_info[0:2] == (3, 8) or sys.version_info[0:2] == (3, 9) or typing.TYPE_CHECKING:
+    def polyfill_310plus_to_38_39():
         tp_type = PyType_CAST_DEREF(type)
-        type.__dict__.m_proxy['__class_getitem__'] = classmethod(lambda cls, item: typing._GenericAlias(cls, item))
         def polyfill_type_or(a, b):
             self = cast(a, py_object).value
             item = cast(b, py_object).value
@@ -78,47 +119,16 @@ if sys.version_info[0:2] == (3, 8) or typing.TYPE_CHECKING:
                 raise
             return result
         typing._type_check = polyfill_typing_type_check
-        class _SpecialForm(typing._Final, _root=True):
-            __slots__ = ('_name', '__doc__', '_getitem')
-            def __init__(self, getitem):
-                self._getitem = getitem
-                self._name = getitem.__name__
-                self.__doc__ = getitem.__doc__
-            def __getattr__(self, item):
-                if item in {'__name__', '__qualname__'}:
-                    return self._name
-                raise AttributeError(item)
-            def __mro_entries__(self, bases):
-                raise TypeError(f"Cannot subclass {self!r}")
-            def __repr__(self):
-                return f'typing.{self._name}'
-            def __reduce__(self):
-                return self._name
-            def __call__(self, *args, **kwds):
-                raise TypeError(f"Cannot instantiate {self!r}")
-            def __or__(self, other):
-                return typing.Union[self, other]
-            def __ror__(self, other):
-                return typing.Union[other, self]
-            def __instancecheck__(self, obj):
-                raise TypeError(f"{self} cannot be used with isinstance()")
-            def __subclasscheck__(self, cls):
-                raise TypeError(f"{self} cannot be used with issubclass()")
-            @typing._tp_cache
-            def __getitem__(self, parameters):
-                return self._getitem(self, parameters)
-        @_SpecialForm
+        @POLYFILL_SpecialForm
         def TypeAlias(self, parameters):
-            """TypeAlias"""
             raise TypeError(f"{self} is not subscriptable")
-        @_SpecialForm
+        @POLYFILL_SpecialForm
         def Self(self, parameters):
-            """Self"""
             raise TypeError(f"{self} is not subscriptable")
         typing.TypeAlias = TypeAlias
         typing.Self = Self
         ctypes.c_time_t = c_int32 if sizeof(c_void_p) == 4 else c_int64
-    _INIT_CHAIN.append(polyfill_39plus_to_38)
+    _INIT_CHAIN.append(polyfill_310plus_to_38_39)
 
 _CWT = TypeVar('_WT')
 
@@ -130,7 +140,7 @@ class IArray(Generic[_CWT]):
 class IPointer(IArray[_CWT]):   
     contents: _CWT
 
-if sys.version_info >= (3, 8) and sys.version_info < (3, 12):
+if sys.version_info >= (3, 8) and sys.version_info < (3, 12) or typing.TYPE_CHECKING:
     class PyObject(Structure, Generic[_CWT]):
         fields_extra = []
         if defined_Py_TRACE_REFS:
@@ -174,8 +184,7 @@ if sys.version_info >= (3, 8) and sys.version_info < (3, 12):
         _fields_ = [
             ('unusedSizeT', c_ssize_t)
         ]
-        
-elif sys.version_info >= (3, 12) and sys.version_info < (3, 15):
+elif sys.version_info >= (3, 12) and sys.version_info < (3, 15) or typing.TYPE_CHECKING:
     if sys.version_info[0:2] != (3, 14):
         class PyObject(Structure, Generic[_CWT]):
             fields_extra = []
@@ -448,7 +457,7 @@ _wrap_flag(PyMemberDef, 'readonly', Py_READONLY)
 _wrap_flag(PyMemberDef, 'audit_read', Py_AUDIT_READ)
 _wrap_flag(PyMemberDef, '_write_restricted', _Py_WRITE_RESTRICTED)
 _wrap_flag(PyMemberDef, 'is_relative_offset', Py_RELATIVE_OFFSET)
-        
+
 class MProxy(PyObject[_CWT]):
     _fields_ = [
         ('mapping', PyObject_PTR)
@@ -559,14 +568,18 @@ class PyTypeObject(PyVarObject[_CWT]):
         ('tp_as_mapping', POINTER(c_void_p)),
         ('unusedPtrs2', c_void_p * 6),
         ('tp_flags', c_ulong),
-        ('unusedPtrs3', c_void_p * 8),
+        ('tp_doc', c_char_p),
+        ('unusedPtrs3', c_void_p * 3),
+        ('unusedSizeT4', c_ssize_t),
+        ('tp_iter', c_void_p),
+        ('unusedPtrs4', c_void_p * 2),
         ('tp_members', PyMemberDef_PTR),
         ('tp_getset', PyGetSetDef_PTR),
         ('_tp_base', c_void_p),
         ('tp_dict', PyMappingProxyObject_PTR),
-        ('unusedPtrs4', c_void_p * 2),
-        ('unusedSizeT4', c_ssize_t),
         ('unusedPtrs5', c_void_p * 2),
+        ('unusedSizeT5', c_ssize_t),
+        ('unusedPtrs6', c_void_p * 2),
         ('tp_new', c_void_p)
     ]
     
@@ -584,6 +597,7 @@ class PyTypeObject(PyVarObject[_CWT]):
     tp_as_mapping: IPointer[c_void_p]
     tp_new: int
     tp_getset: IPointer[PyGetSetDef]
+    tp_iter: int
     
     @property
     def type(self) -> Type[_CWT]:
@@ -942,7 +956,7 @@ def PyCDataObject_CAST_DEREF(o: _CWT) -> PyCDataObject:
 
 pythonapi._PyObject_GC_New.argtypes = [c_void_p]
 pythonapi._PyObject_GC_New.restype = PyObject_PTR
-        
+
 def PyObject_GC_New(typ: Type[_CWT], typeobj) -> IPointer[_CWT]:
     return cast(pythonapi._PyObject_GC_New(id(typeobj)), POINTER(typ))
 
@@ -1033,6 +1047,15 @@ pythonapi.PyObject_Malloc.restype = c_void_p
 
 msvcrt.memcpy.argtypes = [c_void_p, c_void_p, c_size_t]
 msvcrt.memcpy.restype = c_void_p
+
+msvcrt.wcscpy.argtypes = [c_void_p, c_void_p]
+msvcrt.wcscpy.restype = c_void_p
+
+msvcrt.strcpy.argtypes = [c_void_p, c_void_p]
+msvcrt.strcpy.restype = c_void_p
+
+pythonapi.PyBytes_FromStringAndSize.argtypes = [c_void_p, c_size_t]
+pythonapi.PyBytes_FromStringAndSize.restype = c_void_p
 
 def PyObject_Malloc(size: int) -> c_void_p: ...
 
@@ -1246,44 +1269,236 @@ def Init_StructureUnion_fields_patch():
     tp_PyCStructType.Reload()
     tp_UnionType.Reload()
 
-def Init_Array_indexing_patch():
+class CArrayIterator:
+    def __init__(self, arr):
+        self.arr = arr
+        self.l = len(arr)
+        self.i = 0
+    
+    def __next__(self):
+        i = self.i
+        if i == self.l:
+            raise StopIteration
+        self.i = i + 1
+        return self.arr[i]
+
+def MProxy_Access(mp) -> dict:
+    return cast(id(mp), POINTER(MProxy)).contents.mapping.contents.object
+
+def Init_Array_indexing_and_getset_patch():
     tp_Array = PyType_CAST_DEREF(Array)
     pfn_Array_subscript = cast(tp_Array.tp_as_mapping[1], PY_BINARY_FUNC)
+    pfn_Array_ass_subscript = cast(tp_Array.tp_as_mapping[2], PY_TERNARY_WITH_ERR_FUNC)
     def patch_Array_subscript(p_self, p_value):
-        value = cast(p_value, py_object).value
-        if isinstance(value, int):
-            self = cast(p_self, py_object).value
-            cdata: PyCDataObject = cast(p_self, PyCDataObject_PTR).contents
-            length = cdata.b_length
-            if value < 0:
-                offset = sizeof(self._type_) * value
-                b_ptr = cdata.b_ptr
-                cdata.b_ptr = b_ptr + offset
-                index = 0
-                p_result = pfn_Array_subscript(p_self, id(index))
-                cdata.b_ptr = b_ptr
-            elif value >= length:
-                cdata.b_length = value + 1
-                p_result = pfn_Array_subscript(p_self, p_value)
-                cdata.b_length = length
+        try:
+            value = cast(p_value, py_object).value
+            if isinstance(value, int):
+                self = cast(p_self, py_object).value
+                cdata: PyCDataObject = cast(p_self, PyCDataObject_PTR).contents
+                length = cdata.b_length
+                ty = self._type_
+                if value < 0 or value >= length:
+                    b_length = cdata.b_length
+                    if b_length == 0:
+                        cdata.b_length = 1
+                    offset = sizeof(ty) * value
+                    b_ptr = cdata.b_ptr
+                    cdata.b_ptr = b_ptr + offset
+                    index = 0
+                    p_result = pfn_Array_subscript(p_self, id(index))
+                    cdata.b_ptr = b_ptr
+                    if b_length == 0:
+                        cdata.b_length = 0
+                else:
+                    p_result = pfn_Array_subscript(p_self, p_value)
+                ty2 = getattr(ty, '_type_', None)
+                if ty2 == 'c':
+                    result = cast(p_result, py_object).value
+                    result = result[0]
+                    p_result = id(result)
+                return p_result
             else:
-                p_result = pfn_Array_subscript(p_self, p_value)
-            return p_result
-        return pfn_Array_subscript(p_self, p_value)
+                pfn_Array_subscript(p_self, p_value)
+        except Exception as e:
+            print('DefbCI Detected contract violation or unexpected error at (array)[x] operator')
+            print(f'Exception type: {type(e).__qualname__}')
+            print(f'Exception description: {e}')
+            print('------------------------')
+            traceback.print_tb(e.__traceback__)
+            print('------------------------')
+        return 0
     pfn_patch_Array_subscript = PY_BINARY_FUNC(patch_Array_subscript)
     _GLOBAL_REFS.append(pfn_patch_Array_subscript)
+    def patch_Array_ass_subcript(p_self, p_item, p_value):
+        try:
+            item = cast(p_item, py_object).value
+            if isinstance(item, int):
+                self = cast(p_self, py_object).value
+                cdata: PyCDataObject = cast(p_self, PyCDataObject_PTR).contents
+                length = cdata.b_length
+                ty = getattr(self, '_type_', None)
+                if ty is not None:
+                    if item < 0 or item >= length:
+                        b_length = cdata.b_length
+                        if b_length == 0:
+                            cdata.b_length = 1
+                        offset = sizeof(ty) * item
+                        b_ptr = cdata.b_ptr
+                        cdata.b_ptr = b_ptr + offset
+                        index = 0
+                        pfn_Array_ass_subscript(p_self, id(index), p_value)
+                        cdata.b_ptr = b_ptr
+                        if b_length == 0:
+                            cdata.b_length = 0
+                    else:
+                        pfn_Array_ass_subscript(p_self, p_item, p_value)
+            else:
+                pfn_Array_ass_subscript(p_self, p_item, p_value)
+        except Exception as e:
+            print('DefbCI Detected contract violation or unexpected error at (array)[x] equal operator')
+            print(f'Exception type: {type(e).__qualname__}')
+            print(f'Exception description: {e}')
+            print('------------------------')
+            traceback.print_tb(e.__traceback__)
+            print('------------------------')
+        return 0
+    pfn_patch_Array_ass_subscript = PY_TERNARY_WITH_ERR_FUNC(patch_Array_ass_subcript)
+    _GLOBAL_REFS.append(pfn_patch_Array_ass_subscript)
     tp_Array.tp_as_mapping[1] = cast(pfn_patch_Array_subscript, c_void_p)
+    tp_Array.tp_as_mapping[2] = cast(pfn_patch_Array_ass_subscript, c_void_p)
     PyCArrayType = type(Array)
     tp_PyCArrayType = PyType_CAST_DEREF(PyCArrayType)
     pfn_PyCArrayType_new = cast(tp_PyCArrayType.tp_new, PY_TP_NEW_FUNC)
+    def patch_CharArray_getter_value(p_self, p_unused):
+        self = cast(p_self, py_object).value
+        result = c_char_p(addressof(self)).value
+        Py_INCREF(result)
+        return id(result)
+    pfn_patch_CharArray_getter_value = PY_BINARY_FUNC(patch_CharArray_getter_value)
+    _GLOBAL_REFS.append(pfn_patch_CharArray_getter_value)
+    def patch_CharArray_setter_value(p_self, p_value, p_unused):
+        self = cast(p_self, py_object).value
+        value = cast(p_value, py_object).value
+        if value is None:
+            cast(addressof(self), POINTER(c_char))[0] = 0
+        else:
+            try:
+                msvcrt.strcpy(self, value)
+            except Exception as e:
+                print('DefbCI Detected contract violation or unexpected error at (char array)::value setter')
+                print(f'Exception type: {type(e).__qualname__}')
+                print(f'Exception description: {e}')
+                print('------------------------')
+                traceback.print_tb(e.__traceback__)
+                print('------------------------')
+        return 0
+    pfn_patch_CharArray_setter_value = PY_TERNARY_WITH_ERR_FUNC(patch_CharArray_setter_value)
+    _GLOBAL_REFS.append(pfn_patch_CharArray_setter_value)
+    def patch_WcharArray_getter_value(p_self, p_unused):
+        self = cast(p_self, py_object).value
+        result = c_wchar_p(addressof(self)).value
+        Py_INCREF(result)
+        return id(result)
+    pfn_patch_WcharArray_getter_value = PY_BINARY_FUNC(patch_WcharArray_getter_value)
+    _GLOBAL_REFS.append(pfn_patch_WcharArray_getter_value)
+    def patch_WcharArray_setter_value(p_self, p_value, p_unused):
+        self = cast(p_self, py_object).value
+        value = cast(p_value, py_object).value
+        if value is None:
+            cast(addressof(self), POINTER(c_char))[0] = 0
+        else:
+            try:
+                msvcrt.wcscpy(self, value)
+            except Exception as e:
+                print('DefbCI Detected contract violation or unexpected error at (wchar array)::value setter')
+                print(f'Exception type: {type(e).__qualname__}')
+                print(f'Exception description: {e}')
+                print('------------------------')
+                traceback.print_tb(e.__traceback__)
+                print('------------------------')
+        return 0
+    pfn_patch_WcharArray_setter_value = PY_TERNARY_WITH_ERR_FUNC(patch_WcharArray_setter_value)
+    _GLOBAL_REFS.append(pfn_patch_WcharArray_setter_value)
+    def patch_Array_getter_raw(p_self, p_unused):
+        cdata = cast(p_self, PyCDataObject_PTR).contents
+        self = cast(p_self, py_object).value
+        ty = getattr(self, '_type_', None)
+        if ty is None:
+            size_of = 1
+        else:
+            size_of = sizeof(ty)
+        return pythonapi.PyBytes_FromStringAndSize(cdata.b_ptr, cdata.b_length * size_of)
+    pfn_patch_Array_getter_raw = PY_BINARY_FUNC(patch_Array_getter_raw)
+    _GLOBAL_REFS.append(pfn_patch_Array_getter_raw)
+    def patch_Array_setter_raw(p_self, p_value, p_unused):
+        cdata = cast(p_self, PyCDataObject_PTR).contents
+        value = cast(p_value, py_object).value
+        if value is None:
+            cast(cdata.b_ptr, POINTER(c_char))[0] = 0
+        else:
+            try:
+                msvcrt.strcpy(cdata.b_ptr, value)
+            except Exception as e:
+                print('DefbCI Detected contract violation or unexpected error at (wchar array)::raw setter')
+                print(f'Exception type: {type(e).__qualname__}')
+                print(f'Exception description: {e}')
+                print('------------------------')
+                traceback.print_tb(e.__traceback__)
+                print('------------------------')
+        return 0
+    pfn_patch_Array_setter_raw = PY_TERNARY_WITH_ERR_FUNC(patch_Array_setter_raw)
+    _GLOBAL_REFS.append(pfn_patch_Array_setter_raw)
+    psz_value = create_string_buffer(b"value")
+    psz_raw = create_string_buffer(b"raw")
+    _GLOBAL_REFS.append(psz_value)
+    _GLOBAL_REFS.append(psz_raw)
+    getsets_for_CharArray = (PyGetSetDef * 3)(PyGetSetDef(cast(psz_raw, c_char_p), cast(pfn_patch_Array_getter_raw, c_void_p), cast(pfn_patch_Array_setter_raw, c_void_p)), 
+                                              PyGetSetDef(cast(psz_value, c_char_p), cast(pfn_patch_CharArray_getter_value, c_void_p), cast(pfn_patch_CharArray_setter_value, c_void_p)), 
+                                              PyGetSetDef())
+    getsets_for_WCharArray = (PyGetSetDef * 3)(PyGetSetDef(cast(psz_raw, c_char_p), cast(pfn_patch_Array_getter_raw, c_void_p), cast(pfn_patch_Array_setter_raw, c_void_p)), 
+                                               PyGetSetDef(cast(psz_value, c_char_p), cast(pfn_patch_WcharArray_getter_value, c_void_p), cast(pfn_patch_WcharArray_setter_value, c_void_p)), 
+                                               PyGetSetDef())
+    getsets_for_Array = (PyGetSetDef * 2)(PyGetSetDef(cast(psz_raw, c_char_p), cast(pfn_patch_Array_getter_raw, c_void_p), cast(pfn_patch_Array_setter_raw, c_void_p)), 
+                                          PyGetSetDef())
+    def patch_Array_iter(p_self):
+        self = cast(p_self, py_object).value
+        it = CArrayIterator(self)
+        Py_INCREF(it)
+        return id(it)
+    pfn_patch_Array_iter = PY_SINGLE_FUNC(patch_Array_iter)
     def patch_PyCArrayType_new(p_metacls, p_args, p_kwds):
         p_result = pfn_PyCArrayType_new(p_metacls, p_args, p_kwds)
         tp_result: PyTypeObject = cast(p_result, PyTypeObject_PTR).contents
         tp_result.tp_as_mapping[1] = cast(pfn_patch_Array_subscript, c_void_p)
+        tp_result.tp_as_mapping[2] = cast(pfn_patch_Array_ass_subscript, c_void_p)
+        result = cast(p_result, py_object).value
+        ty = getattr(result, '_type_', None)
+        if ty is not None:
+            ty2 = getattr(ty, '_type_', None)
+            if ty2 == 'c':
+                getsets = getsets_for_CharArray
+                dictionary = MProxy_Access(result.__dict__)
+                if 'value' in dictionary:
+                    del dictionary['value']
+                if 'raw' in dictionary:
+                    del dictionary['raw']
+            elif ty2 == 'u':
+                getsets = getsets_for_WCharArray
+                dictionary = MProxy_Access(result.__dict__)
+                if 'value' in dictionary:
+                    del dictionary['value']
+            else:
+                getsets = getsets_for_Array
+            tp_result.tp_getset = cast(getsets, PyGetSetDef_PTR)
+        tp_result.tp_iter = cast(pfn_patch_Array_iter, c_void_p)
+        tp_result.Reload()
         return p_result
+    tp_Array.tp_getset = cast(getsets_for_Array, PyGetSetDef_PTR)
+    tp_Array.Reload()
     pfn_patch_PyCArrayType_new = PY_TP_NEW_FUNC(patch_PyCArrayType_new)
     _GLOBAL_REFS.append(pfn_patch_PyCArrayType_new)
     tp_PyCArrayType.tp_new = cast(pfn_patch_PyCArrayType_new, c_void_p)
+    tp_PyCArrayType.Reload()
 
 def Init():
     SetTPFLAG(CArgObject, Py_TPFLAGS_BASETYPE)
@@ -1291,7 +1506,7 @@ def Init():
     Get_PyMemberDef(CArgObject, '_obj').readonly = False
     
     t_mappingproxy = PyType_CAST_DEREF(mappingproxy)
-    t_mappingproxy.members = [PyMemberDef('m_proxy', _Py_T_OBJECT,
+    t_mappingproxy.members = [PyMemberDef('m_proxy', Py_T_OBJECT_EX,
                                           MProxy.offset('mapping'))]
     t_mappingproxy.Reload()
     t_codetype = PyType_CAST_DEREF(type(HasTPFLAG.__code__))
@@ -1299,7 +1514,7 @@ def Init():
         member.readonly = False
     
     Init_StructureUnion_fields_patch()
-    Init_Array_indexing_patch()
+    Init_Array_indexing_and_getset_patch()
     
     for init_routine in _INIT_CHAIN:
         init_routine()

@@ -44,7 +44,7 @@ class FormatEtc(FORMATETC):
             if isinstance(format_or_name, int):
                 self.cfFormat = format_or_name
             else:
-                format_or_name = create_string_buffer(format_or_name)
+                format_or_name = create_unicode_buffer(format_or_name)
                 self.cfFormat = RegisterClipboardFormatW(format_or_name)
         
         # dwAspect = standard DVASPECT_CONTENT

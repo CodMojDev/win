@@ -52,11 +52,11 @@ if cpreproc.ifndef("__shtypes_h__"):
     class SHITEMID(CStructure):
         _pack_ = 1
         _fields_ = [
-            ("cb", USHORT)
+            ("cb", USHORT),
+            ("abID", BYTE * 1)
         ]
         cb: int
-        abID: IPointer[BYTE]
-    array_after_structure(SHITEMID, 'abID', BYTE)
+        abID: IArray[int]
 
     LPSHITEMID = POINTER(SHITEMID)
     LPCSHITEMID = LPSHITEMID

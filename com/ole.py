@@ -14,7 +14,8 @@ if False:
             ('otdExtDevmodeOffset', USHORT),
             ('otdExtDevmodeSize', USHORT),
             ('otdEnvironmentOffset', USHORT),
-            ('otdEnvironmentSize', USHORT)
+            ('otdEnvironmentSize', USHORT),
+            ('otdData', BYTE * 1)
         ]
         
         otdEnvironmentOffset: int
@@ -24,9 +25,7 @@ if False:
         otdEnvironmentSize: int
         otdExtDevmodeSize: int
         otdPortNameOffset: int
-        otdData: PBYTE
-        
-    array_after_structure(OLETARGETDEVICE, 'otdData', BYTE)
+        otdData: IArray[int]
 
     # flags used in some methods
     OF_SET             = 0x0001

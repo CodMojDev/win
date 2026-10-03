@@ -8,6 +8,8 @@
  *******************************************************************************
 """
 
+from . import cpreproc
+
 if cpreproc.pragma_once("_TIMERAPI_H_"):
     from .mmsyscom import *
     winmm = get_win_library("winmm.dll")

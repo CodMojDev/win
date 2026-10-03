@@ -239,7 +239,8 @@ if cpreproc.pragma_once("_PDH_H_"):
             ("dwQueryUserData", DWORD_PTR),
             ("szFullPath", LPSTR),
             ("u", _DUMMYUNIONNAME),
-            ("szExplainText", LPSTR)
+            ("szExplainText", LPSTR),
+            ("DataBuffer", DWORD * 1)
         ]
         _anonymous_ = ['u']
         dwLength: int
@@ -254,8 +255,8 @@ if cpreproc.pragma_once("_PDH_H_"):
         DataItemPath: PDH_DATA_ITEM_PATH_ELEMENTS_A
         CounterPath: PDH_COUNTER_PATH_ELEMENTS_A
         szExplainText: LPSTR
+        DataBuffer: IArray[int]
     PPDH_COUNTER_INFO_A = POINTER(PDH_COUNTER_INFO_A)
-    array_after_structure(PDH_COUNTER_INFO_A, 'DataBuffer', DWORD)
 
     class PDH_COUNTER_INFO_W(CStructure):
         class _DUMMYUNIONNAME(Union):
@@ -290,8 +291,8 @@ if cpreproc.pragma_once("_PDH_H_"):
         DataItemPath: PDH_DATA_ITEM_PATH_ELEMENTS_W
         CounterPath: PDH_COUNTER_PATH_ELEMENTS_W
         szExplainText: LPWSTR
+        DataBuffer: IArray[int]
     PPDH_COUNTER_INFO_W = POINTER(PDH_COUNTER_INFO_W)
-    array_after_structure(PDH_COUNTER_INFO_W, 'DataBuffer', DWORD)
 
     class PDH_TIME_INFO(CStructure):
         _fields_ = [

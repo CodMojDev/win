@@ -133,14 +133,13 @@ if cpreproc.pragma_once("_PSAPI_H_"):
 
     class PSAPI_WORKING_SET_INFORMATION(CStructure):
         _fields_ = [
-            ("NumberOfEntries", ULONG_PTR)
+            ("NumberOfEntries", ULONG_PTR),
+            ("WorkingSetInfo", PSAPI_WORKING_SET_BLOCK * 1)
         ]
         
-        WorkingSetInfo: IPointer[PSAPI_WORKING_SET_BLOCK]
+        WorkingSetInfo: IArray[PSAPI_WORKING_SET_BLOCK]
         NumberOfEntries: int
-        
-    array_after_structure(PSAPI_WORKING_SET_INFORMATION, 'WorkingSetInfo', 
-                          PSAPI_WORKING_SET_BLOCK)
+    
     PPSAPI_WORKING_SET_INFORMATION = POINTER(PSAPI_WORKING_SET_INFORMATION)
 
     class PSAPI_WORKING_SET_EX_BLOCK(Union):

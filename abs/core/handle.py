@@ -1138,11 +1138,12 @@ class StringUtil:
             return f'<POINT {{{obj.x}, {obj.y}}}>'
         else:
             return repr(obj)
-    
+
 class Pen(GDIObjectHandle):
     """
     Class, representing GDI Pen object.
     """
+    object: LOGPEN
     
     @classmethod
     def create(cls, style: int, width: int, color: int | Color.IColor) -> 'Pen':
@@ -1160,6 +1161,7 @@ class Brush(GDIObjectHandle):
     """
     Class, representing GDI Brush object.
     """
+    object: LOGBRUSH
     
     @classmethod
     def create(cls, color: int | Color.IColor, hatch: int | None = None) -> 'Brush':
@@ -1180,6 +1182,8 @@ class PatternBrush(GDIObjectHandle):
     """
     Class, representing GDI Pattern brush object.
     """
+    object: LOGBRUSH
+    
     @classmethod
     def create(cls, hbm: int | HANDLE) -> 'PatternBrush':
         """
@@ -1194,6 +1198,8 @@ class Font(GDIObjectHandle):
     """
     Class, representing GDI Font object.
     """
+    object: LOGFONTW
+    
     @classmethod
     def create(cls, name: str, height: int, width: int = 0, 
                escapement: int = 0, orientation: int = 0,
@@ -1538,84 +1544,6 @@ class Icon(Handle):
         if not hIcon: raise WinException()
         return cls(hIcon)
     
-    def save(self, path: str, bpp: int=24):
-        with open(path, 'wb') as icon:
-            with DC.create_compatible(NULL) as dc:
-                # write icon header and retrieve icon info
-                icon.write(b'\x00\x00\x01\x00\x01\x00')
-                info = self.icon_info
-                
-                # get color and mask of icon
-                color = info.color.exchange_owner()
-                mask = info.mask.exchange_owner()
-                
-                # retrieve the input color bitmap info
-                bm_info = BitmapInfo(0, 0, -1)
-                dc.get_di_bits(color, NULL, bm_info)
-                
-                # calculate out bitmap info size
-                out_bm_info_size = BitmapInfo.size()
-                if bpp < 24: out_bm_info_size += RGBQUAD.size() * (1 << bpp)
-                
-                # create instance of local allocator (malloc)
-                allocator = CLocalAllocator()
-                
-                # allocate and fill the bitmap info
-                out_bm_info = BitmapInfo.allocate(out_bm_info_size, allocator)
-                allocator.copy(out_bm_info.ref(), bm_info.ref(), BitmapInfo.size())
-                out_bm_info.bpp = bpp
-                
-                # allocate and retrieve bitmap bits
-                out_bm_bits = allocator.allocate(bm_info.image_size)
-                dc.get_di_bits(color, out_bm_bits, out_bm_info, lines=bm_info.height)
-                
-                # get mask data
-                mask_info = BitmapInfo(0, 0, -1)
-                dc.get_di_bits(mask, NULL, mask_info)
-                
-                # allocate and fill the mask bitmap info
-                out_mask_info = BitmapInfo.allocate(
-                    BitmapInfo.size() + 2 * RGBQUAD.size(), allocator)
-                allocator.copy(out_mask_info.ref(), mask_info.ref(), mask_info.size())
-                
-                # allocate and retrieve mask bits
-                out_mask_bits = allocator.allocate(mask_info.image_size)
-                dc.get_di_bits(mask, out_mask_bits, out_mask_info, lines=mask_info.height)
-                
-                # create and fill the icon directory
-                d = ICONDIRENTRY()
-                d.nWidth = bm_info.width
-                d.nHeight = bm_info.height
-                d.nNumColorsInPalette = 16 if bpp == 4 else 0
-                d.nBitsPerPixel = bm_info.bpp
-                d.nDataLength = bm_info.image_size + mask_info.image_size + out_bm_info_size
-                d.nOffset = d.size() + 6
-                
-                # create Memory I/O for bitmap info and write to icon
-                out_bm_info_io = MemoryIO(out_bm_info.ref(), out_bm_info_size)
-                icon.write(out_bm_info_io.read())
-                
-                # create Memory I/O for icon directory and write to icon
-                icondir_io = MemoryIO(d.ref(), d.size())
-                icon.write(icondir_io.read())
-                
-                # preserve image size for writing, we are modifying field value
-                out_bm_size = out_bm_info.image_size
-                # write DIB header (including color table):
-                out_bm_info.height *= 2 # because the header is for both bm and mask
-                out_bm_info.image_size += mask_info.image_size
-                
-                # write bitmap info I/O again, but with modified values
-                icon.write(out_bm_info_io.read())
-                
-                # create Memory I/O for color bitmap bits and write to icon
-                bm_bits_io = MemoryIO(out_bm_bits, out_bm_size)
-                icon.write(bm_bits_io.read())
-                
-                # create Memory I/O for mask bitmap bits and write to icon
-                mask_bits_io = MemoryIO(out_mask_bits, mask_info.image_size)
-                icon.write(mask_bits_io.read())
-    
 class CursorMeta(Icon.__class__):
     @property
     def position(cls) -> tuple[int, int]:
@@ -1729,6 +1657,7 @@ class Bitmap(GDIObjectHandle):
     """
     Class, representing the GDI Bitmap object.
     """
+    object: BITMAP
     
     @classmethod
     def create(cls, width: int, height: int, planes: int = 1, bit_count: int = 32, bits = NULL) -> Self:

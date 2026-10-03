@@ -95,7 +95,7 @@ class TaskDialog(Window):
         self.config.nDefaultRadioButton = default_radio_button
         
         if not radio_buttons:
-            self.config.pRadioButtons = None
+            self.pRadioButtons = None
         else:
             self.pRadioButtons = (TASKDIALOG_BUTTON*len(radio_buttons))(*radio_buttons)
             self.config.cRadioButtons = len(radio_buttons)

@@ -32,8 +32,12 @@ def OpenHKCR(SubKey: str, access = winreg.KEY_WRITE, create: bool = True) -> win
 class FacadeFactory:
     def Facade(self, ScriptPath: str, FacadeTemplate: str | None = None) -> str:
         if not os.path.isfile(ScriptPath): return None
+        if sizeof(PVOID) == 8:
+            suffix = '-x64'
+        else:
+            suffix = '-x86'
         if FacadeTemplate is None:
-            Facade = os.path.join(os.path.dirname(__file__), 'data\\FacadeDLL.dll')
+            Facade = os.path.join(os.path.dirname(__file__), f'data\\FacadeDLL-{suffix}.dll')
             
         ScriptNameW = os.path.splitext(os.path.basename(ScriptPath))[0]
         ScriptName = ScriptNameW.encode('ascii')

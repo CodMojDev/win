@@ -1004,7 +1004,6 @@ class Window(Abs.Object, HWND):
         self.on_key_up = MultiEvent()
         self.on_move = MultiEvent()
         self.on_show = MultiEvent()
-        self.on_style_changed = MultiEvent()
         self.on_theme_changed = MultiEvent()
         self.on_user_changed = MultiEvent()
         self.on_unknown_message = MultiEvent()
@@ -3131,7 +3130,7 @@ class ThreadLoopUnit:
         del self.RUNNING_LOOPS[self.thread_id]
         self.on_destroy.execute() # execute the application.on_destroy because application event loop was destroyed
 
-    def on_dispatch_message(self) -> bool:
+    def on_dispatch_message(self, msg: MSG, pMsg: IPointer[MSG]) -> bool:
         """
         The dispatch event callback.
         Return `False` if message should not be processed, otherwise `True`.

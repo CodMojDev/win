@@ -1,7 +1,5 @@
 from typing import Callable, Any
 
-import random
-
 class Priority:
     _PrivateMinPriority = 0xfafafa_abcdef_fafafa
     _PrivateMaxPriority = -0xbababa_abcabc_bababa
@@ -14,6 +12,10 @@ class Priority:
     Max = 0
 
 class EventCallback:
+    """
+    Event callback with priority support.
+    """
+    
     def __init__(self, callback: Callable, priority: int = Priority.Min):
         self._unique_id = hash(callback.__code__.co_code)
         self._callback = callback
@@ -23,9 +25,16 @@ class EventCallback:
         return self._unique_id == callback._unique_id and self._callback.__name__ == callback._callback.__name__
         
     def execute(self, *args, **kwargs) -> Any:
+        """
+        Execute the callback.
+        """
         return self._callback(*args, **kwargs)
 
 class MultiEvent:
+    """
+    Event with multiple callback subscribers.
+    """
+    
     _callbacks: list[EventCallback]
     _blocked: bool
     
@@ -51,23 +60,42 @@ class MultiEvent:
         return self
     
     def empty(self) -> bool:
+        """
+        Check event is empty.
+        """
         return not self._callbacks or self._blocked
     
     def execute(self, *args, **kwargs) -> tuple[Any, ...]:
+        """
+        Execute the event.
+        """
         if self._blocked:
             return ()
         return tuple(callback.execute(*args, **kwargs) for callback in self._callbacks)
     
     def block(self):
+        """
+        Temporarily prevent the event callback subscribers from execution.
+        """
         self._blocked = True
         
     def unblock(self):
+        """
+        Unblock the event.
+        """
         self._blocked = False
         
     def clear(self):
+        """
+        Clear the event.
+        """
         self._callbacks.clear()
         
 class SingleEvent:
+    """
+    Event with single callback subscriber.
+    """
+    
     _callback: Callable
     _blocked: bool
     
@@ -76,21 +104,39 @@ class SingleEvent:
         self._blocked = False
     
     def set(self, callback: Callable):
+        """
+        Set the callback of a single event.
+        """
         self._callback = callback
         
     def execute(self, *args, **kwargs) -> Any:
+        """
+        Execute the event.
+        """
         if self._blocked or self._callback is None:
             return None
         return self._callback(*args, **kwargs)
     
     def block(self):
+        """
+        Temporarily prevent the event callback subscribers from execution.
+        """
         self._blocked = True
         
     def unblock(self):
+        """
+        Unblock the event.
+        """
         self._blocked = False
         
     def clear(self):
+        """
+        Clear the event.
+        """
         self._callback = None
         
     def empty(self) -> bool:
+        """
+        Check event is empty.
+        """
         return self._callback is None

@@ -775,7 +775,7 @@ def unraisablehook_remove(entry: type[IUnraisableHook]):
     """
     _defb_state._unraisablehook_entries.remove(entry)
     
-from ctypes import Structure, byref, POINTER as _POINTER, pointer, c_int, c_void_p
+from ctypes import Structure, byref, POINTER as _POINTER, pointer, c_int, c_void_p, c_size_t
 from _ctypes import CFuncPtr
         
 from typing import Tuple, Mapping
@@ -1921,6 +1921,9 @@ if isinstance(ucrtbased, NullLibrary):
     ucrtbased = get_win_library('msvcr80d.dll')
 msvcrt = get_win_library('msvcrt.dll')
 
+@msvcrt.foreign(c_int, c_void_p, c_void_p, c_size_t)
+def memcmp(s1, s2, n) -> int: ...
+
 suppress_WinWarning()
 
 class AssertTool:
@@ -2375,7 +2378,10 @@ class CStructure(Structure):
         return self.__class__.from_address(allocated)
     
     def __eq__(self, other: 'CStructure') -> bool:
-        return hash(self) == hash(other)
+        a = sizeof(self)
+        if a != sizeof(other):
+            return False
+        return memcmp(addressof(self), addressof(other), a)
 
 def resolve_genericalias(generic_alias: IGenericAlias) -> type:
     """
@@ -3456,6 +3462,7 @@ def _diagnostic(mod_path = '.'):
         raise LookupError('The module is not win module.')
     modules = [mod for mod in files if os.path.splitext(mod)[-1] == '.py']
     for module in modules:
+        if module == 'setup.py': continue
         try:
             imp.import_module('.' + os.path.splitext(module)[0], __package__)
         except Exception:

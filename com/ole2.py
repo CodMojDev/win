@@ -57,6 +57,9 @@ def CreateOleAdviseHolder(ppAdviseHolder: IDoublePtr[IOleAdviseHolder]) -> int: 
 @ole32.foreign(HRESULT, LPDATAOBJECT)
 def OleSetClipboard(pDataObject: IPointer[IDataObject]) -> int: ...
 
+@ole32.foreign(HRESULT, PVOID)
+def OleGetClipboard(ppDataObj: IDoublePtr[IDataObject]) -> int: ...
+
 @ole32.foreign(HRESULT, HWND, LPDROPTARGET)
 def RegisterDragDrop(hwnd: int, pDropTarget: IPointer[IDropTarget]) -> int: ...
 

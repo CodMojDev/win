@@ -120,7 +120,7 @@ if cpreproc.pragma_once("_INC_MMSYSCOM"):
     MAKEFOURCC = lambda ch0, ch1, ch2, ch3: \
         (DWORD(BYTE(ch0).value).value | \
         (DWORD(BYTE(ch1).value).value) << 8) | \
-        (DWORD(BYTE(ch3).value).value << 16) | (DWORD(BYTE(ch4).value).value << 24)
+        (DWORD(BYTE(ch2).value).value << 16) | (DWORD(BYTE(ch3).value).value << 24)
     
     """
     ***************************************************************************
@@ -210,14 +210,14 @@ if cpreproc.pragma_once("_INC_MMSYSCOM"):
     MMSYSERR_INVALHANDLE = (MMSYSERR_BASE + 5) # device handle is invalid
     MMSYSERR_NODRIVER = (MMSYSERR_BASE + 6) # no device driver present
     MMSYSERR_NOMEM = (MMSYSERR_BASE + 7) # memory allocation error
-    MMSYSERR_NOTSUPPORTED = (MMSYSERR_BASE = + 8) # function isn't supported
+    MMSYSERR_NOTSUPPORTED = (MMSYSERR_BASE + 8) # function isn't supported
     MMSYSERR_BADERRNUM = (MMSYSERR_BASE + 9) # error value out of range
     MMSYSERR_INVALFLAG = (MMSYSERR_BASE + 10) # invalid flag passed
     MMSYSERR_INVALPARAM = (MMSYSERR_BASE + 11) # invalid parameter passed
     MMSYSERR_HANDLEBUSY = (MMSYSERR_BASE + 12) # handle being used
     # simultaneously on another
     # thread(eg callback)
-    MMSYSERR_INVALIDALIAS = (MMSYSERR_BASE = + 13) # specified alias not found
+    MMSYSERR_INVALIDALIAS = (MMSYSERR_BASE + 13) # specified alias not found
     MMSYSERR_BADDB = (MMSYSERR_BASE + 14) # bad registry database
     MMSYSERR_KEYNOTFOUND = (MMSYSERR_BASE + 15) # registry key not found
     MMSYSERR_READERROR = (MMSYSERR_BASE + 16) # registry read error

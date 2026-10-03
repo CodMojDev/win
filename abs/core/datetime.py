@@ -16,22 +16,41 @@ class DateTime:
     _tz: TIME_ZONE_INFORMATION
     _utc: SYSTEMTIME
     
-    def __init__(self, st: SYSTEMTIME = None, ft: FILETIME = None,
-                 lcid: int = LOCALE_USER_DEFAULT):
-        self._tz = TIME_ZONE_INFORMATION()
-        GetTimeZoneInformation(self._tz.ref())
-        self._utc = SYSTEMTIME()
-        if st is None and ft is not None:
+    def __init__(self, st: SYSTEMTIME | None = None, ft: FILETIME | None = None,
+                 lcid: int = LOCALE_USER_DEFAULT, timezone: TIME_ZONE_INFORMATION | None = None,
+                 utc: SYSTEMTIME | None = None):
+        if ((st is not None and ft is not None) or 
+            (st is not None and utc is not None) or 
+            (ft is not None and utc is not None)):
+            raise ValueError("Incompatible arguments given.")
+        if timezone is None:
+            timezone = TIME_ZONE_INFORMATION()
+            GetTimeZoneInformation(timezone.ref())
+        else:
+            timezone = timezone.copy()
+        self._tz = timezone
+        if utc is None:
+            self._utc = SYSTEMTIME()
+        else:
+            self._utc = utc.copy()
+        if ft is not None:
+            ft = ft.copy()
             st = SYSTEMTIME()
-            FileTimeToSystemTime(ft.ref(), st.ref())
-            SystemTimeToTzSpecificLocalTime(self._tz.ref(), st.ref(), st.ref())
-        elif st is not None and ft is None:
+            FileTimeToSystemTime(ft.ref(), self._utc.ref())
+            SystemTimeToTzSpecificLocalTime(self._tz.ref(), self._utc.ref(), st.ref())
+        elif st is not None:
             ft = FILETIME()
+            st = st.copy()
             TzSpecificLocalTimeToSystemTime(self._tz.ref(), st.ref(), self._utc.ref())
             SystemTimeToFileTime(self._utc.ref(), ft.ref())
-        else:
-            st = SYSTEMTIME()
+        elif utc is not None:
             ft = FILETIME()
+            st = SYSTEMTIME()
+            SystemTimeToFileTime(utc.ref(), ft.ref())
+            SystemTimeToTzSpecificLocalTime(self._tz.ref(), utc.ref(), st.ref())
+        else:
+            ft = FILETIME()
+            st = SYSTEMTIME()
         self._st = st
         self._ft = ft
         self.lcid = lcid
@@ -271,7 +290,7 @@ class DateTime:
     
     @filetime.setter
     def filetime(self, filetime: FILETIME):
-        self._ft = filetime
+        self._ft = filetime.copy()
         self._synchronize(True)
     
     @property
@@ -280,7 +299,7 @@ class DateTime:
     
     @systemtime.setter
     def systemtime(self, systemtime: SYSTEMTIME):
-        self._st = systemtime
+        self._st = systemtime.copy()
         self._synchronize(False)
     
     @property
@@ -289,7 +308,7 @@ class DateTime:
     
     @utc.setter
     def utc(self, utc: SYSTEMTIME):
-        self._utc = utc
+        self._utc = utc.copy()
         SystemTimeToTzSpecificLocalTime(self._tz.ref(), utc.ref(), self._st.ref())
         self._synchronize(False)
         
@@ -300,7 +319,7 @@ class DateTime:
     @timezone.setter
     def timezone(self, timezone: TIME_ZONE_INFORMATION):
         tz = self._tz
-        self._tz = timezone
+        self._tz = timezone.copy()
         TzSpecificLocalTimeToSystemTime(tz.ref(), self._st.ref(), self._utc.ref())
         SystemTimeToTzSpecificLocalTime(timezone.ref(), self._utc.ref(), self._st.ref())
         self._synchronize(False)
@@ -365,3 +384,10 @@ class DateTime:
         else:
             memcpy(self._st.ref(), dt._st.ref(), SYSTEMTIME.size())
             memcpy(self._ft.ref(), dt._ft.ref(), FILETIME.size())
+            memcpy(self._utc.ref(), dt._utc.ref(), SYSTEMTIME.size())
+            if (dt._tz.StandardBias != self._tz.StandardBias or
+                dt._tz.DaylightBias != self._tz.DaylightBias or
+                dt._tz.Bias != self._tz.Bias):
+                timezone = self._tz
+                self._tz = dt._tz
+                self.timezone = timezone
