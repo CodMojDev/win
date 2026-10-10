@@ -23,9 +23,6 @@ from win.com.propdef import (PROPVARIANT, PROPERTYKEY,
 # imports from typing module
 from typing import Iterator
 
-# import from DefbCI
-from win import _defbase_ctypinit as _defb_ci
-
 # # # # # # # # # # # # # # # # # # # #
 # Win Abstractions Layer code Begins
 
@@ -680,6 +677,193 @@ GCLP_HICONSM = (-34)
 @user32.foreign(BOOL, HWND, LONG, LONG, PMENUBARINFO)
 def GetMenuBarInfo(hwnd: int, idObject: int, idItem: int, pmbi: IPointer[MENUBARINFO]) -> int: ...
 
+class DrawItemStruct(DRAWITEMSTRUCT):
+    @property
+    def type(self) -> int:
+        return self.CtlType
+    
+    @type.setter
+    def type(self, type: int):
+        self.CtlType = type
+    
+    @property
+    def identifier(self) -> int:
+        return self.CtlID
+    
+    @identifier.setter
+    def identifier(self, identifier: int):
+        self.CtlID = identifier
+    
+    @property
+    def item_id(self) -> int:
+        return self.itemID
+    
+    @item_id.setter
+    def item_id(self, item_id: int):
+        self.itemID = item_id
+    
+    @property
+    def action(self) -> int:
+        return self.itemAction
+    
+    @action.setter
+    def action(self, action: int):
+        self.itemAction = action
+    
+    @property
+    def state(self) -> int:
+        return self.itemState
+    
+    @state.setter
+    def state(self, state: int):
+        self.itemState = state
+    
+    @property
+    def item(self) -> 'Window':
+        return Window.foreign(self.hwndItem)
+    
+    @item.setter
+    def item(self, item: int | HANDLE):
+        self.hwndItem = item
+    
+    @property
+    def dc(self) -> DC:
+        return DC.foreign_owner(self.hDC)
+    
+    @dc.setter
+    def dc(self, dc: int | HANDLE):
+        self.hDC = dc
+    
+    @property
+    def rect(self) -> Rect:
+        return i_cast_structure(self.rcItem, Rect)
+    
+    @rect.setter
+    def rect(self, rect: RECT):
+        self.rcItem = rect
+    
+    @property
+    def data(self) -> int:
+        return self.itemData
+    
+    @data.setter
+    def data(self, data: int):
+        self.itemData = data
+        
+class MeasureItemStruct(MEASUREITEMSTRUCT):
+    @property
+    def type(self) -> int:
+        return self.CtlType
+    
+    @type.setter
+    def type(self, type: int):
+        self.CtlType = type
+    
+    @property
+    def identifier(self) -> int:
+        return self.CtlID
+    
+    @identifier.setter
+    def identifier(self, identifier: int):
+        self.CtlID = identifier
+    
+    @property
+    def item_id(self) -> int:
+        return self.itemID
+    
+    @item_id.setter
+    def item_id(self, item_id: int):
+        self.itemID = item_id
+    
+    @property
+    def width(self) -> int:
+        return self.itemWidth
+    
+    @width.setter
+    def width(self, width: int):
+        self.itemWidth = width
+    
+    @property
+    def height(self) -> int:
+        return self.itemHeight
+    
+    @height.setter
+    def height(self, height: int):
+        self.itemHeight = height
+    
+    @property
+    def data(self) -> int:
+        return self.itemData
+    
+    @data.setter
+    def data(self, data: int):
+        self.itemData = data
+        
+class CompareItemStruct(COMPAREITEMSTRUCT):
+    @property
+    def type(self) -> int:
+        return self.CtlType
+    
+    @type.setter
+    def type(self, type: int):
+        self.CtlType = type
+    
+    @property
+    def identifier(self) -> int:
+        return self.CtlID
+    
+    @identifier.setter
+    def identifier(self, identifier: int):
+        self.CtlID = identifier
+    
+    @property
+    def item(self) -> 'Window':
+        return Window.foreign(self.hwndItem)
+    
+    @item.setter
+    def item(self, item: int | HANDLE):
+        self.hwndItem = item
+    
+    @property
+    def item_id1(self) -> int:
+        return self.itemID1
+    
+    @item_id1.setter
+    def item_id1(self, item_id1: int):
+        self.itemID1 = item_id1
+    
+    @property
+    def data1(self) -> int:
+        return self.itemData1
+    
+    @data1.setter
+    def data1(self, data1: int):
+        self.itemData1 = data1
+    
+    @property
+    def item_id2(self) -> int:
+        return self.itemID2
+    
+    @item_id2.setter
+    def item_id2(self, item_id2: int):
+        self.itemID2 = item_id2
+    
+    @property
+    def data2(self) -> int:
+        return self.itemData
+    
+    @data2.setter
+    def data2(self, data2: int):
+        self.itemData2 = data2
+    
+    @property
+    def lcid(self) -> int:
+        return self.dwLocaleId
+    
+    @lcid.setter
+    def lcid(self, lcid: int):
+        self.dwLocaleId = lcid
+
 # Window send message type enumeration
 WSMT_SEND = 0
 WSMT_POST = 1
@@ -968,9 +1152,13 @@ class Window(Abs.Object, HWND):
             window.value = hwnd
             Window.__init__(window, headless=True)
             Window._foreign_cache[hwnd] = window
+            window.foreign_init()
         return window
     
     def headless_init(self):
+        pass
+    
+    def foreign_init(self):
         pass
     
     def __init__(self, *args, **kwargs):
@@ -1559,7 +1747,7 @@ class Window(Abs.Object, HWND):
             return 0 # the message is handled, so return 0
         elif msg == WM_DRAWITEM: # draw the item (by style *_OWNERDRAW)
             if not self.on_draw_item.empty(): # if has draw item handlers
-                self.on_draw_item.execute(wParam, i_cast_value(lParam, DRAWITEMSTRUCT))
+                self.on_draw_item.execute(wParam, i_cast_value(lParam, DrawItemStruct))
                 return TRUE # WM_DRAWITEM handled
             return FALSE # not handled
         elif msg == WM_SETFOCUS: # the window got focus
@@ -1577,12 +1765,12 @@ class Window(Abs.Object, HWND):
                 return result
         elif msg == WM_MEASUREITEM: # measure the item
             if not self.on_measure_item.empty(): # if has measure item handlers
-                self.on_measure_item.execute(wParam, i_cast_value(lParam, MEASUREITEMSTRUCT))
+                self.on_measure_item.execute(wParam, i_cast_value(lParam, MeasureItemStruct))
                 return TRUE # WM_MEASUREITEM handled
             return FALSE # not handled
         elif msg == WM_COMPAREITEM:
             if not self.on_compare_item.empty(): # if has compare item handlers
-                self.on_compare_item.execute(wParam, i_cast_value(lParam, COMPAREITEMSTRUCT))
+                self.on_compare_item.execute(wParam, i_cast_value(lParam, CompareItemStruct))
                 return TRUE # WM_COMPAREITEM handled
             return FALSE # not handled
         elif msg == WM_CHAR: # the character is pressed
@@ -1597,6 +1785,7 @@ class Window(Abs.Object, HWND):
             return 0
         elif msg == WM_NCDESTROY: # window was completely destroyed
             self.on_nc_destroy.execute() # execute handlers
+            self.value = 0 # set the window handle to null
             return 0
         elif msg == WM_NCPAINT: # non-client area paint
             region = Region.foreign_owner(wParam) # create Region from wParam
@@ -3344,28 +3533,6 @@ class Control(Window):
     
     _id_last: ClassVar[int] = 0x7ff
     
-    def __init__(self, parent: int | HWND=None, identifier: int | HMENU=None, **kwargs):
-        super().__init__()
-        if 'headless' not in kwargs:
-            self._style = WS_CHILD | WS_VISIBLE
-            self._identifier = identifier
-            self._parent = parent
-            
-            self.on_click = MultiEvent()
-            self.on_right_click = MultiEvent()
-            self.on_double_click = MultiEvent()
-            self.on_right_double_click = MultiEvent()
-            self.on_return = MultiEvent()
-            self.on_nm_key_down = MultiEvent()
-            self.on_capture_released = MultiEvent()
-            self.on_nm_focus_changed = MultiEvent()
-            self.on_nm_focus_lost = MultiEvent()
-        
-            # if parent is window and Abs-managed object, then subscribe on events
-            if isinstance(parent, Window) and Abs.managed(parent):
-                parent.on_command += self.parent_window_on_command
-                parent.on_notify += self.parent_window_on_notify
-     
     _identifier: int | HMENU
     _parent: int | HWND
     
@@ -3378,6 +3545,38 @@ class Control(Window):
     on_capture_released: MultiEvent
     on_nm_focus_changed: MultiEvent
     on_nm_focus_lost: MultiEvent
+    
+    def __init__(self, parent: int | HWND=None, identifier: int | HMENU=None, **kwargs):
+        super().__init__()
+        self._style = WS_CHILD | WS_VISIBLE
+        self._identifier = identifier
+        self._parent = parent
+    
+        # bind the control to parent
+        self.bind(parent)
+    
+    def headless_init(self):
+        self.on_click = MultiEvent()
+        self.on_right_click = MultiEvent()
+        self.on_double_click = MultiEvent()
+        self.on_right_double_click = MultiEvent()
+        self.on_return = MultiEvent()
+        self.on_nm_key_down = MultiEvent()
+        self.on_capture_released = MultiEvent()
+        self.on_nm_focus_changed = MultiEvent()
+        self.on_nm_focus_lost = MultiEvent()
+    
+    def bind(self, parent: int | HANDLE) -> Window | None:
+        """
+        Bind the control to the WinAbs-managed parent. 
+        Returns given argument if it is Window object and Abs-managed or None otherwise.
+        """
+        # if parent is window and Abs-managed object, then subscribe on events
+        if isinstance(parent, Window) and Abs.managed(parent):
+            parent.on_command += self.parent_window_on_command
+            parent.on_notify += self.parent_window_on_notify
+            return parent
+        return None
     
     @staticmethod
     def id() -> int:

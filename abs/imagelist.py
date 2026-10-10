@@ -51,3 +51,22 @@ class ImageList(Handle):
         if isinstance(value, Bitmap):
             value = Icon.from_bitmap(value)
         ImageList_ReplaceIcon(self, index, value)
+    
+    @classmethod
+    def load(cls, file: str, width: int, grow: int = 0, mask: int | Color.IColor = 0, type: int = IMAGE_BITMAP, flags: int = LR_LOADFROMFILE, handle: int | HINSTANCE = NULL) -> Self:
+        """
+        Load the image list from file.
+        """
+        lpbmp = create_unicode_buffer(file)
+        result = ImageList_LoadImageW(handle, lpbmp, width, grow, mask, type, flags)
+        if not result:
+            raise WinException()
+        return ImageList(result)
+    
+    def draw(self, dc: int | HANDLE, index: int, x: int, y: int, width: int = 0, height: int = 0,
+             background: int | Color.IColor = CLR_NONE, fore: int | Color.IColor = CLR_NONE, style: int = ILD_NORMAL):
+        """
+        Draw the image from image list.
+        """
+        if not ImageList_DrawEx(self, index, dc, x, y, width, height, int(background), int(fore), style):
+            raise WinException()

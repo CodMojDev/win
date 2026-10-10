@@ -8,7 +8,7 @@
 *                                                                             *
 * Copyright (c) Microsoft Corporation. All rights reserved.                   *
 *                                                                             *
-\*****************************************************************************/
+******************************************************************************/
 """
 
 from . import cpreproc
@@ -586,12 +586,9 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
             HIMAGELIST_QueryInterface = declare(comctl32.HIMAGELIST_QueryInterface, HRESULT, HIMAGELIST, REFIID, PVOID)
     #====== HEADER CONTROL =======================================================
     if cpreproc.ifndef("NOHEADER"):
-        if cpreproc.ifdef("_WIN32"):
-            WC_HEADERA = "SysHeader32"
-            WC_HEADERW = u"SysHeader32"
-            WC_HEADER = unicode(WC_HEADERW, WC_HEADERA)
-        else:
-            WC_HEADER = "SysHeader"
+        WC_HEADERA = "SysHeader32"
+        WC_HEADERW = u"SysHeader32"
+        WC_HEADER = unicode(WC_HEADERW, WC_HEADERA)
     # begin_r_commctrl
     HDS_HORZ = 0x0000
     HDS_BUTTONS = 0x0002
@@ -4818,7 +4815,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
                     ('iRetImageIndex', INT)
                 ]
                 hdr: NMHDR
-                pimldp: IPointer[IMAGELISTDRAWPARAMS]
+                pimldp: IPointer[_IMAGELISTDRAWPARAMS]
                 hr: int
                 hItem: int
                 lParam: int
@@ -6397,7 +6394,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         def FlatSB_ShowScrollBar(hWndParent: int, code: int, fShow: int) -> int: ...
         
         @comctl32.foreign(BOOL, HWND, INT, LPINT, LPINT)
-        def FlatSB_GetScrollRange(hWndParent: int, code: int, piMin: LPINT, piMax: LPINT) -> int: ...
+        def FlatSB_GetScrollRange(hWndParent: int, code: int, piMin: IPointer[INT], piMax: IPointer[INT]) -> int: ...
         
         @comctl32.foreign(BOOL, HWND, INT, LPSCROLLINFO)
         def FlatSB_GetScrollInfo(hWndParent: int, code: int, pScrollInfo: IPointer[SCROLLINFO]) -> int: ...
@@ -6406,7 +6403,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         def FlatSB_GetScrollPos(hWndParent: int, code: int) -> int: ...
         
         @comctl32.foreign(BOOL, HWND, INT, LPINT)
-        def FlatSB_GetScrollProp(hWndParent: int, propIndex: int, piData: LPINT) -> int: ...
+        def FlatSB_GetScrollProp(hWndParent: int, propIndex: int, piData: IPointer[INT]) -> int: ...
         
         if cpreproc.ifdef('_WIN64'):
             @comctl32.foreign(BOOL, HWND, INT, PINT_PTR)

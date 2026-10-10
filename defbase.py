@@ -192,7 +192,8 @@ __all__ = [
     "add_policy_flag", "remove_policy_flag",
     "DEFB_POLICY_RAISEONNULLCALL",
     "DEFB_POLICY_RAISEONNULLLIBRARY",
-    "NullLibrary"
+    "NullLibrary",
+    "i_cast_structure_reowner"
 ]
 
 # # # # # # # # # # # # # # # # # # #
@@ -2999,6 +3000,18 @@ def i_cast_value(obj, typ: Type[WT]) -> WT:
     Cast the given castable value into another type.
     """
     return i_cast(obj, PTR(typ)).contents
+
+def i_cast_structure_reowner(obj: CStructure, typ: Type[WT]) -> WT:
+    """
+    Cast the given structure to another structure and save the old object owner over newly casted structure.
+    """
+    casted = i_cast(pointer(obj), PTR(typ)).contents
+    if obj._b_needsfree_:
+        casted._b_needsfree_ = 1
+        obj._b_needsfree_ = 0
+        casted._objects = obj._objects
+        obj._objects = None
+    return casted
 
 if TYPE_CHECKING:
     def i_cast(obj: Any, typ: Type[IPointer[WT]]) -> IPointer[WT]:

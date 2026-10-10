@@ -16,7 +16,6 @@ class FindReplaceDialog(Window):
     lpstrReplaceWith: IWideCharArray
     on_action: MultiEvent
     
-    
     def __init__(self, owner: int | HANDLE, find_what: str | None = None,
                  replace_with: str | None = None, 
                  extra_flags: int = 0, 

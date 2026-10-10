@@ -1,5 +1,6 @@
 from .imagelist import *
 from .window import *
+from .listhdr import *
 
 class ListView(Control):
     """
@@ -254,13 +255,35 @@ class ListView(Control):
         def first(self) -> 'ListView.Items.Item':
             return ListView.Items.Item(self.list_view, -1)
     
+    class ListStyles(BitGroup):
+        lv: 'Listiew'
+        
+        def __init__(self, lv: 'ListView'):
+            self.lv = lv
+        
+        @property
+        def value(self) -> int:
+            return self.lv.send(LVM_GETEXTENDEDLISTVIEWSTYLE)
+        
+        @value.setter
+        def value(self, value: int):
+            self.lv.send(LVM_SETEXTENDEDLISTVIEWSTYLE, 0, value)
+    
+    columns: Columns
+    items: Items
+    list_styles: ListStyles
+    
     def __init__(self, width: int, height: int, parent: int | HWND, identifier: int | HWND):
         super().__init__(parent, identifier)
         self._width = width
         self._height = height
         self.class_name = WC_LISTVIEWW
+    
+    def headless_init(self):
+        super().headless_init()
         self.columns = ListView.Columns(self)
         self.items = ListView.Items(self)
+        self.list_styles = ListView.ListStyles(self)
     
     def create(self, x: int, y: int, relative: int | HANDLE = NULL):
         """
@@ -365,3 +388,7 @@ class ListView(Control):
         i = self.send(LVM_HITTEST, 0, lvhti.ref())
         if i == -1: return (lvhti.flags, None)
         return (lvhti.flags, self.items.Item(self, i))
+    
+    @property
+    def header(self) -> ListHeader | None:
+        return ListHeader.foreign(self.send(LVM_GETHEADER))

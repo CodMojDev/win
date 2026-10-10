@@ -248,6 +248,9 @@ class ListBox(Control):
         super().__init__(parent, identifier)
         self._width = width
         self._height = height
+    
+    def headless_init(self):
+        super().headless_init()
         self.selection = self.Selection(self)
         self.items = self.Items(self)
         self.on_err_space = MultiEvent()

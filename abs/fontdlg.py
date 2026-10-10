@@ -107,8 +107,8 @@ class FontDialog(Window):
         return self.choose_font.nFontType
     
     @property
-    def font(self) -> LOGFONTW:
-        return self.choose_font.lpLogFont.contents
+    def font(self) -> Logfont:
+        return i_cast_structure(self.choose_font.lpLogFont.contents, Logfont)
     
     @property
     def color(self) -> Color.BGR:

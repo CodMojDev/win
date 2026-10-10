@@ -8,6 +8,9 @@ class UpDown(Control):
         self._width = width
         self._height = height
         self.class_name = UPDOWN_CLASSW
+        
+    def headless_init(self):
+        super().headless_init()
         self.on_number_changed = MultiEvent()
         
     def create(self, x: int = 0, y: int = 0, relative: int | HWND = NULL):

@@ -1090,8 +1090,8 @@ if cpreproc.pragma_once("_INC_SHELLAPI"):
         guidItem: GUID
     PNOTIFYICONIDENTIFIER = POINTER(NOTIFYICONIDENTIFIER)
 
-    Shell_NotifyIconA = declare(shell32.Shell_NotifyIconA, VOID, DWORD, PNOTIFYICONDATAA)
-    Shell_NotifyIconW = declare(shell32.Shell_NotifyIconW, VOID, DWORD, PNOTIFYICONDATAW)
+    Shell_NotifyIconA = declare(shell32.Shell_NotifyIconA, BOOL, DWORD, PNOTIFYICONDATAA)
+    Shell_NotifyIconW = declare(shell32.Shell_NotifyIconW, BOOL, DWORD, PNOTIFYICONDATAW)
     Shell_NotifyIcon = unicode(Shell_NotifyIconW, Shell_NotifyIconA)
 
     if cpreproc.getdef("_WINVER") >= WIN32_WINNT_WIN7:

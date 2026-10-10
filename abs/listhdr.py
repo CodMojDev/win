@@ -1,6 +1,72 @@
 from .window import *
 from .imagelist import *
 
+class HeaderItemInfo(HDITEMW):
+    @property
+    def width(self) -> int:
+        return self.cx
+    
+    @width.setter
+    def width(self, width: int):
+        self.cx = width
+        self.mask |= HDI_WIDTH
+    
+    @property
+    def text(self) -> int:
+        return self.pszText.value
+    
+    @text.setter
+    def text(self, text: str):
+        self._buffer_cache = create_unicode_buffer(text)
+        self.pszText = i_cast(self._buffer_cache, LPWSTR)
+        self.cchTextMax = len(text)
+        self.mask |= HDI_TEXT
+    
+    @property
+    def bitmap(self) -> Bitmap | None:
+        return Bitmap.foreign_owner(self.hbm)
+    
+    @bitmap.setter
+    def bitmap(self, bitmap: int | HANDLE):
+        self.hbm = bitmap
+        self.mask |= HDI_BITMAP
+    
+    @property
+    def image(self) -> int:
+        return self.iImage
+    
+    @image.setter
+    def image(self, image: int):
+        self.iImage = image
+        self.mask |= HDI_IMAGE
+    
+    @property
+    def order(self) -> int:
+        return self.iOrder
+    
+    @order.setter
+    def order(self, order: int):
+        self.iOrder = order
+        self.mask |= HDI_ORDER
+    
+    @property
+    def format(self) -> int:
+        return self.fmt
+    
+    @format.setter
+    def format(self, format: int):
+        self.fmt = format
+        self.mask |= HDI_FORMAT
+    
+    @property
+    def parameter(self) -> int:
+        return self.lParam
+    
+    @parameter.setter
+    def parameter(self, parameter: int):
+        self.lParam = parameter
+        self.mask |= HDI_LPARAM
+
 class ListHeader(Control):
     class Item:
         """
@@ -41,28 +107,6 @@ class ListHeader(Control):
             """
             return ImageList.foreign_owner(self.hdr.send(HDM_CREATEDRAGIMAGE, self.index))
     
-    class Items:
-        hdr: 'ListHeader'
-        
-        def __init__(self, hdr: 'ListHeader'):
-            self.hdr = hdr
-            
-        def count(self) -> int:
-            """
-            Get the count of items in list header.
-            """
-            return self.hdr.send(HDM_GETITEMCOUNT)
-    
-        @property
-        def focused(self) -> 'ListHeader.Item':
-            return ListHeader.Item(self.hdr, self.hdr.send(HDM_GETFOCUSEDITEM))
-    
-        def from_order(self, order: int) -> 'ListHeader.Item':
-            """
-            Get the list header item by its order.
-            """
-            return ListHeader.Item(self.hdr, self.hdr.send(HDM_ORDERTOINDEX, order))
-    
         def get(self, mask: int | None = None) -> HDITEMW:
             """
             Get the information about list header item.
@@ -86,18 +130,43 @@ class ListHeader(Control):
                     delattr(hdi, '_buffer_cache')
             return hdi
     
-        def set(self, item: HDITEMW, mask: int | None = None) -> HDITEMW:
+        def set(self, item: HDITEMW, mask: int | None = None):
             """
             Get the information about list header item.
             """
             if mask is None:
-                mask = (HDI_BITMAP | HDI_FILTER | HDI_DI_SETITEM |
-                        HDI_LPARAM | HDI_HEIGHT | HDI_WIDTH |
-                        HDI_STATE | HDI_ORDER | HDI_FORMAT |
-                        HDI_IMAGE | HDI_TEXT)
+                if not item.mask:
+                    mask = (HDI_BITMAP | HDI_FILTER | HDI_DI_SETITEM |
+                            HDI_LPARAM | HDI_HEIGHT | HDI_WIDTH |
+                            HDI_STATE | HDI_ORDER | HDI_FORMAT |
+                            HDI_IMAGE | HDI_TEXT)
+                else:
+                    mask = item.mask
             item.mask = mask
             if not self.hdr.send(HDM_SETITEM, self.index, item.ref()):
                 raise WinException()
+    
+    class Items:
+        hdr: 'ListHeader'
+        
+        def __init__(self, hdr: 'ListHeader'):
+            self.hdr = hdr
+            
+        def count(self) -> int:
+            """
+            Get the count of items in list header.
+            """
+            return self.hdr.send(HDM_GETITEMCOUNT)
+    
+        @property
+        def focused(self) -> 'ListHeader.Item':
+            return ListHeader.Item(self.hdr, self.hdr.send(HDM_GETFOCUSEDITEM))
+    
+        def from_order(self, order: int) -> 'ListHeader.Item':
+            """
+            Get the list header item by its order.
+            """
+            return ListHeader.Item(self.hdr, self.hdr.send(HDM_ORDERTOINDEX, order))
     
         def insert(self, item: HDITEMW, index: int = -1) -> 'ListHeader.Item':
             """
@@ -132,17 +201,19 @@ class ListHeader(Control):
             """
             Set the change timeout of list header filter.
             """
-            self.hdrsend(HDM_SETFILTERCHANGETIMEOUT, 0, change_timeout)
+            self.hdr.send(HDM_SETFILTERCHANGETIMEOUT, 0, change_timeout)
     
     items: Items
     filter: Filter
     
     def __init__(self):
         super().__init__()
+        self.class_name = WC_HEADERW
     
     def headless_init(self):
-        self.items = self.Items()
-        self.filter = self.Filter()
+        super().headless_init()
+        self.items = self.Items(self)
+        self.filter = self.Filter(self)
         
     def hit(self, x: int, y: int) -> tuple[int, Item | None]:
         """
@@ -166,7 +237,7 @@ class ListHeader(Control):
     def state_image_list(self) -> ImageList:
         return ImageList.foreign_owner(self.send(HDM_GETIMAGELIST, HDSIL_STATE))
     
-    @image_list.setter
+    @state_image_list.setter
     def state_image_list(self, state_image_list: int | HANDLE):
         self.send(HDM_SETIMAGELIST, HDSIL_STATE, state_image_list)
         

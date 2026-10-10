@@ -21,21 +21,23 @@ class Edit(Control):
     def __init__(self, width: int=None, height: int=None, parent: int | HWND=None, 
                  identifier: int | HMENU=None, text: str = '', readonly: bool = False, **kwargs):
         super().__init__(parent, identifier)
-        if 'headless' not in kwargs:
-            self.class_name = 'EDIT'
-            if readonly:
-                self._style |= ES_READONLY
-            self._text = text
-            self._width = width
-            self._height = height
-            self.on_changed = MultiEvent()
-            self.on_update = MultiEvent()
-            self.on_edit_vscroll = MultiEvent()
-            self.on_edit_hscroll = MultiEvent()
-            self.on_realigned_to_rtl = MultiEvent()
-            self.on_realigned_to_ltr = MultiEvent()
-            self.on_out_of_memory = MultiEvent()
-            self.on_limit_reached = MultiEvent()
+        self.class_name = 'EDIT'
+        self._text = text
+        self._width = width
+        self._height = height
+        if readonly:
+            self.styles.add(ES_READONLY)
+    
+    def headless_init(self):
+        super().headless_init()
+        self.on_changed = MultiEvent()
+        self.on_update = MultiEvent()
+        self.on_edit_vscroll = MultiEvent()
+        self.on_edit_hscroll = MultiEvent()
+        self.on_realigned_to_rtl = MultiEvent()
+        self.on_realigned_to_ltr = MultiEvent()
+        self.on_out_of_memory = MultiEvent()
+        self.on_limit_reached = MultiEvent()
             
     @property
     def selection(self) -> tuple[int, int]:

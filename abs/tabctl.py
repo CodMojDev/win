@@ -91,6 +91,9 @@ class TabControl(Control):
         self.class_name = WC_TABCONTROLW
         self._width = width
         self._height = height
+        
+    def headless_init(self):
+        super().headless_init()
         self.on_selection_changing = MultiEvent()
         self.on_selection_changed = MultiEvent()
         self.on_get_object = MultiEvent()

@@ -45,8 +45,11 @@ class ProgressBar(Control):
         super().__init__(parent, identifier)
         self._width = width
         self._height = height
-        self.progress = ProgressBar.Progress(self)
         self.class_name = PROGRESS_CLASSW
+    
+    def headless_init(self):
+        super().headless_init()
+        self.progress = ProgressBar.Progress(self)
         
     def create(self, x: int, y: int, relative: int | HWND=NULL):
         """

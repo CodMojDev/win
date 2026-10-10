@@ -94,6 +94,9 @@ class Slider(Control):
         self._width = width
         self._height = height
         self.class_name = TRACKBAR_CLASSW
+    
+    def headless_init(self):
+        super().headless_init()
         self.selection = Slider.Selection(self)
         self.tick_marks = Slider.TickMarks(self)
         self.progress = Slider.Progress(self)

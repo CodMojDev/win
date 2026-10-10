@@ -131,7 +131,7 @@ class Color:
         def __and__(self, value):
             return self.__class__(self.value & value)
         
-        def __inv__(self):
+        def __invert__(self):
             return self.__class__(~self.value)
         
         def __neg__(self):

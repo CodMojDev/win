@@ -191,17 +191,19 @@ class PropertyGridItemCombobox(PropertyGridItem):
             for variant in self.variants:
                 self.combobox.append(variant)
             self.combobox.current = self.default
+            self.combobox.item_height = rect.height
             self.combobox.hide()
         else:
             self.combobox.position = (rect.x + 4, rect.y)
             self.combobox.size = (rect.width - 4, rect.height)
+            self.combobox.item_height = rect.height
     
     def paint(self, dc: DC):
         rect = Rect.create(0 + 4, 0, self.rect.width - 4, self.rect.height)
         self.current = self.combobox.current
         font = self.view.logical_bold_name_font
         with dc.select_ex(font):
-            dc.draw_text(self.combobox.text(self.current), rect, DT_SINGLELINE | DT_LEFT)
+            dc.draw_text(self.combobox[self.current].text, rect, DT_SINGLELINE | DT_LEFT)
     
     def enter(self):
         self.combobox.show()

@@ -33,9 +33,9 @@ class FacadeFactory:
     def Facade(self, ScriptPath: str, FacadeTemplate: str | None = None) -> str:
         if not os.path.isfile(ScriptPath): return None
         if sizeof(PVOID) == 8:
-            suffix = '-x64'
+            suffix = 'x64'
         else:
-            suffix = '-x86'
+            suffix = 'x86'
         if FacadeTemplate is None:
             Facade = os.path.join(os.path.dirname(__file__), f'data\\FacadeDLL-{suffix}.dll')
             
@@ -98,5 +98,5 @@ class FacadeFactory:
         ClsidPath = f'CLSID\\{Clsid}'
         winregx.DeleteTree(winreg.HKEY_CLASSES_ROOT, ClsidPath)
                 
-    def UnregisterInterface(self, onterface: COMInterface):
+    def UnregisterInterface(self, interface: COMInterface):
         winregx.DeleteTree(winreg.HKEY_CLASSES_ROOT, f'Interface\\{interface.iid()}')

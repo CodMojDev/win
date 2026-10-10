@@ -1,6 +1,39 @@
 from .window import *
 
 class Combobox(Control):
+    class Item:
+        cb: 'Combobox'
+        index: int
+        
+        def __init__(self, cb: 'Combobox', index: int):
+            self.cb = cb
+            self.index = index
+            
+        def delete(self):
+            self.cb.send(CB_DELETESTRING, self.index)
+            
+        @property
+        def data(self) -> int:
+            return self.cb.send(CB_GETITEMDATA, self.index)
+        
+        @data.setter
+        def data(self, data: WT_ADDRLIKE):
+            self.cb.send(CB_SETITEMDATA, self.index, data)
+        
+        @property
+        def text(self) -> str | None:
+            length = self.cb.send(CB_GETLBTEXTLEN, self.index)
+            if length == CB_ERR: return None
+            text = create_unicode_buffer(length)
+            if self.cb.send(CB_GETLBTEXT, self.index, text) == CB_ERR:
+                return None
+            return text.value
+        
+        @text.setter
+        def text(self, text: str):
+            self._buffer_cache = create_unicode_buffer(text)
+            self.cb.send(CB_SETITEMDATA, self.index, self._buffer_cache)
+    
     on_selection_changed: MultiEvent
     on_selection_canceled: MultiEvent
     on_selection_ok: MultiEvent
@@ -10,6 +43,9 @@ class Combobox(Control):
         self._width = width
         self._height = height
         self.class_name = WC_COMBOBOXW
+        
+    def headless_init(self):
+        super().headless_init()
         self.on_selection_changed = MultiEvent()
         self.on_selection_canceled = MultiEvent()
         self.on_selection_ok = MultiEvent()
@@ -17,39 +53,42 @@ class Combobox(Control):
     def create(self, x: int, y: int, relative: int | HWND = NULL):
         super().create(self._width, self._height, x, y, '', relative)
         
-    def reset(self):
+    def clear(self):
         self.send(CB_RESETCONTENT)
         
     def count(self) -> int:
         return self.send(CB_GETCOUNT)
     
     def insert(self, index: int, variant: str):
-        self.send(CB_INSERTSTRING, index, variant)
-        
-    def append(self, variant: str):
-        self.send(CB_ADDSTRING, 0, variant)
+        index = self.send(CB_INSERTSTRING, index, variant)
+        if index == CB_ERR: raise WinException()
+        return Combobox.Item(self, index)
+    
+    def remove(self, index: int):
+        self.send(CB_DELETESTRING, index)
+    
+    def append(self, variant: str) -> Item:
+        index = self.send(CB_ADDSTRING, 0, variant)
+        if index == CB_ERR: raise WinException()
+        return Combobox.Item(self, index)
         
     def limit(self, limit: int):
         self.send(CB_LIMITTEXT, limit)
-        
+    
+    def __getitem__(self, index: int | Item) -> Item:
+        if isinstance(index, Combobox.Item):
+            index = index.index
+        return Combobox.Item(self, index)
+    
     @property
-    def current(self) -> int:
-        return self.send(CB_GETCURSEL)
+    def current(self) -> Item:
+        return Combobox.Item(self, self.send(CB_GETCURSEL))
     
     @current.setter
-    def current(self, current: int):
+    def current(self, current: int | Item):
+        if isinstance(current, Combobox.Item):
+            current = current.index
         self.send(CB_SETCURSEL, current)
-        
-    def text(self, index: int) -> str | None:
-        """
-        Get text of the item.
-        """
-        length = self.send(CB_GETLBTEXTLEN, index)
-        if length == CB_ERR: return None
-        text = create_unicode_buffer(length)
-        if self.send(CB_GETLBTEXT, index, text) == CB_ERR:
-            return None
-        return text.value
     
     @property
     def item_height(self) -> int:

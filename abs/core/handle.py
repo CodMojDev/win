@@ -70,7 +70,7 @@ class BitGroup:
         self.value |= bit
         return self
     
-    def __int__(self) -> 'BitGroup':
+    def __int__(self) -> int:
         return self.value
     
     def __lshift__(self, bit: int) -> 'BitGroup':
@@ -90,7 +90,7 @@ class BitGroup:
     def test(self, mapping: dict[int, str]) -> list[str]:
         result = []
         for k, v in mapping.items():
-            if self.value & v: result.append(k)
+            if self.value & k: result.append(v)
         return result
         
 class GDIObjectHandle(Handle):
@@ -239,8 +239,9 @@ class DC(Handle):
             
         def __enter__(self):
             self.begin()
+            return self
             
-        def __exit__(self, exc_type, exc, tb):
+        def __exit__(self, *_):
             self.end()
             
         def abort(self):
@@ -327,6 +328,7 @@ class DC(Handle):
             
         def __enter__(self):
             self.begin()
+            return self
             
         def __exit__(self, exc_type, exc, tb):
             self.end()
@@ -398,9 +400,25 @@ class DC(Handle):
             
         def __enter__(self):
             self.v = self.f(self.n)
+            return self
             
         def __exit__(self, *_):
             self.f(self.v)
+    
+    class Transact:
+        dc: 'DC'
+        index: int
+        
+        def __init__(self, dc: 'DC'):
+            self.dc = dc
+            self.index = 0
+            
+        def __enter__(self):
+            self.index = self.dc.save()
+            return self
+            
+        def __exit__(self, *_):
+            self.dc.restore(self.index)
     
     pixels: 'DC.Pixels'
     _created: bool
@@ -490,13 +508,21 @@ class DC(Handle):
         
         return DC.Select(self, hGdiObject)
     
-    def text_out(self, x: int, y: int, text: str):
+    def text_out(self, x: int, y: int, text: str, options: int = ETO_OPAQUE,
+                 rect: Rect | None = None, distances: list[int] | None = None):
         """
         Output the text to screen.
         """
-        
-        buf = create_unicode_buffer(text)
-        if not TextOutW(self, x, y, buf, len(text)):
+        lpString = create_unicode_buffer(text)
+        if rect is not None:
+            lpRect = rect.ref()
+        else:
+            lpRect = NULL
+        if distances is not None:
+            lpDx = (INT*len(distances))(*distances)
+        else:
+            lpDx = NULL
+        if not ExtTextOutW(self, x, y, options, lpRect, lpString, len(text), lpDx):
             raise WinException()
         
     def set_pixel(self, x: int, y: int, color: TUnion[int, 'Color.IColor']) -> 'Color.BGR':
@@ -860,7 +886,7 @@ class DC(Handle):
             raise WinException()
         return (pt.x, pt.y)
     
-    @viewport_origin.setter
+    @window_origin.setter
     def window_origin(self, window_origin: 'GraphicUtils.Point'):
         x, y = GraphicUtils.point_tuple(window_origin)
         if not SetWindowOrgEx(self, x, y, NULL):
@@ -1029,13 +1055,42 @@ class DC(Handle):
             memory.seek(0)
             # GdiDrawStream
             self.draw_stream(memory)
-            
-    def draw_focus_rect(self, rect: RECT):
+        
+    def caps(self, index: int) -> int:
         """
-        Draw the focus rect.
+        Get the device context capabilities.
         """
-        if not DrawFocusRect(self, rect.ref()):
+        return self.capabilities(index)
+    
+    def save(self) -> int:
+        """
+        Save the DC state into context stack.
+        """
+        index = SaveDC(self)
+        if not index: raise WinException()
+        return index
+    
+    def restore(self, index: int):
+        """
+        Restore the specified DC state.
+        """
+        if not RestoreDC(self, index):
             raise WinException()
+        
+    def transact(self) -> Transact:
+        """
+        Start the save-restore DC transaction.
+        """
+        return DC.Transact(self)
+    
+    def metrics(self) -> 'TextMetric':
+        """
+        Get the text metrics of current selected font.
+        """
+        metrics = TextMetric()
+        if not GetTextMetricsW(self, metrics.ref()):
+            raise WinException()
+        return metrics
 
 class Monitor(HMONITOR):
     @classmethod
@@ -1124,20 +1179,6 @@ class BitmapInfo(BITMAPINFO):
     @bpp.setter
     def bpp(self, bpp: int):
         self.bmiHeader.biBitCount = bpp
-        
-class StringUtil:
-    """
-    String and stringify utilities.
-    """
-    
-    @staticmethod
-    def to_string(obj: Any) -> str:
-        if isinstance(obj, RECT):
-            return f'<RECT {{{{{obj.left}, {obj.top}}}, {{{obj.right}, {obj.bottom}}}}}>'
-        elif isinstance(obj, POINT):
-            return f'<POINT {{{obj.x}, {obj.y}}}>'
-        else:
-            return repr(obj)
 
 class Pen(GDIObjectHandle):
     """
@@ -1228,7 +1269,367 @@ class Font(GDIObjectHandle):
         if not font.value:
             raise WinException()
         return font
+
+class TextMetric(TEXTMETRICW):
+    @property
+    def height(self) -> int:
+        return self.tmHeight
+    
+    @height.setter
+    def height(self, height: int):
+        self.tmHeight = height
+    
+    @property
+    def ascent(self) -> int:
+        return self.tmAscent
+    
+    @ascent.setter
+    def ascent(self, ascent: int):
+        self.tmAscent = ascent
+    
+    @property
+    def descent(self) -> int:
+        return self.tmHeight
+    
+    @descent.setter
+    def descent(self, descent: int):
+        self.tmDescent = descent
+    
+    @property
+    def internal_leading(self) -> int:
+        return self.tmInternalLeading
+    
+    @internal_leading.setter
+    def internal_leading(self, internal_leading: int):
+        self.tmInternalLeading = internal_leading
+    
+    @property
+    def external_leading(self) -> int:
+        return self.tmExternalLeading
+    
+    @external_leading.setter
+    def external_leading(self, external_leading: int):
+        self.tmExternalLeading = external_leading
+    
+    @property
+    def average_char_width(self) -> int:
+        return self.tmAveCharWidth
+    
+    @average_char_width.setter
+    def average_char_width(self, average_char_width: int):
+        self.tmAveCharWidth = average_char_width
+    
+    @property
+    def max_char_width(self) -> int:
+        return self.tmMaxCharWidth
+    
+    @max_char_width.setter
+    def max_char_width(self, max_char_width: int):
+        self.tmMaxCharWidth = max_char_width
+    
+    @property
+    def weight(self) -> int:
+        return self.tmWeight
+    
+    @weight.setter
+    def weight(self, weight: int):
+        self.tmWeight = weight
+    
+    @property
+    def overhang(self) -> int:
+        return self.tmOverhang
+    
+    @overhang.setter
+    def overhang(self, overhang: int):
+        self.tmOverhang = overhang
+    
+    @property
+    def charset(self) -> int:
+        return self.tmCharSet
+    
+    @charset.setter
+    def charset(self, charset: int):
+        self.tmCharSet = charset
+    
+    @property
+    def digitized_aspect_x(self) -> int:
+        return self.tmDigitizedAspectX
+    
+    @digitized_aspect_x.setter
+    def digitized_aspect_x(self, digitized_aspect_x: int):
+        self.tmDigitizedAspectX = digitized_aspect_x
+    
+    @property
+    def digitized_aspect_y(self) -> int:
+        return self.tmDigitizedAspectY
+    
+    @digitized_aspect_y.setter
+    def digitized_aspect_y(self, digitized_aspect_y: int):
+        self.tmDigitizedAspectY = digitized_aspect_y
+    
+    @property
+    def digitized_aspect(self) -> tuple[int, int]:
+        return self.digitized_aspect_x, self.digitized_aspect_y
+    
+    @digitized_aspect.setter
+    def digitized_aspect(self, digitized_aspect: GraphicUtils.Point):
+        self.digitized_aspect_x, self.digitized_aspect_y = GraphicUtils.point_tuple(digitized_aspect)
+    
+    @property
+    def first_char(self) -> str:
+        return self.tmFirstChar
+    
+    @first_char.setter
+    def first_char(self, first_char: str):
+        self.tmFirstChar = first_char
+    
+    @property
+    def last_char(self) -> str:
+        return self.tmLastChar
+    
+    @last_char.setter
+    def last_char(self, last_char: str):
+        self.tmLastChar = last_char
+    
+    @property
+    def default_char(self) -> str:
+        return self.tmDefaultChar
+    
+    @default_char.setter
+    def default_char(self, default_char: str):
+        self.tmDefaultChar = default_char
+    
+    @property
+    def break_char(self) -> str:
+        return self.tmBreakChar
+    
+    @break_char.setter
+    def break_char(self, break_char: str):
+        self.tmBreakChar = break_char
         
+    @property
+    def italic(self) -> bool:
+        return self.tmItalic == TRUE
+    
+    @italic.setter
+    def italic(self, italic: bool):
+        self.tmItalic = italic
+        
+    @property
+    def underline(self) -> bool:
+        return self.tmUnderlined == TRUE
+    
+    @underline.setter
+    def underline(self, underline: bool):
+        self.tmUnderlined = underline
+        
+    @property
+    def strike_out(self) -> bool:
+        return self.tmStruckOut == TRUE
+    
+    @strike_out.setter
+    def strike_out(self, strike_out: bool):
+        self.tmStruckOut = strike_out
+    
+    @property
+    def pitch_and_family(self) -> int:
+        return self.tmPitchAndFamily
+    
+    @pitch_and_family.setter
+    def pitch_and_family(self, pitch_and_family: int):
+        self.tmPitchAndFamily = pitch_and_family
+        
+    @property
+    def pitch(self) -> int:
+        return self.pitch_and_family & 0x0F
+    
+    @pitch.setter
+    def pitch(self, pitch: int):
+        self.pitch_and_family = (pitch << 4) | self.family
+    
+    @property
+    def family(self) -> int:
+        return self.pitch_and_family & 0xF0
+    
+    @family.setter
+    def family(self, family: int):
+        self.pitch_and_family = (self.pitch << 4) | family
+
+class Logfont(LOGFONTW):
+    metric: TEXTMETRICW | None
+    type: int | None
+    
+    def __new__(cls, *args, **kwargs):
+        self = super().__new__(cls, *args, **kwargs)
+        self.metric = None
+        self.type = None
+        return self
+
+    @property
+    def name(self) -> str:
+        return self.lfFaceName.value
+    
+    @name.setter
+    def name(self, name: str):
+        self.lfFaceName.value = name
+    
+    @property
+    def width(self) -> int:
+        return self.lfWidth
+    
+    @width.setter
+    def width(self, width: int):
+        self.lfWidth = width
+    
+    @property
+    def height(self) -> int:
+        return self.lfHeight
+    
+    @height.setter
+    def height(self, height: int):
+        self.lfHeight = height
+        
+    @property
+    def weight(self) -> int:
+        return self.lfWeight
+    
+    @weight.setter
+    def weight(self, weight: int):
+        self.lfWeight = weight
+        
+    @property
+    def escapement(self) -> int:
+        return self.lfEscapement
+    
+    @escapement.setter
+    def escapement(self, escapement: int):
+        self.lfEscapement = escapement
+        
+    @property
+    def orientation(self) -> int:
+        return self.lfOrientation
+    
+    @orientation.setter
+    def orientation(self, orientation: int):
+        self.lfOrientation = orientation
+    
+    @property
+    def italic(self) -> bool:
+        return self.lfItalic == TRUE
+    
+    @italic.setter
+    def italic(self, italic: bool):
+        self.lfItalic = italic
+        
+    @property
+    def underline(self) -> bool:
+        return self.lfUnderline == TRUE
+    
+    @underline.setter
+    def underline(self, underline: bool):
+        self.lfUnderline = underline
+        
+    @property
+    def strike_out(self) -> bool:
+        return self.lfStrikeOut == TRUE
+    
+    @strike_out.setter
+    def strike_out(self, strike_out: bool):
+        self.lfStrikeOut = strike_out
+        
+    @property
+    def quality(self) -> int:
+        return self.lfQuality
+    
+    @quality.setter
+    def quality(self, quality: int):
+        self.lfQuality = quality
+        
+    @property
+    def charset(self) -> int:
+        return self.lfCharSet
+    
+    @charset.setter
+    def charset(self, charset: int):
+        self.lfCharSet = charset
+        
+    @property
+    def pitch_and_family(self) -> int:
+        return self.lfPitchAndFamily
+    
+    @pitch_and_family.setter
+    def pitch_and_family(self, pitch_and_family: int):
+        self.lfPitchAndFamily = pitch_and_family
+        
+    @property
+    def out_precision(self) -> int:
+        return self.lfOutPrecision
+    
+    @out_precision.setter
+    def out_precision(self, out_precision: int):
+        self.lfOutPrecision = out_precision
+        
+    @property
+    def clip_precision(self) -> int:
+        return self.lfClipPrecision
+    
+    @clip_precision.setter
+    def clip_precision(self, clip_precision: int):
+        self.lfClipPrecision = clip_precision
+        
+    @classmethod
+    def enumerate(cls, dc: int | HANDLE | None = None, charset: int = DEFAULT_CHARSET, name: str | None = None,
+                  pitch: int = DEFAULT_PITCH, family: int = FF_DONTCARE, 
+                  type: int = RASTER_FONTTYPE | DEVICE_FONTTYPE | TRUETYPE_FONTTYPE) -> list[Self]:
+        """
+        Enumerate the all logical font families available in System / Device context.
+        """
+        lfParameter = Logfont()
+        lfParameter.charset = charset
+        if name is not None:
+            lfParameter.name = name
+        families = []
+        def font_enum_proc(plf: IPointer[LOGFONTW], ptm: IPointer[TEXTMETRICW], font_type: int, parameter: int) -> int:
+            if not (type & font_type):
+                return TRUE
+            lf = i_cast_value(plf, cls)
+            if pitch != DEFAULT_PITCH and lf.pitch != pitch:
+                return TRUE
+            if family != FF_DONTCARE and lf.family != family:
+                return TRUE
+            tm = i_cast_value(ptm, TextMetric)
+            font = lf.copy()
+            font.metric = tm.copy()
+            font.type = font_type
+            families.append(font)
+            return TRUE
+        if dc is None:
+            dc = DC.create_compatible(None)
+        EnumFontFamiliesExW(dc, lfParameter.ref(), FONTENUMPROCW(font_enum_proc), 0, 0)
+        return families
+    
+    def __repr__(self) -> str:
+        return f'<win.abs.core.handle.Logfont "{self.name}">'
+    
+    @property
+    def pitch(self) -> int:
+        return self.pitch_and_family & 0x0F
+    
+    @pitch.setter
+    def pitch(self, pitch: int):
+        self.pitch_and_family = (pitch << 4) | self.family
+    
+    @property
+    def family(self) -> int:
+        return self.pitch_and_family & 0xF0
+    
+    @family.setter
+    def family(self, family: int):
+        self.pitch_and_family = (self.pitch << 4) | family
+
+def script_relative(path: str) -> str:
+    return os.path.abspath(os.path.normpath(os.path.join(os.path.dirname(get_caller_frame().f_globals['__file__']), path)))
+
 class Region(GDIObjectHandle):
     """
     Class, representing GDI Region object.
@@ -1378,6 +1779,7 @@ class IconInfo(ICONINFO):
         else:
             info = IconInfo()
         info._foreign_owner = True
+        return info
     
     @property
     def is_icon(self) -> bool:
@@ -2022,8 +2424,6 @@ class CommonDialogError(Exception):
         elif err == 0x1008: # PDERR_NODEFAULTPRN
             hr = E_INVALIDARG # invalid argument
         elif err == 0x1007: # PDERR_NODEVICES
-            hr = E_FAIL # generic fail
-        elif err == 0x1008: # PDERR_NODEVICES
             hr = E_FAIL # generic fail
         elif err == 0x1002: # PDERR_PARSEFAILURE
             hr = E_FAIL # generic fail

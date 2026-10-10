@@ -7085,69 +7085,96 @@ if cpreproc.pragma_once("_WINUSER_"):
 
         METRICS_USEDEFAULT = -1
 
-        if cpreproc.ifndef("_WINGDI_"):
-            cpreproc.define("NOGDI")
+        from .wingdi import LOGFONTA, LOGFONTW
 
-            from .wingdi import LOGFONTA, LOGFONTW
+        # REGION *** Desktop Family ***
 
-            # REGION *** Desktop Family ***
+        _NONCLIENTMETRICSA_fields_ = [
+                ("cbSize", UINT),
+                ("iBorderWidth", INT),
+                ("iScrollWidth", INT),
+                ("iScrollHeight", INT),
+                ("iCaptionWidth", INT),
+                ("iCaptionHeight", INT),
+                ("lfCaptionFont", LOGFONTA),
+                ("iSmCaptionWidth", INT),
+                ("iSmCaptionHeight", INT),
+                ("lfSmCaptionFont", LOGFONTA),
+                ("iMenuWidth", INT),
+                ("iMenuHeight", INT),
+                ("lfMenuFont", LOGFONTA),
+                ("lfStatusFont", LOGFONTA),
+                ("lfMessageFont", LOGFONTA)
+            ]
+        if cpreproc.getdef("_WINVER") > 0x0600:
+            _NONCLIENTMETRICSA_fields_.append(("iPaddedBorderWidth", INT))
 
-            _NONCLIENTMETRICSA_fields_ = [
-                    ("cbSize", UINT),
-                    ("iBorderWidth", INT),
-                    ("iScrollWidth", INT),
-                    ("iScrollHeight", INT),
-                    ("iCaptionWidth", INT),
-                    ("iCaptionHeight", INT),
-                    ("lfCaptionFont", LOGFONTA),
-                    ("iSmCaptionWidth", INT),
-                    ("iSmCaptionHeight", INT),
-                    ("lfSmCaptionFont", LOGFONTA),
-                    ("iMenuWidth", INT),
-                    ("iMenuHeight", INT),
-                    ("lfMenuFont", LOGFONTA),
-                    ("lfStatusFont", LOGFONTA),
-                    ("lfMessageFont", LOGFONTA)
-                ]
-            if cpreproc.getdef("_WINVER") > 0x0600:
-                _NONCLIENTMETRICSA_fields_.append(("iPaddedBorderWidth", INT))
+        class NONCLIENTMETRICSA(CStructure):
+            _fields_ = _NONCLIENTMETRICSA_fields_
+            cbSize: int
+            iBorderWidth: int
+            iScrollWidth: int
+            iScrollHeight: int
+            iCaptionWidth: int
+            iCaptionHeight: int
+            lfCaptionFont: LOGFONTA
+            iSmCaptionWidth: int
+            iSmCaptionHeight: int
+            lfSmCaptionFont: LOGFONTA
+            iMenuWidth: int
+            iMenuHeight: int
+            lfMenuFont: LOGFONTA
+            lfStatusFont: LOGFONTA
+            lfMessageFont: LOGFONTA
+            iPaddedBorderWidth: int
+        PNONCLIENTMETRICSA = POINTER(NONCLIENTMETRICSA)
+        LPNONCLIENTMETRICSA = PNONCLIENTMETRICSA
 
-            class NONCLIENTMETRICSA(CStructure):
-                _fields_ = _NONCLIENTMETRICSA_fields_
-            PNONCLIENTMETRICSA = POINTER(NONCLIENTMETRICSA)
-            LPNONCLIENTMETRICSA = PNONCLIENTMETRICSA
+        _NONCLIENTMETRICSW_fields_ = [
+                ("cbSize", UINT),
+                ("iBorderWidth", INT),
+                ("iScrollWidth", INT),
+                ("iScrollHeight", INT),
+                ("iCaptionWidth", INT),
+                ("iCaptionHeight", INT),
+                ("lfCaptionFont", LOGFONTW),
+                ("iSmCaptionWidth", INT),
+                ("iSmCaptionHeight", INT),
+                ("lfSmCaptionFont", LOGFONTW),
+                ("iMenuWidth", INT),
+                ("iMenuHeight", INT),
+                ("lfMenuFont", LOGFONTW),
+                ("lfStatusFont", LOGFONTW),
+                ("lfMessageFont", LOGFONTW)
+            ]
+        if cpreproc.getdef("_WINVER") > 0x0600:
+            _NONCLIENTMETRICSW_fields_.append(("iPaddedBorderWidth", INT))
 
-            _NONCLIENTMETRICSW_fields_ = [
-                    ("cbSize", UINT),
-                    ("iBorderWidth", INT),
-                    ("iScrollWidth", INT),
-                    ("iScrollHeight", INT),
-                    ("iCaptionWidth", INT),
-                    ("iCaptionHeight", INT),
-                    ("lfCaptionFont", LOGFONTW),
-                    ("iSmCaptionWidth", INT),
-                    ("iSmCaptionHeight", INT),
-                    ("lfSmCaptionFont", LOGFONTW),
-                    ("iMenuWidth", INT),
-                    ("iMenuHeight", INT),
-                    ("lfMenuFont", LOGFONTW),
-                    ("lfStatusFont", LOGFONTW),
-                    ("lfMessageFont", LOGFONTW)
-                ]
-            if cpreproc.getdef("_WINVER") > 0x0600:
-                _NONCLIENTMETRICSW_fields_.append(("iPaddedBorderWidth", INT))
+        class NONCLIENTMETRICSW(CStructure):
+            _fields_ = _NONCLIENTMETRICSW_fields_
+            cbSize: int
+            iBorderWidth: int
+            iScrollWidth: int
+            iScrollHeight: int
+            iCaptionWidth: int
+            iCaptionHeight: int
+            lfCaptionFont: LOGFONTW
+            iSmCaptionWidth: int
+            iSmCaptionHeight: int
+            lfSmCaptionFont: LOGFONTW
+            iMenuWidth: int
+            iMenuHeight: int
+            lfMenuFont: LOGFONTW
+            lfStatusFont: LOGFONTW
+            lfMessageFont: LOGFONTW
+            iPaddedBorderWidth: int
+        PNONCLIENTMETRICSW = POINTER(NONCLIENTMETRICSW)
+        LPNONCLIENTMETRICSW = PNONCLIENTMETRICSW
+        NONCLIENTMETRICS = unicode(NONCLIENTMETRICSW, NONCLIENTMETRICSA)
+        PNONCLIENTMETRICS = unicode(PNONCLIENTMETRICSW, PNONCLIENTMETRICSA)
+        LPNONCLIENTMETRICS = PNONCLIENTMETRICS
 
-            class NONCLIENTMETRICSW(CStructure):
-                _fields_ = _NONCLIENTMETRICSW_fields_
-            PNONCLIENTMETRICSW = POINTER(NONCLIENTMETRICSW)
-            LPNONCLIENTMETRICSW = PNONCLIENTMETRICSW
-            NONCLIENTMETRICS = unicode(NONCLIENTMETRICSW, NONCLIENTMETRICSA)
-            PNONCLIENTMETRICS = unicode(PNONCLIENTMETRICSW, PNONCLIENTMETRICSA)
-            LPNONCLIENTMETRICS = PNONCLIENTMETRICS
-
-            # REGION ***
-        # NOGDI
-    # _WINGDI_
+        # REGION ***
     ARW_BOTTOMLEFT = 0x0000
     ARW_BOTTOMRIGHT = 0x0001
     ARW_TOPLEFT = 0x0002

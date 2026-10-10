@@ -415,7 +415,7 @@ if cpreproc.pragma_once() or TYPE_CHECKING:
         wireHBRUSH = wireHFONT = wireHDC = \
         wireHICON = wireHRGN = wireHMONITOR = RemotableHandle.PTR()
         
-    class tagTEXTMETRICW(CStructure):
+    class TEXTMETRICW(CStructure):
         _pack_ = 4
         _fields_ = [
             ("tmHeight", LONG),
@@ -439,7 +439,6 @@ if cpreproc.pragma_once() or TYPE_CHECKING:
             ("tmPitchAndFamily", BYTE),
             ("tmCharSet", BYTE)
         ]
-    TEXTMETRICW = tagTEXTMETRICW
     PTEXTMETRICW = LPTEXTMETRICW = TEXTMETRICW.PTR()
     
     wireHBITMAP = userHBITMAP.PTR()

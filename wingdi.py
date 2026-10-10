@@ -1195,7 +1195,7 @@ if cpreproc.pragma_once("_WINGDI_"):
                 tmStruckOut: int
                 tmPitchAndFamily: int
                 tmCharSet: int
-            PTEXTMETRICA = TEXTMETRICA
+            PTEXTMETRICA = PTR(TEXTMETRICA)
             NPTEXTMETRICA = PTEXTMETRICA
             LPTEXTMETRICA = PTEXTMETRICA
 
@@ -1244,7 +1244,7 @@ if cpreproc.pragma_once("_WINGDI_"):
                 tmPitchAndFamily: int
                 tmCharSet: int
                 
-            PTEXTMETRICW = TEXTMETRICW
+            PTEXTMETRICW = PTR(TEXTMETRICW)
             NPTEXTMETRICW = PTEXTMETRICW
             LPTEXTMETRICW = PTEXTMETRICW
 
