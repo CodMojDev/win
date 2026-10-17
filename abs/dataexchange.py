@@ -231,3 +231,49 @@ class DataObject(IDataObject):
         CUnknown.__init__(self)
         CComObject.InitComObject(self)
         self.implement_interface(IDataObject)
+
+@kernel32.foreign(UINT)
+def GetOEMCP() -> int: ...
+
+class COMDataObjectForText(DataObject):
+    def __init__(self, text: str):
+        self.supported_formats = [
+            FormatEtc(CF_TEXT), 
+            FormatEtc(CF_UNICODETEXT),
+            FormatEtc(CF_OEMTEXT)]
+        self.text = text
+        
+        self.setup()
+        
+    def on_get_data(self, format_etc: FormatEtc, medium: STGMEDIUM, direct: bool) -> int:
+        if format_etc.tymed != TYMED_HGLOBAL:
+            return DV_E_TYMED
+        
+        medium.tymed = TYMED_HGLOBAL
+        
+        if format_etc.cfFormat == CF_TEXT:
+            buffer = self.text.encode('ascii', errors='replace')
+        elif format_etc.cfFormat == CF_UNICODETEXT:
+            buffer = bytes(create_unicode_buffer(self.text))
+        elif format_etc.cfFormat == CF_OEMTEXT:
+            try:
+                buffer = self.text.encode(str(GetOEMCP()), errors='replace')
+            except LookupError:
+                buffer = self.text.encode('437', errors='replace')
+        else:
+            return DV_E_FORMATETC
+        
+        if direct:
+            data = GlobalIO(medium.hGlobal)
+        else:
+            data = GlobalIO.allocate(len(buffer)+1, GMEM_ZEROINIT | GMEM_MOVEABLE).owning(False)
+        
+        data.write(buffer)
+        data.unlock()
+        
+        medium.hGlobal = data.handle
+        
+        return S_OK
+    
+    def get_formats(self) -> list[FormatEtc]:
+        return self.supported_formats

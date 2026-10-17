@@ -363,20 +363,33 @@ def TlGetIterator(itf: IT, enumerator: type[IT], value_type: type[WT]) -> TL_ITE
     """
     return TL_ITERATOR[value_type](TlQueryInterface(enumerator, itf))
 
+class TL_GUARD_OBJECT:
+    pass
+
 def TlAddRefGuard(itf: IT):
     """
     Add ref-guard to interface.
     """
     TlAddRefGuardEx(itf, itf)
 
-class TL_GUARD_OBJECT:
-    pass
-
 def TlAddRefGuardEx(holder: Any, itf: IT):
     """
     Indirectly add ref-guard of interface to any guard holder object.
     """
     i_setattr(holder, '_tl_ref_guard', _TL_REF_GUARD(TlGetInterface(itf)))
+
+def TlAddRefGuardMulti(itf: IT):
+    """
+    Add ref-guard to interface with multiple guarding support.
+    """
+    TlAddRefGuardMultiEx(itf, itf)
+
+def TlAddRefGuardMultiEx(holder: Any, itf: IT):
+    """
+    Indirectly add ref-guard of interface to any guard holder object with multiple guarding support.
+    """
+    itf = TlGetInterface(itf)
+    i_setattr(holder, f'_tl_ref_guard_{itf.addressof()}', _TL_REF_GUARD(itf))
 
 def TlHoldInterface(itf: IT):
     """

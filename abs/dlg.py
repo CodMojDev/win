@@ -6,7 +6,7 @@ class Dialog(Window):
     Class, wrapping functionality of Win32 Dialog window.
     """
     
-    def __init__(self, width: int, height: int, himetric: bool = False):
+    def __init__(self, width: int = 0, height: int = 0, himetric: bool = False):
         super().__init__()
         
         # predefined parameters
@@ -67,51 +67,69 @@ class Dialog(Window):
     def default_window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
         return FALSE # Dialog procedure is not for DefWindowProc.
     
-    def create(self, x: int, y: int, window_name: str = 'Dialog', parent: int | HWND = NULL):
+    def create(self, x: int = 0, y: int = 0, window_name: str = 'Dialog', parent: int | HWND = NULL, handle: int | None = None, location: tuple[int, int] | None = None):
         """
         Create the modal or modeless dialog.
         """
         
-        # allocate DLGTEMPLATE structure as buffer of 256 bytes
-        buffer = (CHAR * 256)()
-        pDlg = i_cast(buffer, LPDLGTEMPLATE)
-        dlg = pDlg.contents
-        
-        # save refs on dialog structure and dialog buffer for GC safety
+        if location is not None:
+            resource, resourceType = location
+            if isinstance(resource, str):
+                resource = create_unicode_buffer(resource)
+            if isinstance(resourceType, str):
+                resourceType = create_unicode_buffer(resourceType)
+            if handle is None:
+                handle = GetModuleHandleW(NULL)
+            hResource = FindResourceW(handle, i_cast(resource, LPCWSTR), i_cast(resourceType, LPCWSTR))
+            if not hResource:
+                raise WinException()
+            hData = LoadResource(handle, hResource)
+            if not hData:
+                raise WinException()
+            pDlg = i_cast(LockResource(hData), LPDLGTEMPLATE)
+            if not pDlg:
+                raise WinException()
+            dlg = pDlg.contents
+        else:
+            # allocate DLGTEMPLATE structure as buffer of 256 bytes
+            buffer = (CHAR * 256)()
+            pDlg = i_cast(buffer, LPDLGTEMPLATE)
+            dlg = pDlg.contents
+            
+            # save ref to dialog buffer for GC safety
+            self._buffer = buffer
+            
+            # setup dialog template coordinates
+            dlg.x = x
+            dlg.y = y
+            
+            # setup dialog template size
+            dlg.cx = self._width
+            dlg.cy = self._height
+            
+            # setup dialog template style
+            dlg.style = self._style
+            
+            # flexible data section starts
+            pData = PtrArithmetic.add(pDlg, 1)
+            
+            # directly write to after-structure data with MemoryIO
+            with MemoryIO(pData, len(buffer) - sizeof(DLGTEMPLATE)) as data:
+                # write the dialog data
+                data.write_uint16(0) # dialog menu
+                data.write_uint16(0) # class
+                data.write((window_name + '\0').encode('utf-16-le')) # write the dialog window name
+                # write the font data
+                data.write_uint16(8) # height
+                data.write_uint16(0) # weight
+                data.write_uint16(0) # italic
+                data.write_uint16(0) # charset
+                data.write('MS Shell Dlg\0'.encode('utf-16-le')) # write the font name
+        # save refs on dialog structure
         self.dlg = dlg
-        self._buffer = buffer
-        
         # save the parent argument and dialog pointer for modal dialog
         self._parent = parent
         self.pDlg = pDlg
-        
-        # setup dialog template coordinates
-        dlg.x = x
-        dlg.y = y
-        
-        # setup dialog template size
-        dlg.cx = self._width
-        dlg.cy = self._height
-        
-        # setup dialog template style
-        dlg.style = self._style
-        
-        # flexible data section starts
-        pData = PtrArithmetic.add(pDlg, 1)
-        
-        # directly write to after-structure data with MemoryIO
-        with MemoryIO(pData, len(buffer) - sizeof(DLGTEMPLATE)) as data:
-            # write the dialog data
-            data.write_uint16(0) # dialog menu
-            data.write_uint16(0) # class
-            data.write((window_name + '\0').encode('utf-16-le')) # write the dialog window name
-            # write the font data
-            data.write_uint16(8) # height
-            data.write_uint16(0) # weight
-            data.write_uint16(0) # italic
-            data.write_uint16(0) # charset
-            data.write('MS Shell Dlg\0'.encode('utf-16-le')) # write the font name
-        
         if not self.modal: # if dialog is modeless, when create it
             # setup dialog procedure
             self.pfnWndProc = DLGPROC(self.window_proc)

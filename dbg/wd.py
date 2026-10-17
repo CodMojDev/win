@@ -7,6 +7,7 @@ from .dbgapi import IsDebuggerPresent, DebugBreak
 from ..wet.trace import WET_PROVIDER, dbg_trace
 from typing import TYPE_CHECKING
 from .. import cpreproc
+from .. import _defbase_ctypinit
 
 import traceback
 import types
@@ -153,7 +154,7 @@ def _WD_DebugRoutine():
             continue
         
 def _WD_TraceRoutine(frame: types.FrameType, event: str, arg):
-    if frame.f_code.co_qualname.startswith(('_WD_', 'WD_')):
+    if _defbase_ctypinit.Code_Qualname(frame.f_code).startswith(('_WD_', 'WD_')):
         return _WD_TraceRoutine
 
     if event == 'line':

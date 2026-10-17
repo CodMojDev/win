@@ -1180,7 +1180,8 @@ class VirtualTable:
         # thunk between C and Python, garbages unused `this` pointer and uses closured `self`
         def thunk(this, *f_args, **kwargs):
             thunk.__name__ = f'{self.name}_{function_name}_Thunk'
-            thunk.__qualname__ = thunk.__code__.co_name = thunk.__code__.co_qualname = thunk.__name__
+            thunk.__qualname__ = thunk.__code__.co_name = thunk.__name__
+            _defbase_ctypinit.Code_QualnameSet(thunk.__code__, thunk.__name__)
             impl = getattr(self_class, function_name + '_Impl')
             marshal_scheme = getattr(function, 'marshal_scheme', None)
             
@@ -2919,7 +2920,7 @@ class CClass(CStructure):
                 
             raise AccessError(f'The field {name} is protected.')
         elif is_private:
-            _, qual_name = code.co_filename, code.co_qualname
+            _, qual_name = code.co_filename, _defbase_ctypinit.Code_Qualname(code)
             class_name = '.'.join(qual_name.split('.')[:-1])
             self_name = type(self).__qualname__
             if class_name != self_name: 

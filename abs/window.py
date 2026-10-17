@@ -393,9 +393,29 @@ def DwmDefWindowProc(hWnd: int, msg: int, wParam: int, lParam: int, plResult: IP
 def DwmExtendFrameIntoClientArea(hWnd: int, pMarInset: IPointer[MARGINS]) -> int: ...
 
 # DWM window attributes
+DWMWA_NCRENDERING_ENABLED = 1
+DWMWA_NCRENDERING_POLICY = 2
+DWMWA_TRANSITIONS_FORCEDISABLED = 3
+DWMWA_ALLOW_NCPAINT = 4
+DWMWA_CAPTION_BUTTON_BOUNDS = 5
+DWMWA_NONCLIENT_RTL_LAYOUT = 6
+DWMWA_FORCE_ICONIC_REPRESENTATION = 7
+DWMWA_FLIP3D_POLICY = 8
 DWMWA_USE_IMMERSIVE_DARK_MODE = 20
 DWMWA_USE_HOSTBACKDROPBRUSH = 17
 DWMWA_SYSTEMBACKDROP_TYPE = 38
+
+# Non-client Rendering Policy
+DWMNCRP_USEWINDOWSTYLE = 0
+DWMNCRP_DISABLED = 1
+DWMNCRP_ENABLED = 2
+DWMNCRP_LAST = 3
+
+# Flip3D Policy
+DWMFLIP3D_DEFAULT = 0
+DWMFLIP3D_EXCLUDEBELOW = 1
+DWMFLIP3D_EXCLUDEABOVE = 2
+DWMFLIP3D_LAST = 3
 
 # System Backdrop Type
 DWMSBT_AUTO = 0
@@ -1126,6 +1146,8 @@ class Window(Abs.Object, HWND):
     on_magnification_started: MultiEvent
     on_sys_color_change: MultiEvent
     on_time_changed: MultiEvent
+    on_nc_create: MultiEvent
+    on_setting_change: MultiEvent
     
     class_style: int
     last_message: MSG
@@ -1238,6 +1260,8 @@ class Window(Abs.Object, HWND):
         self.on_magnification_started = MultiEvent()
         self.on_sys_color_change = MultiEvent()
         self.on_time_changed = MultiEvent()
+        self.on_nc_create = MultiEvent()
+        self.on_setting_change = MultiEvent()
         
         self.headless_init()
         
@@ -1652,7 +1676,7 @@ class Window(Abs.Object, HWND):
             return 0 # the message is handled, so return 0
         elif msg == WM_LBUTTONDBLCLK: # left mouse button double-clicked
             self.on_left_button_double_click.execute(wParam, LOWORD(lParam), HIWORD(lParam))
-            return 0 # the message is handled, so return 0
+            return 0 # the messagрe is handled, so return 0
         elif msg == WM_RBUTTONDOWN: # right mouse button down
             self.on_right_button_down.execute(wParam, LOWORD(lParam), HIWORD(lParam))
             return 0 # the message is handled, so return 0
@@ -2095,6 +2119,15 @@ class Window(Abs.Object, HWND):
         elif msg == WM_TIMECHANGE: # the system broadcasting time change to all windows
             # call the handler
             self.on_time_changed.execute()
+            return 0 # message is handled
+        elif msg == WM_NCCREATE: # the NC area of window is being created
+            # call the handler
+            if not all(self.on_nc_create.execute()):
+                return FALSE # one of handlers return false value, abort the creation
+            # otherwise let it fallback
+        elif msg == WM_SETTINGCHANGE: # one of System settings was changed
+            # call the handler, wParam=uiAction, lParam=pszSetting
+            self.on_setting_change.execute(LPWSTR(lParam).value, wParam)
             return 0 # message is handled
         else:
             # unknown window message received
@@ -2546,10 +2579,12 @@ class Window(Abs.Object, HWND):
         if not UpdateWindow(self):
             raise WinException()
         
-    def set_dwm_attribute(self, attribute: int, value: CData):
+    def set_dwm_attribute(self, attribute: int, value: CData | int):
         """
         Set the DWM attribute of window.
         """
+        if isinstance(value, int):
+            value = INT(value)
         hr = DwmSetWindowAttribute(self, attribute, addressof(value), sizeof(value))
         if FAILED(hr): raise COMError(hr)
         
@@ -2964,6 +2999,26 @@ class Window(Abs.Object, HWND):
         Set the window theme by application name and ID list.
         """
         hr = SetWindowTheme(self, app_name, id_list)
+        if FAILED(hr): raise COMError(hr)
+    
+    @property
+    def region(self) -> Region:
+        region = Region.rect(0, 0, 0, 0)
+        result = GetWindowRgn(self, region)
+        if result == ERROR:
+            raise WinException()
+        return region
+    
+    @region.setter
+    def region(self, region: int | HANDLE):
+        if not SetWindowRgn(self, region, TRUE):
+            raise WinException()
+        
+    def extend_frame(self, margins: MARGINS):
+        """
+        Extend the DWM Window Frame to Client Area.
+        """
+        hr = DwmExtendFrameIntoClientArea(self, margins.ref())
         if FAILED(hr): raise COMError(hr)
     
 class Mouse:

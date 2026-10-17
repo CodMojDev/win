@@ -32,7 +32,7 @@ class STATSTG(CStructure):
         ('reserved', DWORD)
     ]
     
-    pwcsName: str
+    pwcsName: LPOLESTR
     type: int
     
     cbSize: ULARGE_INTEGER
@@ -46,9 +46,9 @@ class STATSTG(CStructure):
     ctime: FILETIME
     atime: FILETIME
     
-STGTY_STORAGE	= 1,
-STGTY_STREAM	= 2,
-STGTY_LOCKBYTES	= 3,
+STGTY_STORAGE	= 1
+STGTY_STREAM	= 2
+STGTY_LOCKBYTES	= 3
 STGTY_PROPERTY	= 4
 STGTY = INT
 

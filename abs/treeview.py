@@ -132,13 +132,13 @@ class TreeItem(HTREEITEM):
         """
         
         tviex = TVITEMEXW()
-        tviex.mask = TVIF_TEXT | TVIF_IMAGE
+        tviex.mask = TVIF_TEXT | TVIF_IMAGE | TVIF_SELECTEDIMAGE
         if image_index is None:
             image_index = -1
         tviex.iImage = image_index
-        if selected_image_index is not None:
-            tviex.mask |= TVIF_SELECTEDIMAGE
-            tviex.iSelectedImage = selected_image_index
+        if selected_image_index is None:
+            selected_image_index = -1
+        tviex.iSelectedImage = selected_image_index
         if value is not None:
             value = PtrUtil.get_address(value)
             tviex.mask |= TVIF_PARAM
@@ -159,12 +159,12 @@ class TreeItem(HTREEITEM):
             return None
         return TreeItem(self.tree_view, hItem)
     
-    def information(self, mask: int | None = None) -> TVITEMEXW:
+    def information(self, mask: int | None = None) -> 'TreeViewItemInfo':
         """
         Get information of a tree item.
         """
         
-        tviex = TVITEMEXW()
+        tviex = TreeViewItemInfo()
         if mask is None:
             mask = (
                 TVIF_TEXT | TVIF_CHILDREN | TVIF_SELECTEDIMAGE | TVIF_EXPANDEDIMAGE |
@@ -226,8 +226,17 @@ class TreeViewItemInfo(TVITEMEXW):
         return self.lParam
     
     @parameter.setter
-    def parameter(self, parameter: int):
-        self.lParam = parameter
+    def parameter(self, parameter: WT_ADDRLIKE):
+        self.lParam = PtrUtil.get_address(parameter)
+        self.mask |= TVIF_PARAM
+    
+    @property
+    def value(self) -> int:
+        return self.lParam
+    
+    @value.setter
+    def value(self, value: WT_ADDRLIKE):
+        self.lParam = PtrUtil.get_address(value)
         self.mask |= TVIF_PARAM
     
     @property
@@ -487,16 +496,18 @@ class TreeView(Control):
                 self.on_nm_key_down.execute(nmkd)
             elif code == TVN_ITEMEXPANDED:
                 nmtv = i_cast_structure(nm, NMTREEVIEWW)
+                item = TreeItem(self, nmtv.itemNew.hItem)
                 if nmtv.action & TVE_COLLAPSE:
-                    self.on_item_collapsed.execute(nmtv)
-                else:
-                    self.on_item_expanded.execute(nmtv)
+                    self.on_item_collapsed.execute(item)
+                elif nmtv.action & TVE_EXPAND:
+                    self.on_item_expanded.execute(item)
             elif code == TVN_ITEMEXPANDING:
                 nmtv = i_cast_structure(nm, NMTREEVIEWW)
+                item = TreeItem(self, nmtv.itemNew.hItem)
                 if nmtv.action & TVE_COLLAPSE:
-                    self.on_item_collapsing.execute(nmtv)
-                else:
-                    self.on_item_expanding.execute(nmtv)
+                    self.on_item_collapsing.execute(item)
+                elif nmtv.action & TVE_EXPAND:
+                    self.on_item_expanding.execute(item)
             elif code == TVN_BEGINDRAGW:
                 nmtv = i_cast_structure(nm, NMTREEVIEWW)
                 self.on_begin_drag.execute(nmtv)

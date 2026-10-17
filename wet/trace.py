@@ -6,6 +6,7 @@ from typing import TypeAlias, Callable, ClassVar
 from datetime import datetime
 from ..sysinfoapi import *
 from ..dbg.dbgapi import *
+from .. import _defbase_ctypinit
 
 import random
 
@@ -220,7 +221,7 @@ def dbg_trace(provider: WET_PROVIDER | str, message: str = '', trace_id: int = -
         additional_info.IsComObject = True
         additional_info.TraceID = trace_id
     
-    name = caller.f_code.co_qualname
+    name = _defbase_ctypinit.Code_Qualname(caller.f_code)
        
     if 'self' in caller.f_locals: 
         self = caller.f_locals['self']

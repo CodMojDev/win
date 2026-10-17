@@ -71,6 +71,23 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
         _pfill_initchain = []
         def p_init_39spec():
             MProxy_Access(type.__dict__)['__class_getitem__'] = classmethod(lambda cls, item: typing._GenericAlias(cls, item))
+            tp_str = PyType_CAST_DEREF(str)
+            tp_str.immutable = False
+            tp_str.is_heap_type = True
+            def _removeprefix(self: str, prefix: str):
+                if self.startswith(prefix):
+                    return self[len(prefix):]
+                return self
+            def _removesuffix(self: str, suffix: str):
+                if self.endswith(suffix):
+                    return self[:-len(suffix)]
+                return self
+            MProxy_Access(str.__dict__)['removeprefix'] = _removeprefix
+            MProxy_Access(str.__dict__)['removesuffix'] = _removesuffix
+            str.removeprefix = _removeprefix
+            str.removesuffix = _removesuffix
+            tp_str.immutable = True
+            tp_str.is_heap_type = False
         def p_init_310spec():
             @POLYFILL_SpecialForm
             def TypeGuard(self, parameters):
@@ -116,6 +133,7 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
                 except (AttributeError, ValueError):
                     pass
                 return None
+            class _DummyKwargsPlaceholder_NoDefault: pass
             class ParamSpec(list, _DefaultMixin):
                 __class__ = typing.TypeVar
                 @property
@@ -125,7 +143,9 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
                 def kwargs(self):
                     return ParamSpecKwargs(self)
                 def __init__(self, name, *, bound=None, covariant=False, contravariant=False,
-                            infer_variance=False, default=typing.NoDefault):
+                            infer_variance=False, default=_DummyKwargsPlaceholder_NoDefault):
+                    if default is _DummyKwargsPlaceholder_NoDefault:
+                        default = typing.NoDefault
                     list.__init__(self, [self])
                     self.__name__ = name
                     self.__covariant__ = bool(covariant)
@@ -173,20 +193,110 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
                 return newargs
             def _is_unpack(obj):
                 return typing.get_origin(obj) is typing.Unpack
-            class _ConcatenateGenericAlias(typing._ConcatenateGenericAlias, _root=True):
-                __module__ = "typing"
+            def _is_param_expr(arg):
+                return arg is ... or isinstance(
+                    arg,
+                    (
+                        tuple,
+                        list,
+                        ParamSpec,
+                        typing._ConcatenateGenericAlias,
+                    ),
+                )
+            class _ConcatenateGenericAlias(list):
+                __class__ = typing._GenericAlias
+                def __init_subclass__(cls, *args, **kwargs):
+                    super().__init_subclass__(*args)
+                def __init__(self, origin, args):
+                    super().__init__(args)
+                    self.__origin__ = origin
+                    self.__args__ = args
+                def __repr__(self):
+                    _type_repr = typing._type_repr
+                    return (f'{_type_repr(self.__origin__)}'
+                            f'[{", ".join(_type_repr(arg) for arg in self.__args__)}]')
+                def __hash__(self):
+                    return hash((self.__origin__, self.__args__))
+                def __call__(self, *args, **kwargs): pass
+                @property
+                def __parameters__(self):
+                    return tuple(
+                        tp for tp in self.__args__ if isinstance(tp, (typing.TypeVar, ParamSpec))
+                    )
                 def copy_with(self, params):
-                    if isinstance(params[-1], (list, tuple)): return (*params[:-1], *params[-1])
-                    if isinstance(params[-1], typing._ConcatenateGenericAlias): params = (*params[:-1], *params[-1].__args__)
-                    elif not (params[-1] is ... or isinstance(params[-1], ParamSpec)):
+                    if isinstance(params[-1], _ConcatenateGenericAlias):
+                        params = (*params[:-1], *params[-1].__args__)
+                    elif isinstance(params[-1], (list, tuple)):
+                        return (*params[:-1], *params[-1])
+                    elif (not (params[-1] is ... or isinstance(params[-1], ParamSpec))):
                         raise TypeError("The last parameter to Concatenate should be a "
                                 "ParamSpec variable or ellipsis.")
-                    return super(typing._ConcatenateGenericAlias, self).copy_with(params)
+                    return self.__class__(self.__origin__, params)
                 def __getitem__(self, args):
-                    value = super().__getitem__(args)
-                    if isinstance(value, tuple) and any(_is_unpack(t) for t in value):
-                        return tuple(_unpack_args(*(n for n in value)))
-                    return value
+                    if self.__origin__ in (Generic, typing.Protocol):
+                        raise TypeError(f"Cannot subscript already-subscripted {self}")
+                    if not self.__parameters__:
+                        raise TypeError(f"{self} is not a generic class")
+                    if not isinstance(args, tuple):
+                        args = (args,)
+                    args = _unpack_args(*(_type_convert(p) for p in args))
+                    params = self.__parameters__
+                    for param in params:
+                        prepare = getattr(param, "__typing_prepare_subst__", None)
+                        if prepare is not None:
+                            args = prepare(self, args)
+                        elif isinstance(param, ParamSpec):
+                            i = params.index(param)
+                            if (
+                                i == len(args)
+                                and getattr(param, '__default__', typing.NoDefault) is not typing.NoDefault
+                            ):
+                                args = [*args, param.__default__]
+                            if i >= len(args):
+                                raise TypeError(f"Too few arguments for {self}")
+                            if len(params) == 1 and not _is_param_expr(args[0]):
+                                assert i == 0
+                                args = (args,)
+                            elif (
+                                isinstance(args[i], list)
+                                and not isinstance(args[i], _ConcatenateGenericAlias)
+                            ):
+                                args = (*args[:i], tuple(args[i]), *args[i + 1:])
+                    alen = len(args)
+                    plen = len(params)
+                    if alen != plen:
+                        raise TypeError(
+                            f"Too {'many' if alen > plen else 'few'} arguments for {self};"
+                            f" actual {alen}, expected {plen}"
+                        )
+                    subst = dict(zip(self.__parameters__, args))
+                    new_args = []
+                    for arg in self.__args__:
+                        if isinstance(arg, type):
+                            new_args.append(arg)
+                            continue
+                        if isinstance(arg, TypeVar):
+                            arg = subst[arg]
+                            if (
+                                (isinstance(arg, typing._GenericAlias) and _is_unpack(arg))
+                                or (
+                                    hasattr(types, "GenericAlias")
+                                    and isinstance(arg, types.GenericAlias)
+                                    and getattr(arg, "__unpacked__", False)
+                                )
+                            ):
+                                raise TypeError(f"{arg} is not valid as type argument")
+                        elif isinstance(arg,
+                            typing._GenericAlias
+                            if not hasattr(types, "GenericAlias") else
+                            (typing._GenericAlias, types.GenericAlias)
+                        ):
+                            subparams = arg.__parameters__
+                            if subparams:
+                                subargs = tuple(subst[x] for x in subparams)
+                                arg = arg[subargs]
+                        new_args.append(arg)
+                    return self.copy_with(tuple(new_args))
             typing._ConcatenateGenericAlias = _ConcatenateGenericAlias
             @typing._tp_cache
             def _concatenate_getitem(self, parameters):
@@ -238,12 +348,15 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
             def TypeAlias(self, parameters):
                 raise TypeError(f"{self} is not subscriptable")
             typing.TypeAlias = TypeAlias
-            def _bit_count(self):
+            def _bit_count(self: int):
                 return bin(self).count("1")
             tp_int = PyType_CAST_DEREF(int)
             tp_int.immutable = False
+            tp_int.is_heap_type = True
             MProxy_Access(int.__dict__)['bit_count'] = _bit_count
             int.bit_count = _bit_count
+            tp_int.immutable = True
+            tp_int.is_heap_type = False
         def p_init_311spec():
             def _unpack_args(*args):
                 newargs = []
@@ -277,7 +390,7 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
             def Self(self, parameters):
                 raise TypeError(f"{self} is not subscriptable")
             typing.Self = Self
-            @typing._SpecialForm
+            @POLYFILL_SpecialForm
             def Never(self, params):
                 raise TypeError(f"{self} is not subscriptable")
             typing.Never = Never
@@ -308,7 +421,7 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
                     ...
                 ] = (),
                 **kwargs: typing.Any,
-            ) -> typing.Callable[[T], T]:
+            ) -> typing.Callable:
                 def decorator(cls_or_fn):
                     cls_or_fn.__dataclass_transform__ = {
                         "eq_default": eq_default,
@@ -326,7 +439,7 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
                 return obj
             typing.reveal_type = reveal_type
         def p_init_312spec():
-            class _UnpackSpecialForm(typing._SpecialForm, _root=True):
+            class _UnpackSpecialForm(POLYFILL_SpecialForm, _root=True):
                 def __init__(self, getitem):
                     super().__init__(getitem)
             class _UnpackAlias(typing._GenericAlias, _root=True):
@@ -387,6 +500,10 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
                     and tp is not typing.Protocol
                 )
             typing.is_protocol = is_protocol
+            _EXCLUDED_ATTRS = frozenset(typing.EXCLUDED_ATTRIBUTES) | {
+                "__match_args__", "__protocol_attrs__", "__non_callable_proto_members__",
+                "__final__",
+            }
             def _get_protocol_attrs(cls):
                 attrs = set()
                 for base in cls.__mro__[:-1]:
@@ -1641,6 +1758,16 @@ class CArrayIterator:
 
 def MProxy_Access(mp) -> dict:
     return cast(id(mp), POINTER(MProxy)).contents.mapping.contents.object
+
+def Code_Qualname(co) -> str:
+    co_qualname = getattr(co, 'co_qualname', None)
+    if co_qualname is None:
+        return co.co_name
+    return co.co_name
+
+def Code_QualnameSet(co, qualname):
+    if hasattr(co, 'co_qualname'):
+        co.co_qualname = qualname
 
 def Init_Array_indexing_and_getset_patch():
     tp_Array = PyType_CAST_DEREF(Array)

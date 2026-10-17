@@ -51,7 +51,7 @@ class FontCombobox(Combobox):
             if font.charset == MAC_CHARSET: continue
             buffer = create_unicode_buffer(font.name)
             self.font_names.append(buffer)
-            self.append('').data = buffer
+            self.append(font.name).data = buffer
             self.hfonts.append(Font.indirect(font))
     
     def FontCombobox_on_draw_item(self, id: int, dis: DrawItemStruct):

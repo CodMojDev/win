@@ -256,7 +256,7 @@ class ListView(Control):
             return ListView.Items.Item(self.list_view, -1)
     
     class ListStyles(BitGroup):
-        lv: 'Listiew'
+        lv: 'ListView'
         
         def __init__(self, lv: 'ListView'):
             self.lv = lv

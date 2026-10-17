@@ -7,6 +7,7 @@ from functools import wraps
 from .comdefbase import *
 from .guid import *
 from ..wtypes import *
+from .. import _defbase_ctypinit
 
 from ..wet.trace import *
 
@@ -237,8 +238,7 @@ class COMInterface(CStructure, IReferenceable, IUnpackable):
         def thunk(this, *args, **kwargs):
             thunk.__name__ = f'{virtual_table.name}_{function_name}_Thunk'
             thunk.__qualname__ = thunk.__code__.co_name = thunk.__name__
-            if hasattr(thunk.__code__, 'co_qualname'):
-                thunk.co_qualname = thunk.__name__
+            _defbase_ctypinit.Code_QualnameSet(thunk.__code__, thunk.__name__)
             dbg_trace(dbgplus_provider, f'UnusedThis={this}, This={self.virtual_table.name}')
             return getattr(self, function_name + '_Impl')(*args)
         
