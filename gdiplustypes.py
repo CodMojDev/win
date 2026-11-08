@@ -499,7 +499,12 @@ if cpreproc.pragma_once("_GDIPLUSTYPES_H"):
             if self.Types:
                 memset(cast(self.Types, PVOID), 0, sizeof(BYTE))
 
-    class CharacterRange:
+    class CharacterRange(CStructure):
+        _fields_ = [
+            ("First", INT),
+            ("Length", INT)
+        ]
+        
         def __init__(self, first = 0, length = 0):
             self.First = first
             self.Length = length

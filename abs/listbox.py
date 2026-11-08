@@ -244,10 +244,16 @@ class ListBox(Control):
     on_selection_cancel: MultiEvent
     on_selection_change: MultiEvent
     
-    def __init__(self, width: int, height: int, parent: int | HANDLE, identifier: int | HMENU):
+    def __init__(self, width: int, height: int, parent: int | HWND, identifier: int | HMENU):
         super().__init__(parent, identifier)
         self._width = width
         self._height = height
+    
+    def create(self, x: int, y: int, relative: int | HANDLE = NULL):
+        """
+        Create list box control.
+        """
+        super().create(self._width, self._height, x, y, None, relative)
     
     def headless_init(self):
         super().headless_init()

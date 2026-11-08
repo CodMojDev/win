@@ -565,7 +565,7 @@ def TlPpUnknown(pvPp: WT_ADDRLIKE) -> IDoublePtr[IUnknown]:
     """
     Convert `void**`-like argument to `IUnknown**`.
     """
-    return i_cast(pvPp, PTR(LPUNKOWN))
+    return i_cast(pvPp, PTR(LPUNKNOWN))
 
 def TlPvPp(pvPp: WT_ADDRLIKE) -> int:
     """

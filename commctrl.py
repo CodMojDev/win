@@ -269,7 +269,7 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         hDC: int
         lpString: LPCWSTR
         nCount: int
-        lpRect: LPRECT
+        lpRect: IPointer[RECT]
         uFormat: int
         fLink: int
     NMCUSTOMTEXT = tagNMCUSTOMTEXT
@@ -5539,24 +5539,26 @@ if cpreproc.pragma_once("_INC_COMMCTRL"):
         DATETIMEPICK_CLASSA = b"SysDateTimePick32"
         DATETIMEPICK_CLASS = DATETIMEPICK_CLASSW
         if cpreproc.get_version() >= WIN32_WINNT_VISTA:
-            """
-
-            typedef struct tagDATETIMEPICKERINFO
-            {
-            DWORD cbSize;
-
-            RECT rcCheck;
-            DWORD stateCheck;
-
-            RECT rcButton;
-            DWORD stateButton;
-
-            HWND hwndEdit;
-            HWND hwndUD;
-            HWND hwndDropDown;
-            } DATETIMEPICKERINFO, *LPDATETIMEPICKERINFO;
-
-            """
+            class DATETIMEPICKERINFO(CStructure):
+                _fields_ = [
+                    ("cbSize", DWORD),
+                    ("rcCheck", RECT),
+                    ("stateCheck", DWORD),
+                    ("rcButton", RECT),
+                    ("stateButton", DWORD),
+                    ("hwndEdit", HWND),
+                    ("hwndUD", HWND),
+                    ("hwndDropDown", HWND)
+                ]
+                cbSize: int
+                rcCheck: RECT
+                stateCheck: int
+                rcButton: RECT
+                stateButton: int
+                hwndEdit: int
+                hwndUD: int
+                hwndDropDown: int
+            LPDATETIMEPICKERINFO = PTR(DATETIMEPICKERINFO)
 
         #(_WINVER >= WIN32_WINNT_VISTA)
         DTM_FIRST = 0x1000

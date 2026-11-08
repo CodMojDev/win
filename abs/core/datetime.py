@@ -243,7 +243,7 @@ class DateTime:
         second = abs(second)
         prev_sync = self._sync
         self._sync = False
-        while second > 60:
+        while second >= 60:
             second -= sign*60
             self.minute += sign
         self._sync = prev_sync
@@ -260,7 +260,7 @@ class DateTime:
         millisecond = abs(millisecond)
         prev_sync = self._sync
         self._sync = False
-        while millisecond > 1000:
+        while millisecond >= 1000:
             millisecond -= sign*1000
             self.second += sign
         self._sync = prev_sync
@@ -361,7 +361,7 @@ class DateTime:
     
     def copy(self) -> Self:
         """
-        Copy the Date/Time.
+        Copy the Date/Timfe.
         """
         dt = self.__class__()
         dt._st = self._st.copy()

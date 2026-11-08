@@ -528,7 +528,7 @@ class TreeList(TreeView):
     
     columns: Columns
     
-    def __init__(self, width: int, height: int, parent: int | HANDLE, identifier: int | HANDLE):
+    def __init__(self, width: int, height: int, parent: int | HWND, identifier: int | HMENU):
         super().__init__(width, height, parent, identifier)
         self.styles.add(WS_CLIPCHILDREN)
         self.class_name = TVC_CLASSNAME

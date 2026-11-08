@@ -8466,6 +8466,34 @@ PSCROLLBARINFO = LPSCROLLBARINFO = PTR(SCROLLBARINFO)
 @user32.foreign(BOOL, HWND, LONG, PSCROLLBARINFO)
 def GetScrollBarInfo(hwnd: int, idObject: int, psbi: IPointer[SCROLLBARINFO]) -> int: ...
 
+#****
+# COMBOBOX INFORMATION (ADDED FOR WINABS, NONIMPL WITH OTHERS)
+
+class COMBOBOXINFO(CStructure):
+    _fields_ = [
+        ("cbSize", DWORD),
+        ("rcItem", RECT),
+        ("rcButton", RECT),
+        ("stateButton", DWORD),
+        ("hwndCombo", HWND),
+        ("hwndItem", HWND),
+        ("hwndList", HWND)
+    ]
+    cbSize: int
+    rcItem: RECT
+    rcButton: RECT
+    stateButton: int
+    hwndCombo: int
+    hwndItem: int
+    hwndList: int
+
+PCOMBOBOXINFO = LPCOMBOBOXINFO = PTR(COMBOBOXINFO)
+
+@user32.foreign(BOOL, HWND, PCOMBOBOXINFO)
+def GetComboBoxInfo(hwndCombo: int, pcbi: IPointer[COMBOBOXINFO]) -> int: ...
+
+#****
+
 # NOT IMPLEMENTED
 # TODO
 

@@ -255,7 +255,7 @@ class Manifest:
             dpiAware = Manifest.XMLNode('dpiAware', 'true' if dpi_aware else 'false', {'xmlns': 'http://schemas.microsoft.com/SMI/2005/WindowsSettings'})
             windowsSettings.data.append(dpiAware)
         else:
-            windowsSettings.data = 'true' if dpi_aware else 'false'
+            dpiAware.data = 'true' if dpi_aware else 'false'
             
     def apply(self) -> ActivationContext:
         """

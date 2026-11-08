@@ -86,7 +86,7 @@ class TabControl(Control):
     on_get_object: MultiEvent
     on_tc_key_down: MultiEvent
     
-    def __init__(self, width: int, height: int, parent: int | HANDLE, identifier: int | HANDLE):
+    def __init__(self, width: int, height: int, parent: int | HWND, identifier: int | HMENU):
         super().__init__(parent, identifier)
         self.class_name = WC_TABCONTROLW
         self._width = width

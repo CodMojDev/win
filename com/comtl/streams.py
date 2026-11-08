@@ -76,18 +76,19 @@ class StreamOverIO(CComObject, IStream, ILockBytes):
         else:
             stat.grfMode = STGM_WRITE
         
-        mtime = int(os.path.getmtime(self.file) * 10000000) + WIN32_EPOCH_NULL_TIMESTAMP
-        ctime = int(os.path.getctime(self.file) * 10000000) + WIN32_EPOCH_NULL_TIMESTAMP
-        atime = int(os.path.getatime(self.file) * 10000000) + WIN32_EPOCH_NULL_TIMESTAMP
+        if isinstance(self, FileStream):
+            mtime = int(os.path.getmtime(self.file) * 10000000) + WIN32_EPOCH_NULL_TIMESTAMP
+            ctime = int(os.path.getctime(self.file) * 10000000) + WIN32_EPOCH_NULL_TIMESTAMP
+            atime = int(os.path.getatime(self.file) * 10000000) + WIN32_EPOCH_NULL_TIMESTAMP
         
-        stat.mtime.dwLowDateTime = mtime & 0xFFFFFFFF
-        stat.mtime.dwHighDateTime = mtime >> 32
+            stat.mtime.dwLowDateTime = mtime & 0xFFFFFFFF
+            stat.mtime.dwHighDateTime = mtime >> 32
         
-        stat.ctime.dwLowDateTime = ctime & 0xFFFFFFFF
-        stat.ctime.dwHighDateTime = ctime >> 32
-        
-        stat.atime.dwLowDateTime = atime & 0xFFFFFFFF
-        stat.atime.dwHighDateTime = atime >> 32
+            stat.ctime.dwLowDateTime = ctime & 0xFFFFFFFF
+            stat.ctime.dwHighDateTime = ctime >> 32
+            
+            stat.atime.dwLowDateTime = atime & 0xFFFFFFFF
+            stat.atime.dwHighDateTime = atime >> 32
         
         return S_OK
     

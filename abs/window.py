@@ -122,7 +122,7 @@ class Scrollbar:
     
     @property
     def range(self) -> tuple[int, int]:
-        iMin, iMax = UINT(), UINT()
+        iMin, iMax = INT(), INT()
         if not GetScrollRange(self.window, self.type, byref(iMin), byref(iMax)):
             raise WinException()
         return iMin.value, iMax.value
@@ -207,11 +207,17 @@ class Scrollbar:
     def maximal(self, maximal: int):
         self.range = (self.minimal, maximal)
         
-    def enable_all(self):
+    def enable(self):
         """
         Enable all the buttons.
         """
         EnableScrollBar(self.window, self.type, ESB_ENABLE_BOTH)
+        
+    def disable(self):
+        """
+        Disable all the buttons.
+        """
+        EnableScrollBar(self.window, self.type, ESB_DISABLE_BOTH)
 
 # menu APIs
 class Menu(Handle):
@@ -219,13 +225,60 @@ class Menu(Handle):
     Main window menu.
     """
     
+    class MenuAbstractItem:
+        menu: 'Menu'
+        value: int
+        on_click: MultiEvent
+        _holdref: Any
+        
+        def __init__(self, menu: 'Menu', value: WT_ADDRLIKE, holdref: Any | None = None):
+            if holdref is not None:
+                self._holdref = holdref
+            self.menu = menu
+            self.value = PtrUtil.get_address(value)
+            self.on_click = MultiEvent()
+    
+    class MenuItem(MenuAbstractItem):
+        pass
+    
+    class SubMenu(MenuAbstractItem):
+        _holdref: 'PopupMenu'
+
+        def separator(self):
+            """
+            Add the separator into menu.
+            """
+            self._holdref.separator()
+
+        def string(self, string: str) -> 'Menu.MenuItem':
+            """
+            Add the string into menu.
+            """
+            return self._holdref.string(string)
+        
+        def submenu(self, name: str) -> 'Menu.SubMenu':
+            """
+            Add the submenu into menu.
+            """
+            return self._holdref.submenu(name)
+    
+    _menu_items: list[MenuItem]
+    _bound_window: TUnion['Window', None]
+    _item_counter: int
+    
     def close(self):
+        if self._bound_window is not None:
+            self.unbind(self._bound_window)
+            self._bound_window = None
         DestroyMenu(self)
         self._closed = True
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._bound_window = None
         self._buffer = create_unicode_buffer(256)
+        self._menu_items = []
+        self._item_counter = 0
     
     @classmethod
     def create(cls):
@@ -233,6 +286,28 @@ class Menu(Handle):
         if not menu.value:
             raise WinException()
         return menu
+    
+    def BoundWindow_on_command(self, identifier: int, notify_code: int, hwnd: int):
+        for item in self._menu_items:
+            if isinstance(item, self.MenuItem):
+                if item.value == identifier:
+                    item.on_click.execute()
+    
+    def bind(self, window: int | HANDLE):
+        """
+        Bind the menu handling onto window (if it is managed).
+        """
+        if isinstance(window, Window) and Abs.managed(window):
+            window.on_command += self.BoundWindow_on_command
+            
+    def unbind(self, window: int | HANDLE):
+        """
+        Unbind the menu handling from window (managed window instance).
+        """
+        if isinstance(window, Window) and Abs.managed(window):
+            try:
+                window.on_command -= self.BoundWindow_on_command
+            except: pass
     
     def append(self, item: int, lp, flags: int):
         """
@@ -242,6 +317,7 @@ class Menu(Handle):
             lp = create_unicode_buffer(lp)
         if not AppendMenuW(self, flags, PtrUtil.get_address(item), i_cast(lp, LPCWSTR)):
             raise WinException()
+        self._item_counter += 1
 
     def modify(self, position: int, item: int, lp, flags: int):
         """
@@ -315,6 +391,32 @@ class Menu(Handle):
             raise WinException()
         return mii
 
+    def separator(self):
+        """
+        Add the separator into menu.
+        """
+        self.append(0, NULL, MF_STRING)
+
+    def string(self, string: str) -> MenuItem:
+        """
+        Add the string into menu.
+        """
+        identifier = f'WinAbs-Menu->[{self.value}]->ID[#{self._item_counter}]'
+        self.append(Identifiers[identifier], string, MF_STRING)
+        item = self.MenuItem(self, Identifiers[identifier])
+        self._menu_items.append(item)
+        return item
+    
+    def submenu(self, name: str) -> SubMenu:
+        """
+        Add the submenu into menu.
+        """
+        popup = PopupMenu.create()
+        self.append(popup, name, MF_POPUP)
+        item = self.SubMenu(self, popup, popup)
+        self._menu_items.append(item)
+        return item
+
 class PopupMenu(Menu):
     """
     Popup menu class.
@@ -375,7 +477,6 @@ class WINDOWCOMPOSITIONATTRIBDATA(CStructure):
     Attrib: int
     pvData: int
     cbData: int
-
 LPWINDOWCOMPOSITIONATTRIBDATA = PTR(WINDOWCOMPOSITIONATTRIBDATA)
 
 # the compositor attributes methods Infrastructure
@@ -383,7 +484,7 @@ LPWINDOWCOMPOSITIONATTRIBDATA = PTR(WINDOWCOMPOSITIONATTRIBDATA)
 def SetWindowCompositionAttribute(hwnd: int, pwcad: IPointer[WINDOWCOMPOSITIONATTRIBDATA]) -> int: pass
 
 @dwmapi.foreign(HRESULT, HWND, DWORD, LPCVOID, DWORD)
-def DwmSetWindowAttribute(hwnd: int, dwAttribute: int, pvAtribute: int, cbAttribute: int): pass
+def DwmSetWindowAttribute(hwnd: int, dwAttribute: int, pvAtribute: int, cbAttribute: int): ...
 
 # the DWM infrastructure
 @dwmapi.foreign(BOOL, HWND, UINT, WPARAM, LPARAM, PTR(LRESULT))
@@ -401,9 +502,25 @@ DWMWA_CAPTION_BUTTON_BOUNDS = 5
 DWMWA_NONCLIENT_RTL_LAYOUT = 6
 DWMWA_FORCE_ICONIC_REPRESENTATION = 7
 DWMWA_FLIP3D_POLICY = 8
-DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+DWMWA_DISALLOW_PEEK = 11
+DWMWA_EXCLUDED_FROM_PEEK = 12
+if cpreproc.get_build() >= 18985: # NT 10.0.18985
+    DWMWA_USE_IMMERSIVE_DARK_MODE = 20
+else:
+    DWMWA_USE_IMMERSIVE_DARK_MODE = 19
 DWMWA_USE_HOSTBACKDROPBRUSH = 17
+if cpreproc.get_build() >= 22000: # NT 10.0.22000
+    DWMWA_WINDOW_CORNER_PREFERENCE = 33
+    DWMWA_BORDER_COLOR = 34
+    DWMWA_CAPTION_COLOR = 35
+    DWMWA_VISIBLE_FRAME_BORDER_THICKNESS = 37
+else: # <22000
+    DWMWA_BORDER_COLOR = 33
+    DWMWA_CAPTION_COLOR = 34
+    DWMWA_TEXT_COLOR = 35
+    DWMWA_VISIBLE_FRAME_BORDER_THICKNESS = 36
 DWMWA_SYSTEMBACKDROP_TYPE = 38
+DWMWA_MICA_EFFECT = 1029
 
 # Non-client Rendering Policy
 DWMNCRP_USEWINDOWSTYLE = 0
@@ -425,25 +542,63 @@ DWMSBT_TRANSIENTWINDOW = 3
 DWMSBT_TABBEDWINDOW = 4
 
 # document "undocumented" composition attribs.
+WCA_UNDEFINED = 0
+WCA_NCRENDERING_ENABLED = 1
+WCA_NCRENDERING_POLICY = 2
 WCA_TRANSITIONS_FORCEDISABLED = 3
 WCA_ALLOW_NCPAINT = 4
 WCA_CAPTION_BUTTON_BOUNDS = 5
 WCA_NONCLIENT_RTL_LAYOUT = 6
+WCA_FORCE_ICONIC_REPRESENTATION = 7
 WCA_EXTENDED_FRAME_BOUNDS = 8
+WCA_HAS_ICONIC_BITMAP = 9
+WCA_THEME_ATTRIBUTES = 10
+WCA_NCRENDERING_EXILED = 11
+WCA_NCADORNMENTINFO = 12
+WCA_EXCLUDED_FROM_LIVEPREVIEW = 13
+WCA_VIDEO_OVERLAY_ACTIVE = 14
+WCA_FORCE_ACTIVEWINDOW_APPEARANCE = 15
 WCA_DISALLOW_PEEK = 16
 WCA_CLOAK = 17
 WCA_CLOAKED = 18
 WCA_ACCENT_POLICY = 19
+WCA_FREEZE_REPRESENTATION = 20
+WCA_EVER_UNCLOAKED = 21
+WCA_VISUAL_OWNER = 22
+WCA_HOLOGRAPHIC = 23
 WCA_EXCLUDED_FROM_DDA = 24
+WCA_PASSIVEUPDATEMODE = 25
 WCA_USEDARKMODECOLORS = 26
+WCA_CORNER_STYLE = 27
+WCA_PART_COLOR = 28
+WCA_DISABLE_MOVESIZE_FEEDBACK = 29
+WCA_LAST = 30
 
 # accent state enumeration
-ACCENT_DISABLED = 0
-ACCENT_ENABLE_GRADIENT = 1
-ACCENT_ENABLE_TRANSPARENTGRADIENT = 2
-ACCENT_ENABLE_BLURBEHIND = 3
-ACCENT_ENABLE_SLOWMOVE = 4
+ACCENT_STATE_DISABLED = 0
+ACCENT_STATE_ENABLE_GRADIENT = 1
+ACCENT_STATE_ENABLE_TRANSPARENTGRADIENT = 2
+ACCENT_STATE_ENABLE_BLURBEHIND = 3
+ACCENT_STATE_ENABLE_ACRYLICBLURBEHIND = 4
+ACCENT_STATE_ENABLE_HOSTBACKDROP = 5
+ACCENT_STATE_INVALID_STATE = 6
 ACCENT_STATE = INT
+
+# accent flags
+ACCENT_FLAG_NONE = 0
+ACCENT_FLAG_ENABLE_MODERN_ACRYLIC_RECIPE = 1 << 1 # Windows 11 22H2+
+ACCENT_FLAG_ENABLE_GRADIENT_COLOR = 1 << 1 # ACCENT_ENABLE_BLURBEHIND
+ACCENT_FLAG_ENABLE_FULLSCREEN = 1 << 2
+ACCENT_FLAG_ENABLE_BORDER_LEFT = 1 << 5
+ACCENT_FLAG_ENABLE_BORDER_TOP = 1 << 6
+ACCENT_FLAG_ENABLE_BORDER_RIGHT = 1 << 7
+ACCENT_FLAG_ENABLE_BORDER_BOTTOM = 1 << 8
+ACCENT_FLAG_ENABLE_BLUR_RECT = 1 << 9 # DwmpUpdateAccentBlurRect, it is conflicted with ACCENT_ENABLE_GRADIENT_COLOR when using ACCENT_ENABLE_BLURBEHIND
+ACCENT_FLAG_ENABLE_BORDER = (
+    ACCENT_FLAG_ENABLE_BORDER_LEFT | 
+    ACCENT_FLAG_ENABLE_BORDER_TOP | 
+    ACCENT_FLAG_ENABLE_BORDER_RIGHT | 
+    ACCENT_FLAG_ENABLE_BORDER_BOTTOM)
 
 # ToUnicodeEx infrastructure
 _to_unicode_keyboard_state = (BYTE * 256)()
@@ -493,6 +648,8 @@ WM_UAHDRAWMENUITEM = 0x0092
 WM_UAHINITMENU = 0x0093
 WM_UAHMEASUREMENUITEM = 0x0094
 WM_UAHNCPAINTMENUPOPUP = 0x0095
+WM_NCUAHDRAWCAPTION = 0x00ae
+WM_NCUAHDRAWFRAME = 0x00af
 
 class UAHMENU(CStructure):
     _fields_ = [
@@ -697,6 +854,47 @@ GCLP_HICONSM = (-34)
 @user32.foreign(BOOL, HWND, LONG, LONG, PMENUBARINFO)
 def GetMenuBarInfo(hwnd: int, idObject: int, idItem: int, pmbi: IPointer[MENUBARINFO]) -> int: ...
 
+class MenuBarInfo(MENUBARINFO):
+    @property
+    def rect(self) -> Rect:
+        return i_cast_structure(self.rcBar, Rect)
+    
+    @rect.setter
+    def rect(self, rect: RECT):
+        self.rcBar = rect
+    
+    @property
+    def menu(self) -> Menu:
+        return Menu.foreign_owner(self.hMenu)
+    
+    @menu.setter
+    def menu(self, menu: int | HANDLE):
+        self.hMenu = menu
+        
+    @property
+    def window(self) -> 'Window':
+        return Window.foreign(self.hwndMenu)
+    
+    @window.setter
+    def window(self, window: int | HWND):
+        self.hwndMenu = window
+        
+    @property
+    def bar_focused(self) -> bool:
+        return self.fBarFocused == TRUE
+    
+    @bar_focused.setter
+    def bar_focused(self, bar_focused: int):
+        self.fBarFocused = bar_focused
+        
+    @property
+    def item_focused(self) -> bool:
+        return self.fFocused == TRUE
+    
+    @item_focused.setter
+    def item_focused(self, item_focused: int):
+        self.fFocused = item_focused
+
 class DrawItemStruct(DRAWITEMSTRUCT):
     @property
     def type(self) -> int:
@@ -883,6 +1081,116 @@ class CompareItemStruct(COMPAREITEMSTRUCT):
     @lcid.setter
     def lcid(self, lcid: int):
         self.dwLocaleId = lcid
+
+class MinMaxInfo(MINMAXINFO):
+    @property
+    def max_size(self) -> tuple[int, int]:
+        return self.ptMaxSize.x, self.ptMaxSize.y
+    
+    @max_size.setter
+    def max_size(self, max_size: GraphicUtils.Size):
+        self.ptMaxSize = POINT(*GraphicUtils.size_tuple(max_size))
+        
+    @property
+    def max_position(self) -> tuple[int, int]:
+        return self.ptMaxPosition.x, self.ptMaxPosition.y
+    
+    @max_position.setter
+    def max_position(self, max_position: GraphicUtils.Point):
+        self.ptMaxPosition = GraphicUtils.point_tuple(max_position)
+    
+    @property
+    def max_track_size(self) -> tuple[int, int]:
+        return self.ptMaxTrackSize.x, self.ptMaxTrackSize.y
+    
+    @max_track_size.setter
+    def max_track_size(self, max_track_size: GraphicUtils.Size):
+        self.ptMaxTrackSize = POINT(*GraphicUtils.size_tuple(max_track_size))
+    
+    @property
+    def min_track_size(self) -> tuple[int, int]:
+        return self.ptMinTrackSize.x, self.ptMinTrackSize.y
+    
+    @min_track_size.setter
+    def min_track_size(self, min_track_size: GraphicUtils.Size):
+        self.ptMinTrackSize = POINT(*GraphicUtils.size_tuple(min_track_size))
+
+class WindowPos(WINDOWPOS):
+    @property
+    def width(self) -> int:
+        return self.cx
+    
+    @width.setter
+    def width(self, width: int):
+        self.cx = width
+    
+    @property
+    def height(self) -> int:
+        return self.cy
+    
+    @height.setter
+    def height(self, height: int):
+        self.cy = height
+        
+    @property
+    def window(self) -> 'Window':
+        return Window.foreign(self.hwnd)
+    
+    @window.setter
+    def window(self, window: int | HWND):
+        self.hwnd = window
+        
+    @property
+    def insert_after(self) -> 'Window':
+        return Window.foreign(self.hwndInsertAfter)
+    
+    @insert_after.setter
+    def insert_after(self, insert_after: int | HWND):
+        self.hwndInsertAfter = insert_after
+
+class WindowPlacement(WINDOWPLACEMENT):
+    @property
+    def show_command(self) -> int:
+        return self.showCmd
+    
+    @show_command.setter
+    def show_command(self, show_command):
+        self.showCmd = show_command
+        
+    @property
+    def min_position(self) -> tuple[int, int]:
+        return self.ptMinPosition.x, self.ptMinPosition.y
+    
+    @min_position.setter
+    def min_position(self, min_position: GraphicUtils.Point):
+        self.ptMinPosition = POINT(*GraphicUtils.point_tuple(min_position))
+        
+    @property
+    def max_position(self) -> tuple[int, int]:
+        return self.ptMaxPosition.x, self.ptMaxPosition.y
+    
+    @max_position.setter
+    def max_position(self, max_position: GraphicUtils.Point):
+        self.ptMaxPosition = POINT(*GraphicUtils.point_tuple(max_position))
+
+WINDOWTHEMEATTRIBUTETYPE = INT
+
+class WTA_OPTIONS(CStructure):
+    _fields_ = [
+        ("dwFlags", DWORD),
+        ("dwMask", DWORD)
+    ]
+    dwFlags: int
+    dwMask: int
+
+WTA_NONCLIENT = 1
+WTNCA_NODRAWCAPTION = 1
+WTNCA_NODRAWICON = 2
+WTNCA_NOSYSMENU = 4
+WTNCA_NOMIRRORHELP = 8
+
+@uxtheme.foreign(HRESULT, HWND, WINDOWTHEMEATTRIBUTETYPE, PVOID, DWORD)
+def SetWindowThemeAttribute(hwnd: int, eAttribute: int, pvAtribute: int, cbAttribute: int): ...
 
 # Window send message type enumeration
 WSMT_SEND = 0
@@ -1072,6 +1380,12 @@ class Window(Abs.Object, HWND):
         def __contains__(self, window: 'Window') -> bool:
             return window in self.children
     
+    class Notifications:
+        on_size: MultiEvent
+        
+        def __init__(self):
+            self.on_size = MultiEvent()
+    
     _foreign_cache: dict[int, 'Window'] = {}
     styles: Styles
     props: Props
@@ -1136,7 +1450,7 @@ class Window(Abs.Object, HWND):
     on_capture_changed: MultiEvent
     on_focus_changed: MultiEvent
     on_focus_lost: MultiEvent
-    on_dwm_colorization_color: MultiEvent
+    on_dwm_colorization_color_changed: MultiEvent
     on_dwm_composition_changed: MultiEvent
     on_dwm_nc_rendering_changed: MultiEvent
     on_dwm_send_iconic_live_preview_bitmap: MultiEvent
@@ -1148,10 +1462,15 @@ class Window(Abs.Object, HWND):
     on_time_changed: MultiEvent
     on_nc_create: MultiEvent
     on_setting_change: MultiEvent
+    on_parent_notify: MultiEvent
+    notifications: Notifications
     
     class_style: int
     last_message: MSG
     pending_messages: list[tuple[int, int, int, int]]
+    _timers: dict[int, FARPROC]
+    _subclasses: dict[Callable[[int, int, int, int], int], FARPROC]
+    _class_name: str | None
     
     def __hash__(self):
         return hash(self.value)
@@ -1162,19 +1481,25 @@ class Window(Abs.Object, HWND):
         return window.value == self.value
     
     @classmethod
-    def foreign(cls, hwnd: int) -> 'Window':
+    def foreign(cls, hwnd: int, cached: bool = True) -> Self:
         """
         Create `Window` object from foreign HWND.
         """
         hwnd = PtrUtil.get_address(hwnd)
         if hwnd == 0: return None
-        window = Window._foreign_cache.get(hwnd)
-        if window is None:
+        if cached:
+            window = Window._foreign_cache.get(hwnd)
+        else:
+            window = None
+        if window is None or not isinstance(window, cls):
+            window2 = window
             window = cls.__new__(cls)
             window.value = hwnd
             Window.__init__(window, headless=True)
             Window._foreign_cache[hwnd] = window
             window.foreign_init()
+            if window2 is not None:
+                window._subclasses.extend(window2._subclasses)
         return window
     
     def headless_init(self):
@@ -1250,7 +1575,7 @@ class Window(Abs.Object, HWND):
         self.on_capture_changed = MultiEvent()
         self.on_focus_changed = MultiEvent()
         self.on_focus_lost = MultiEvent()
-        self.on_dwm_colorization_color = MultiEvent()
+        self.on_dwm_colorization_color_changed = MultiEvent()
         self.on_dwm_composition_changed = MultiEvent()
         self.on_dwm_nc_rendering_changed = MultiEvent()
         self.on_dwm_send_iconic_live_preview_bitmap = MultiEvent()
@@ -1262,6 +1587,8 @@ class Window(Abs.Object, HWND):
         self.on_time_changed = MultiEvent()
         self.on_nc_create = MultiEvent()
         self.on_setting_change = MultiEvent()
+        self.on_parent_notify = MultiEvent()
+        self.notifications = self.Notifications()
         
         self.headless_init()
         
@@ -1270,6 +1597,9 @@ class Window(Abs.Object, HWND):
         
         # bind the standard handler for creation: application cycle notifier
         self.on_create += EventCallback(self.Window_on_create, Priority._PrivateMaxPriority)
+        
+        # subclass callback cache
+        self._subclasses = {}
         
         # headless construct = construct `Window` object from HWND
         if 'headless' not in kwargs:
@@ -1289,9 +1619,6 @@ class Window(Abs.Object, HWND):
             
             # timer callback cache
             self._timers = {}
-    
-    _timers: dict[int, FARPROC]
-    class_name: str | None
     
     def on_fully_created(self):
         pass
@@ -1468,11 +1795,11 @@ class Window(Abs.Object, HWND):
         """
         EnableWindow(self, enable)
         
-    def disable(self):
+    def disable(self, disable: bool = True):
         """
         Disable the window.
         """
-        EnableWindow(self, False)
+        EnableWindow(self, not disable)
     
     def register(self) -> Atom | None:
         """
@@ -1537,6 +1864,11 @@ class Window(Abs.Object, HWND):
             if error != 0: raise WinException(error)
             else: return
         
+        previous = Window._foreign_cache.get(self.value, None)
+        if previous is not None:
+            self._subclasses.update(previous._subclasses)
+            if hasattr(previous, '_timers'):
+                self._timers.update(previous._timers)
         Window._foreign_cache[self.value] = self
         self.on_fully_created()
     
@@ -1553,13 +1885,13 @@ class Window(Abs.Object, HWND):
         return None
     
     def on_nc_paint(self, dc: DC, region: Region):
-        return self # sentinel value
+        return Sentinel # sentinel value
     
     def on_nc_hittest(self, x: int, y: int) -> int:
         return None
     
-    def on_nc_calcsize(self, rect: RECT, rectangles: list=None, position: WINDOWPOS=None) -> int:
-        return self # sentinel value
+    def on_nc_calcsize(self, rect: Rect, rectangles: list[Rect] | None, position: WindowPos | None) -> int:
+        return Sentinel # sentinel value
     
     def on_uah_destroy_window(self) -> bool:
         return False
@@ -1582,7 +1914,7 @@ class Window(Abs.Object, HWND):
     def on_nc_activate(self, active: bool, window: TUnion['Window', None]) -> bool:
         return False
     
-    def on_get_minmax_info(self, info: MINMAXINFO) -> bool:
+    def on_get_minmax_info(self, info: MinMaxInfo) -> bool:
         return False
     
     def on_sys_command(self, code: int, x: int, y: int) -> bool:
@@ -1627,6 +1959,9 @@ class Window(Abs.Object, HWND):
     def on_nc_mouse_leave(self) -> bool:
         return False
     
+    def on_nc_mouse_move(self, ht: int, x: int, y: int) -> bool:
+        return False
+    
     def on_control_color_edit(self, edit: 'Window', dc: DC) -> int | HANDLE | None:
         return None
     
@@ -1646,10 +1981,10 @@ class Window(Abs.Object, HWND):
         return None
     
     def on_get_icon(self, icon_type: int, dpi: int) -> int | HANDLE:
-        return self # sentinel value
+        return Sentinel # sentinel value
     
     def on_set_icon(self, icon_type: int, icon: Icon | None) -> int | HANDLE:
-        return self # sentinel value
+        return Sentinel # sentinel value
     
     # ** Main window procedure ** #
     def window_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int:
@@ -1715,6 +2050,7 @@ class Window(Abs.Object, HWND):
             self.on_command.execute(LOWORD(wParam), HIWORD(wParam), lParam)
             return 0 # the message is handled, so return 0
         elif msg == WM_SIZE: # window sized
+            self.notifications.on_size.execute(wParam, LOWORD(lParam), HIWORD(lParam))
             if self.on_size(wParam, LOWORD(lParam), HIWORD(lParam)):
                 return 0 # the message is handled, so return 0
         elif msg == WM_KEYDOWN: # key down
@@ -1823,10 +2159,10 @@ class Window(Abs.Object, HWND):
                     # call the handler
                     result = self.on_nc_paint(dc, region)
             # if sentinel value matches, we are falling back to default procedure
-            if result is not self:
+            if result is not Sentinel:
                 return 0 # otherwise we are handled the message
         elif msg == WM_NCHITTEST: # non-client area hit test message
-            result = self.on_nc_hittest(LOWORD(wParam), HIWORD(wParam)) # call message handler
+            result = self.on_nc_hittest(LOWORD(lParam), HIWORD(lParam)) # call message handler
             # if message is handled, when return hit test result
             if result is not None: return result
         elif msg == WM_NCCALCSIZE: # non-client area calculate size
@@ -1841,11 +2177,11 @@ class Window(Abs.Object, HWND):
                 rectangles = [rectangle0, rectangle1, rectangle2]
                 
                 # call WM_NCCALCSIZE handler
-                result = self.on_nc_calcsize(rectangle0, rectangles, parameters.lppos.contents)
+                result = self.on_nc_calcsize(rectangle0, rectangles, i_cast_value(parameters.lppos, WindowPos))
             else: # don't need
-                result = self.on_nc_calcsize(i_cast_value(lParam, Rect)) # call handler
+                result = self.on_nc_calcsize(i_cast_value(lParam, Rect), None, None) # call handler
             # if sentinel value matches, we are falling back to default procedure
-            if result is not self: 
+            if result is not Sentinel: 
                 return 0 # otherwise we are handled the message
         elif msg == WM_MOUSELEAVE: # mouse is leaved from window
             self.on_mouse_leave.execute() # call handler
@@ -1924,7 +2260,7 @@ class Window(Abs.Object, HWND):
         elif msg == WM_GETMINMAXINFO:
             # the system is needed in min and max window sizes
             # cast lParam to MINMAXINFO and call handler
-            if self.on_get_minmax_info(i_cast_value(lParam, MINMAXINFO)):
+            if self.on_get_minmax_info(i_cast_value(lParam, MinMaxInfo)):
                 return 0 # the message is handled so return 0
             # otherwise let it fallback
         elif msg == WM_STYLECHANGED:
@@ -1945,15 +2281,26 @@ class Window(Abs.Object, HWND):
             return 0 # the message is handled so return 0
         elif msg == WM_WINDOWPOSCHANGED:
             # the window position is has been changed
-            pos = i_cast_value(lParam, WINDOWPOS) # cast the lParam to WINDOWPOS
+            pos = i_cast_value(lParam, WindowPos) # cast the lParam to WindowPos
             self.on_window_position_changed.execute(pos) # call handler
         elif msg == WM_WINDOWPOSCHANGING:
             # the window position is being to be changed
-            pos = i_cast_value(lParam, WINDOWPOS) # cast the lParam to WINDOWPOS
+            pos = i_cast_value(lParam, WindowPos) # cast the lParam to WindowPos
             self.on_window_position_changing.execute(pos) # call handler
         elif msg == WM_NCMOUSELEAVE: # the mouse leaving non-client area
             # call the handler and check result
             if not self.on_nc_mouse_leave():
+                result = LRESULT()
+                # get the result from DWM default window procedure
+                if not is_null(DwmDefWindowProc):
+                    if DwmDefWindowProc(hwnd, msg, wParam, lParam, byref(result)):
+                        return result.value # if succeeded, then return LRESULT
+                # otherwise let it fallback
+            else: # otherwise the message is handled
+                return 0
+        elif msg == WM_NCMOUSEMOVE: # the mouse moving over non-client area
+            # call the handler and check result, wParam=dwHitTest, lParam=ptMove
+            if not self.on_nc_mouse_move(wParam, LOWORD(lParam), HIWORD(lParam)):
                 result = LRESULT()
                 # get the result from DWM default window procedure
                 if not is_null(DwmDefWindowProc):
@@ -2028,7 +2375,7 @@ class Window(Abs.Object, HWND):
             return 0 # the message is handled.
         elif msg == WM_DWMCOLORIZATIONCOLORCHANGED: # DWM colorization settings is changed
             # call the handler, wParam=colorARGB, lParam=isBlended
-            self.on_dwm_colorization_color.execute(Color.ARGB(wParam), lParam != FALSE)
+            self.on_dwm_colorization_color_changed.execute(Color.ARGB(wParam), lParam != FALSE)
             return 0 # the message is handled
         elif msg == WM_DWMCOMPOSITIONCHANGED: # DWM composition is enabled/disabled (Vista or 7)
             # call the handler
@@ -2101,7 +2448,7 @@ class Window(Abs.Object, HWND):
         elif msg == WM_GETICON: # the window has to return the icon
             # call the handler, wParam=nIconType, lParam=nDPI
             result = self.on_get_icon(wParam, lParam)
-            if result is not self: # if sentinel value is not returned:
+            if result is not Sentinel: # if sentinel value is not returned:
                 return result # then return it as icon handle
             # otherwise let it fallback into default proc
         elif msg == WM_SETICON: # the icon of a window is changed by external app
@@ -2112,7 +2459,7 @@ class Window(Abs.Object, HWND):
                 icon = Icon.foreign_owner(lParam)
             # call the handler
             result = self.on_set_icon(wParam, icon)
-            if result is self: pass # sentinel value, fallback to default handler
+            if result is Sentinel: pass # sentinel value, fallback to default handler
             else: # message is handled
                 return result # return icon handle or NULL
             # let it fallback into default proc
@@ -2129,16 +2476,38 @@ class Window(Abs.Object, HWND):
             # call the handler, wParam=uiAction, lParam=pszSetting
             self.on_setting_change.execute(LPWSTR(lParam).value, wParam)
             return 0 # message is handled
+        elif msg == WM_PARENTNOTIFY: # significant event ocurred with child window
+            # call the handler, wParam=Word(Low=uNotifyMsg, High=wMsgSpecific),
+            # lParam=dwMsgSpecificData
+            notify_msg = LOWORD(wParam)
+            # WM_XBUTTONDOWN High(wParam)=wXButtonPressed
+            if notify_msg == WM_XBUTTONDOWN:
+                self.on_parent_notify.execute(notify_msg, (HIWORD(wParam), LOWORD(lParam), HIWORD(lParam)))
+            # WM_CREATE/WM_DESTROY High(wParam)=wID, lParam=hWnd
+            elif notify_msg == WM_CREATE or notify_msg == WM_DESTROY:
+                self.on_parent_notify.execute(notify_msg, (HIWORD(wParam), Window.foreign(lParam)))
+            # WM_POINTERDOWN High(wParam)=wPointerID
+            elif notify_msg == WM_POINTERDOWN:
+                self.on_parent_notify.execute(notify_msg, (HIWORD(wParam),))
+            # WM_LBUTTONDOWN/WM_MBUTTONDOWN/WM_RBUTTONDOWN lParam=ptClick
+            elif (notify_msg == WM_LBUTTONDOWN or 
+                  notify_msg == WM_MBUTTONDOWN or 
+                  notify_msg == WM_RBUTTONDOWN):
+                self.on_parent_notify.execute(notify_msg, (LOWORD(lParam), HIWORD(lParam)))
+            # unknown notify messages are not marshalling and 
+            # present as High(wParam) and lParam
+            else:
+                self.on_parent_notify.execute(notify_msg, (HIWORD(wParam), lParam))
         else:
             # unknown window message received
             result = self.on_unknown_message.execute(hwnd, msg, wParam, lParam) # trying to call all unknown message handlers
             for value in result: # iterate through returned values tuple
-                if value is not None: # if value != None, when handler is handled our message
+                if value is not None and value is not Sentinel: # if value != None, when handler is handled our message
                     return value # return handler value as procedure LRESULT
         
         return self.default_window_proc(hwnd, msg, wParam, lParam) # otherwise let procedure fallback into defined fallback procedure (commonly DefWindowProc)
     
-    def window_subclass_thunk_proc(self, hwnd: int, msg: int, wParam: int, lParam: int, subclassId: int, dwUnused: int): 
+    def window_subclass_thunk_proc(self, hwnd: int, msg: int, wParam: int, lParam: int, subclassId: int, dwUnused: int) -> int: 
         if msg == WM_NCDESTROY:
             RemoveWindowSubclass(hwnd, self.pfnSubclassThunkProc, subclassId)
         elif msg == WM_CREATE:
@@ -2147,11 +2516,34 @@ class Window(Abs.Object, HWND):
         if result is None: return DefSubclassProc(hwnd, msg, wParam, lParam)
         return result
     
-    def subclass(self):
-        SetWindowSubclass(self, self.pfnSubclassThunkProc, SubclassIdentifiers[id(self)], 0)
+    def subclass(self, function: Callable[[int, int, int, int], int | None] | None = None, subclass_id: int | None = None):
+        if function is not None:
+            def thunk_function(hwnd: int, msg: int, wParam: int, lParam: int, subclassId: int, dwUnused: int) -> int:
+                if msg == WM_NCDESTROY:
+                    self.unsubclass(function, subclassId)
+                elif msg == WM_CREATE:
+                    self.value = hwnd
+                result = function(hwnd, msg, wParam, lParam)
+                if result is None: return DefSubclassProc(hwnd, msg, wParam, lParam)
+                return result
+            pfn = SUBCLASSPROC(thunk_function)
+            self._subclasses[function] = pfn
+        else:
+            pfn = self.pfnSubclassThunkProc
+        if subclass_id is None:
+            subclass_id = SubclassIdentifiers[id(self)]
+        SetWindowSubclass(self, pfn, subclass_id, 0)
     
-    def unsubclass(self):
-        RemoveWindowSubclass(self, self.pfnSubclassThunkProc, SubclassIdentifiers[id(self)])
+    def unsubclass(self, function: Callable[[int, int, int, int], int] | None = None, subclass_id: int | None = None):
+        if subclass_id is None:
+            subclass_id = SubclassIdentifiers[id(self)]
+        if function is not None:
+            pfn = self._subclasses.get(function)
+            if pfn is None:
+                raise ValueError(f'No registered subclass callable for {function}.')
+        else:
+            pfn = self.pfnSubclassThunkProc
+        RemoveWindowSubclass(self, pfn, subclass_id)
         
     def window_subclass_proc(self, hwnd: int, msg: int, wParam: int, lParam: int) -> int | None:
         return None
@@ -2171,7 +2563,25 @@ class Window(Abs.Object, HWND):
     
     @property
     def visible(self) -> bool:
-        return IsWindowVisible(self) != FALSE
+        return IsWindowVisible(self) == TRUE
+    
+    @visible.setter
+    def visible(self, visible: bool):
+        if visible:
+            self.show()
+        else:
+            self.hide()
+    
+    @property
+    def invisible(self) -> bool:
+        return IsWindowVisible(self) == FALSE
+    
+    @invisible.setter
+    def invisible(self, invisible: bool):
+        if invisible:
+            self.hide()
+        else:
+            self.show()
     
     def capture(self):
         """
@@ -2215,8 +2625,11 @@ class Window(Abs.Object, HWND):
         """
         Kill the timer by given Event ID.
         """
+        SetLastError(0)
         if not KillTimer(self, event_id):
-            raise WinException()
+            code = GetLastError()
+            if code != 0:
+                raise WinException(0)
         # if event held by window, remove callback cache for event
         if event_id in self._timers:
             del self._timers[event_id]
@@ -2346,7 +2759,7 @@ class Window(Abs.Object, HWND):
         """
         self.send_message(WSMT_POST, message, wParam, lParam)
  
-    def map(self, window: int | HWND, points: Iterable[GraphicUtils.Point]) -> tuple[POINT, ...]:
+    def map(self, window: int | HWND, points: Iterable[GraphicUtils.Point]) -> tuple[Point, ...]:
         """
         Map the given points of window to an another window.
         """
@@ -2782,7 +3195,7 @@ class Window(Abs.Object, HWND):
     
     @classmethod
     def find(cls, name: str = NULL, class_name: str = NULL, 
-             parent: int | HANDLE = NULL, after: int | HANDLE = NULL) -> 'Window':
+             parent: int | HWND = NULL, after: int | HWND = NULL) -> 'Window':
         """
         Find window.
         """
@@ -2877,11 +3290,11 @@ class Window(Abs.Object, HWND):
     def identifier(self) -> int:
         return GetDlgCtrlID(self)
     
-    def get_menu_bar_info(self, object_id: int = OBJID_MENU, identifier: int = 0) -> MENUBARINFO:
+    def get_menu_bar_info(self, object_id: int = OBJID_MENU, identifier: int = 0) -> MenuBarInfo:
         """
         Get the menu bar info.
         """
-        mbi = MENUBARINFO()
+        mbi = MenuBarInfo()
         mbi.cbSize = mbi.size()
         if not GetMenuBarInfo(self, object_id, identifier, mbi.ref()):
             raise WinException()
@@ -2908,13 +3321,34 @@ class Window(Abs.Object, HWND):
     def maximized(self) -> bool:
         return IsZoomed(self) != FALSE
     
+    @maximized.setter
+    def maximized(self, maximized: bool):
+        if maximized:
+            self.maximize()
+        else:
+            self.minimize()
+    
     @property
     def iconic(self) -> bool:
         return IsIconic(self) != FALSE
     
+    @iconic.setter
+    def iconic(self, iconic: bool):
+        if iconic:
+            self.minimize()
+        else:
+            self.maximize()
+    
     @property
     def minimized(self) -> bool:
         return IsIconic(self) != FALSE
+    
+    @minimized.setter
+    def minimized(self, minimized: bool):
+        if minimized:
+            self.minimize()
+        else:
+            self.maximize()
     
     @property
     def frozen(self) -> bool:
@@ -3019,6 +3453,69 @@ class Window(Abs.Object, HWND):
         Extend the DWM Window Frame to Client Area.
         """
         hr = DwmExtendFrameIntoClientArea(self, margins.ref())
+        if FAILED(hr): raise COMError(hr)
+        
+    @property
+    def enabled(self) -> bool:
+        return IsWindowEnabled(self) == TRUE
+    
+    @enabled.setter
+    def enabled(self, enabled: bool):
+        self.enable(enabled)
+        
+    @property
+    def disabled(self) -> bool:
+        return IsWindowEnabled(self) == FALSE
+    
+    @disabled.setter
+    def disabled(self, disabled: bool):
+        self.disable(disabled)
+        
+    def command(self, identifier: int, notify_code: int = 0, hwnd: int = 0):
+        """
+        Send the WM_COMMAND to window.
+        """
+        self.send(WM_COMMAND, MAKEWPARAM(identifier, notify_code), hwnd)
+    
+    def maximize(self):
+        """
+        Maximize the window.
+        """
+        self.show(SW_SHOWMAXIMIZED)
+        
+    def minimize(self):
+        """
+        Minimize the window.
+        """
+        self.show(SW_SHOWMINIMIZED)
+        
+    def restore(self):
+        """
+        Restore the window.
+        """
+        self.show(SW_RESTORE)
+        
+    @property
+    def placement(self) -> WindowPlacement:
+        wp = WindowPlacement()
+        wp.length = sizeof(WindowPlacement)
+        if not GetWindowPlacement(self, wp.ref()):
+            raise WinException()
+        return wp
+    
+    @placement.setter
+    def placement(self, placement: WINDOWPLACEMENT):
+        placement.length = sizeof(WINDOWPLACEMENT)
+        if not SetWindowPlacement(self, placement.ref()):
+            raise WinException()
+        
+    def set_theme_attribute(self, attribute: int, value: CData | int):
+        """
+        Set the UxTheme attribute of window.
+        """
+        if isinstance(value, int):
+            value = INT(value)
+        hr = SetWindowThemeAttribute(self, attribute, addressof(value), sizeof(value))
         if FAILED(hr): raise COMError(hr)
     
 class Mouse:
@@ -3281,7 +3778,7 @@ class ThreadLoopUnit:
     ALL_LOOPS: dict[int, Self] = {}
     
     @classmethod
-    def current(cls, running: bool = True) -> TUnion[Self, None]:
+    def current(cls, running: bool = False) -> TUnion[Self, None]:
         loops = cls.RUNNING_LOOPS if running else cls.ALL_LOOPS
         return loops.get(GetCurrentThreadId(), None)
     
@@ -3621,7 +4118,7 @@ class Control(Window):
         self.on_nm_focus_changed = MultiEvent()
         self.on_nm_focus_lost = MultiEvent()
     
-    def bind(self, parent: int | HANDLE) -> Window | None:
+    def bind(self, parent: int | HWND) -> Window | None:
         """
         Bind the control to the WinAbs-managed parent. 
         Returns given argument if it is Window object and Abs-managed or None otherwise.
@@ -3641,17 +4138,6 @@ class Control(Window):
         
         Control._id_last += 1
         return Control._id_last
-    
-    @property
-    def visible(self):
-        return self.style & WS_VISIBLE
-    
-    @visible.setter
-    def visible(self, visible: bool):
-        if visible:
-            self.style |= WS_VISIBLE
-        else:
-            self.style &= ~WS_VISIBLE
     
     def create(self, width: int, height: int, x: int = 0, y: int = 0, window_name: str='Control', relative: int | HWND = NULL):
         """
@@ -3755,7 +4241,7 @@ class GLWindow(Window):
         
         # OpenGL-specific window event subscribing
         ThreadLoopUnit.current(False).after_message += self.GL_after_message
-        self.on_close += self.GL_close
+        self.on_destroy += self.GL_destroy
         
         # setup the OpenGL pixel format
         self.pfd = PIXELFORMATDESCRIPTOR(
@@ -3779,16 +4265,16 @@ class GLWindow(Window):
         """
         Disable the after-message render, which is bound to application event cycle.
         """
-        
-        self.enable_after_message_render = False
-        ThreadLoopUnit.current(False).after_message -= self.GL_after_message
+        if self.enable_after_message_render:
+            self.enable_after_message_render = False
+            ThreadLoopUnit.current(False).after_message -= self.GL_after_message
     
     def GL_after_message(self):
         # standard after-message handler, execute OpenGL tick event and swap the buffers
         self.gl_tick.execute()
         SwapBuffers(self.dc)
         
-    def GL_close(self):
+    def GL_destroy(self):
         # OpenGL window closed, if enabled after-message render when unbind it from application
         if self.enable_after_message_render:
             ThreadLoopUnit.current(False).after_message -= self.GL_after_message
@@ -3817,10 +4303,9 @@ class GLWindow(Window):
         """
         Create the OpenGL window.
         """
-        
         super().create(width, height, x, y, window_name, parent, NULL)
-        if not self.manual_initialize:
-            self.initialize_gl()
+        if not self.manual_initialize: # if automatic initialization, 
+            self.initialize_gl()       # then trigger OpenGL initialization
 
     def swap_buffers(self):
         """
@@ -3885,9 +4370,21 @@ class ExtendedGLWindow(GLWindow):
                window_name: str = 'Window', parent = NULL):
         # block the window.gl_ready event for silenting the execution (event is called by us in this function)
         self.gl_ready.block()
+        # save the last manual_initialize to swap
+        manual_initialize = self.manual_initialize
+        # trigger the manual initialization so overriden initialize_gl won't be called
+        self.manual_initialize = True
+        # call the super creation procedure
         super().create(width, height, x, y, window_name, parent)
+        # restore the manual_initialize field
+        self.manual_initialize = manual_initialize
         self.gl_ready.unblock() # unblock the window.gl_ready event so we can execute it
-        
+        if not manual_initialize: # if automatic initialization then init OpenGL
+            self.initialize_gl()
+    
+    def initialize_gl(self):
+        # call the super OpenGL initialization method (WGL 1.1)
+        super().initialize_gl()
         # create the OpenGL extended context
         context = self.create_extended_context(self.attributes)
         context.set_current(self.dc)
@@ -3918,6 +4415,6 @@ class ExtendedGLWindow(GLWindow):
         # set the WGL attributes of version
         self.attributes[WGL_CONTEXT_MAJOR_VERSION_ARB] = major
         self.attributes[WGL_CONTEXT_MINOR_VERSION_ARB] = minor
-        
+
 # Win Abstractions Layer code Ends
 # # # # # # # # # # # # # # # # # # # #

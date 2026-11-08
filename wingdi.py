@@ -4641,6 +4641,13 @@ if cpreproc.pragma_once("_WINGDI_"):
             dsOffset: int
         LPDIBSECTION = POINTER(DIBSECTION)
         PDIBSECTION = LPDIBSECTION
+        
+        AngleArc = declare(gdi32.AngleArc, BOOL, HDC, INT, INT, DWORD, FLOAT, FLOAT)
+        PolyPolyline = declare(gdi32.PolyPolyline, BOOL, HDC, LPPOINT, PDWORD, DWORD)
+        GetWorldTransform = declare(gdi32.GetWorldTransform, BOOL, HDC, LPXFORM)
+        SetWorldTransform = declare(gdi32.SetWorldTransform, BOOL, HDC, LPXFORM)
+        ModifyWorldTransform = declare(gdi32.ModifyWorldTransform, BOOL, HDC, LPXFORM, DWORD)
+        CombineTransform = declare(gdi32.CombineTransform, BOOL, LPXFORM, LPXFORM, LPXFORM)
 
         GDI_WIDTHBYTES = lambda bits: DWORD(((bits)+31) & (~31)).value // 8
         GDI_DIBWIDTHBYTES = lambda bi: DWORD(GDI_WIDTHBYTES(DWORD(bi.biWidth).value * DWORD(bi.biBitCount).value)).value

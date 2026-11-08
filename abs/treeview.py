@@ -340,12 +340,18 @@ class TreeView(Control):
     on_begin_drag: MultiEvent
     on_begin_right_drag: MultiEvent
     tree_styles: TreeStyles
+    on_item_right_clicked: MultiEvent
+    on_item_label_right_clicked: MultiEvent
+    on_item_icon_right_clicked: MultiEvent
+    on_item_state_icon_right_clicked: MultiEvent
+    on_right_clicked_nowhere: MultiEvent
     
-    def __init__(self, width: int, height: int, parent: int | HANDLE, identifier: int | HANDLE):
+    def __init__(self, width: int, height: int, parent: int | HWND, identifier: int | HMENU):
         super().__init__(parent, identifier)
         self._width = width
         self._height = height
         self.class_name = WC_TREEVIEWW
+        self.on_right_click += self.TreeView_on_right_click
     
     def headless_init(self):
         super().headless_init()
@@ -365,6 +371,11 @@ class TreeView(Control):
         self.on_item_collapsing = MultiEvent()
         self.on_begin_drag = MultiEvent()
         self.on_begin_right_drag = MultiEvent()
+        self.on_item_right_clicked = MultiEvent()
+        self.on_item_icon_right_clicked = MultiEvent()
+        self.on_item_label_right_clicked = MultiEvent()
+        self.on_item_state_icon_right_clicked = MultiEvent()
+        self.on_right_clicked_nowhere = MultiEvent()
         self.tree_styles = self.TreeStyles(self)
     
     def create(self, x: int, y: int, relative: int | HANDLE = NULL):
@@ -465,7 +476,20 @@ class TreeView(Control):
     @item_height.setter
     def item_height(self, item_height: int):
         self.send(TVM_SETITEMHEIGHT, item_height)
-        
+    
+    def TreeView_on_right_click(self, x: int, y: int):
+        ht, item = self.hit(x, y)
+        if ht & TVHT_ONITEM:
+            self.on_item_right_clicked.execute(item, x, y)
+            if ht & TVHT_ONITEMICON:
+                self.on_item_icon_right_clicked.execute(item, x, y)
+            elif ht & TVHT_ONITEMLABEL:
+                self.on_item_label_right_clicked.execute(item, x, y)
+            elif ht & TVHT_ONITEMSTATEICON:
+                self.on_item_state_icon_right_clicked.execute(item, x, y)
+        elif ht & TVHT_NOWHERE:
+            self.on_right_clicked_nowhere.execute(x, y)
+    
     def parent_window_on_notify(self, nm: NMHDR):
         if nm.hwndFrom == self.value:
             code = INT(nm.code).value

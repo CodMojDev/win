@@ -37,7 +37,7 @@ class FontCombobox(Combobox):
         self.regular_height = dc.metrics().height
         self.blit_maps = []
     
-    def bind(self, parent: int | HANDLE | Window):
+    def bind(self, parent: int | HWND | Window):
         window = super().bind(parent)
         if window is not None:
             window.on_draw_item += self.FontCombobox_on_draw_item

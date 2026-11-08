@@ -165,6 +165,22 @@ class BitmapDecoder(IWICBitmapDecoder):
         TlAddRefGuard(decoder)
         decoder.frames = BitmapDecoder.Frames(decoder)
         return decoder
+    
+    @classmethod
+    def from_stream(cls, stream: IStream | WT_ADDRLIKE | MemoryIO, options: int = WICDecodeMetadataCacheOnDemand) -> 'BitmapDecoder':
+        if not isinstance(stream, IStream):
+            if not isinstance(stream, MemoryIO):
+                stream = MemoryIO(stream)
+            stream = StreamOverIO(stream)
+            TlAddRefGuard(stream)
+        pDecoder = cls.NULL()
+        factory = ImagingFactory.instance()
+        hr = factory.CreateDecoderFromStream(stream.ref(), NULL, options, i_cast(byref(pDecoder), DOUBLE_PTR(IWICBitmapDecoder)))
+        if FAILED(hr): raise COMError(hr)
+        decoder = pDecoder.contents
+        TlAddRefGuard(decoder)
+        decoder.frames = BitmapDecoder.Frames(decoder)
+        return decoder
 
 class BitmapEncoder(IWICBitmapEncoder):
     def initialize(self, stm: IStream | io.IOBase, option: int = WICBitmapEncoderNoCache):
@@ -207,6 +223,21 @@ class BitmapEx(Bitmap):
         info = BitmapInfo(width, height, 32)
         bits = MemoryIO()
         bitmap = BitmapEx.section(info, bits)
+        stride = width * 4
+        size = stride * height
+        converter.copy(bits.memory_address, stride, size, NULL)
+        return bitmap
+    
+    @classmethod
+    def from_memory_ex(self, memory: WT_ADDRLIKE | MemoryIO) -> 'BitmapEx':
+        decoder = BitmapDecoder.from_stream(memory)
+        frame = decoder.frames[0]
+        converter = FormatConverter()
+        converter.initialize(frame, GUID_WICPixelFormat32bppBGRA)
+        width, height = frame.size
+        info = BitmapInfo(width, height, 32)
+        bits = MemoryIO()
+        bitmap = Bitmap.section(info, bits)
         stride = width * 4
         size = stride * height
         converter.copy(bits.memory_address, stride, size, NULL)

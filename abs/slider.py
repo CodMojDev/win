@@ -89,6 +89,11 @@ class Slider(Control):
         def get(self) -> int:
             return self.slider.send(TBM_GETPOS)
     
+    selection: Selection
+    tick_marks: TickMarks
+    progress: Progress
+    on_thumb_position_changed: MultiEvent
+    
     def __init__(self, width: int, height: int, parent: int | HWND, identifier: int | HMENU):
         super().__init__(parent, identifier)
         self._width = width
@@ -100,6 +105,7 @@ class Slider(Control):
         self.selection = Slider.Selection(self)
         self.tick_marks = Slider.TickMarks(self)
         self.progress = Slider.Progress(self)
+        self.on_thumb_position_changed = MultiEvent()
         
     def create(self, x: int = 0, y: int = 0, window_name: str='Slider Control', relative: int | HWND = NULL):
         super().create(self._width, self._height, x, y, window_name, relative=relative)
@@ -171,3 +177,12 @@ class Slider(Control):
     @lower_buddy.setter
     def lower_buddy(self, lower_buddy: int | HWND):
         self.right_buddy = lower_buddy
+    
+    def parent_window_on_notify(self, nm: NMHDR):
+        if nm.hwndFrom == self.value:
+            code = INT(nm.code).value
+            if code == TRBN_THUMBPOSCHANGING:
+                nmtrbtpc = i_cast_structure(nm, NMTRBTHUMBPOSCHANGING)
+                self.on_thumb_position_changed.execute(nmtrbtpc.dwPos, nmtrbtpc.nReason)
+            else:
+                super().parent_window_on_notify(nm)

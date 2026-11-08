@@ -1,9 +1,12 @@
 # Win32 errors stringification and WinException
 from win.defbase_errordef import *
+from win.errhandlingapi import *
 
 # WinAPI header files
+from win.namedpipeapi import *
 from win.handleapi import *
 from win.synchapi import *
+from win.fileapi import *
 from win.winuser import *
 from win.wingdi import *
 from win.winnt import *
@@ -92,7 +95,9 @@ class BitGroup:
         for k, v in mapping.items():
             if self.value & k: result.append(v)
         return result
-        
+
+class Sentinel: pass
+
 class GDIObjectHandle(Handle):
     def close(self):
         DeleteObject(self)
@@ -117,7 +122,7 @@ class GDIObjectHandle(Handle):
     def object(self):
         object_type = self.type
         if object_type == OBJ_BITMAP:
-            bm = BITMAP()
+            bm = BitmapDesc()
             if not GetObject(self, sizeof(bm), bm.ref()):
                 raise WinException()
             return bm
@@ -142,6 +147,13 @@ class GDIObjectHandle(Handle):
                 raise WinException()
             return lf
         
+    @classmethod
+    def framework(cls, index: int) -> Self:
+        """
+        Get the Framework-setted GDI object.
+        """
+        return FrameworkObjectManager.get(index)
+        
 # duplication shortcut for not to write GDIObjectHandle.stock for unknown stock object types
 class StockObject(GDIObjectHandle):
     """
@@ -165,6 +177,60 @@ DS_TILE = 0x2
 DS_TRANSPARENTALPHA = 0x4
 DS_TRANSPARENTCLR = 0x8
 
+class Xform(XFORM):
+    def __init__(self, m11: float = 0.0, m12: float = 0.0, 
+                 m21: float = 0.0, m22: float = 0.0, 
+                 dx: float = 0.0, dy: float = 0.0):
+        super().__init__(m11, m12, m21, m22, dx, dy)
+    
+    @property
+    def m11(self) -> float:
+        return self.eM11
+    
+    @m11.setter
+    def m11(self, m11: float):
+        self.eM11 = m11
+    
+    @property
+    def m12(self) -> float:
+        return self.eM12
+    
+    @m12.setter
+    def m12(self, m12: float):
+        self.eM12 = m12
+    
+    @property
+    def m21(self) -> float:
+        return self.eM21
+    
+    @m21.setter
+    def m21(self, m21: float):
+        self.eM21 = m21
+    
+    @property
+    def m22(self) -> float:
+        return self.eM22
+    
+    @m22.setter
+    def m22(self, m22: float):
+        self.eM22 = m22
+    
+    @property
+    def dx(self) -> float:
+        return self.eDx
+    
+    @dx.setter
+    def dx(self, dx: float):
+        self.eDx = dx
+    
+    @property
+    def dy(self) -> float:
+        return self.eDy
+    
+    @dy.setter
+    def dy(self, dy: float):
+        self.eDy = dy
+
 class DC(Handle):
     """
     Class, representing GDI Device Context (DC).
@@ -184,11 +250,11 @@ class DC(Handle):
         def __exit__(self, *_):
             self.dc.select(self.object)
     
-    class PathPoint(POINT):
+    class PathPoint(Point):
         type: int
         
         def __init__(self, x: int = 0, y: int = 0, type: int = 0):
-            super().__init__()
+            super().__init__(x, y)
             self.type = type
     
     class Path:
@@ -270,9 +336,13 @@ class DC(Handle):
             nPaths: int
             
             nPaths = GetPath(self.dc, NULL, NULL, 0)
+            if nPaths == -1:
+                raise WinException()
             paths = (DC.PathPoint * nPaths)()
             types = (BYTE * nPaths)()
             nPaths = GetPath(self.dc, paths, types)
+            if nPaths == -1:
+                raise WinException()
             
             paths = list(paths)
             for i in range(nPaths):
@@ -307,31 +377,34 @@ class DC(Handle):
     
     class Realize:
         dc: 'DC'
+        palette: int | HANDLE | None
         
-        def __init__(self, dc: 'DC'):
+        def __init__(self, dc: 'DC', palette: int | HANDLE = NULL):
             self.dc = dc
+            self.palette = palette
             
         def begin(self, palette: int | HANDLE=NULL):
             """
             Realize the palette.
             """
-            
-            with self.dc.select_ex(palette):
-                RealizePalette(self.dc)
+            if palette is not None:
+                with self.dc.select_ex(palette):
+                    RealizePalette(self.dc)
                 
         def end(self, palette: int | HANDLE):
             """
             Unrealize the palette.
             """
-            
-            UnrealizeObject(palette)
+            if palette is not None:
+                UnrealizeObject(palette)
             
         def __enter__(self):
-            self.begin()
+            self.begin(self.palette)
             return self
             
         def __exit__(self, exc_type, exc, tb):
-            self.end()
+            if self.palette is not None:
+                self.end(self.palette)
     
     class ClipRegion:
         class Select:
@@ -353,12 +426,12 @@ class DC(Handle):
         def __init__(self, dc: 'DC'):
             self.dc = dc
             
-        def select(self, region: int | HANDLE) -> int:
+        def select(self, region: int | HANDLE, operation: int = RGN_COPY) -> int:
             """
             Select the clip region.
             """
             
-            complexity = SelectClipRgn(self.dc, region)
+            complexity = ExtSelectClipRgn(self.dc, region, operation)
             if complexity == ERROR: raise WinException()
             return complexity
         
@@ -420,18 +493,53 @@ class DC(Handle):
         def __exit__(self, *_):
             self.dc.restore(self.index)
     
-    pixels: 'DC.Pixels'
-    _created: bool
-    path: 'DC.Path'
+    class WorldTransform:
+        dc: 'DC'
+        
+        def __init__(self, dc: 'DC'):
+            self.dc = dc
+        
+        def get(self) -> Xform:
+            """
+            Get the world transform matrix.
+            """
+            xform = Xform()
+            if not GetWorldTransform(self.dc, xform.ref()):
+                raise WinException()
+            return xform
+        
+        def set(self, xform: XFORM):
+            """
+            Set the world transform matrix.
+            """
+            if not SetWorldTransform(self.dc, xform.ref()):
+                raise WinException()
+            
+        def modify(self, xform: XFORM | None = None, mode: int = MWT_IDENTITY):
+            """
+            Modify the world transform matrix.
+            """
+            if not ModifyWorldTransform(self.dc, xform.ref(), mode):
+                raise WinException()
     
-    def __init__(self, dc: int = NULL, hwnd: int = NULL):
+    _created: bool
+    _hwnd: int | HWND | None
+    
+    pixels: Pixels
+    path: Path
+    realize: Realize
+    clip_region: ClipRegion
+    transform: WorldTransform
+    
+    def __init__(self, dc: int | None = NULL, hwnd: int | HWND | None = NULL):
         super().__init__(dc)
         self._created = False
         self._hwnd = hwnd
-        self.path = DC.Path(self)
-        self.pixels = DC.Pixels(self)
-        self.realize = DC.Realize(self)
-        self.clip_region = DC.ClipRegion(self)
+        self.path = self.Path(self)
+        self.pixels = self.Pixels(self)
+        self.realize = self.Realize(self)
+        self.clip_region = self.ClipRegion(self)
+        self.transform = self.WorldTransform(self)
     
     def close(self):
         if self._created:
@@ -475,7 +583,7 @@ class DC(Handle):
             hDC = GetDCEx(hwnd, region, flags)
         if not hDC:
             raise WinException()
-        return DC(hDC)
+        return DC(hDC, hwnd)
         
     @classmethod
     def window(self, window: int | HWND) -> 'DC':
@@ -485,7 +593,7 @@ class DC(Handle):
         hDC = GetWindowDC(window)
         if not hDC:
             raise WinException()
-        return DC(hDC)
+        return DC(hDC, window)
         
     @property
     def clip_box(self) -> Rect:
@@ -508,7 +616,7 @@ class DC(Handle):
         
         return DC.Select(self, hGdiObject)
     
-    def text_out(self, x: int, y: int, text: str, options: int = ETO_OPAQUE,
+    def text_out(self, x: int, y: int, text: str, options: int = 0,
                  rect: Rect | None = None, distances: list[int] | None = None):
         """
         Output the text to screen.
@@ -556,6 +664,12 @@ class DC(Handle):
             raise WinException()
         return crColor
     
+    def set_text_color_ex(self, color: TUnion[int, 'Color.IColor']) -> TransactSelect:
+        """
+        Set the text color (context manager).
+        """
+        return self.TransactSelect(self, color, self.set_text_color)
+    
     @property
     def bk_color(self) -> 'Color.BGR':
         crColor = GetBkColor(self)
@@ -576,6 +690,12 @@ class DC(Handle):
         if crColor == CLR_INVALID:
             raise WinException()
         return Color.BGR(crColor)
+    
+    def set_bk_color_ex(self, color: TUnion[int, 'Color.IColor']) -> TransactSelect:
+        """
+        Set the background color (context manager).
+        """
+        return self.TransactSelect(self, color, self.set_bk_color)
     
     @property
     def bk_mode(self) -> int:
@@ -598,6 +718,12 @@ class DC(Handle):
             raise WinException()
         return dwPrevMode
     
+    def set_bk_mode_ex(self, mode: int) -> TransactSelect:
+        """
+        Set the background mode (context manager).
+        """
+        return self.TransactSelect(self, mode, self.set_bk_mode)
+    
     @property
     def text_align(self) -> int:
         dwAlign = GetTextAlign(self)
@@ -618,6 +744,12 @@ class DC(Handle):
         if dwPrevAlign == GDI_ERROR:
             raise WinException()
         return dwPrevAlign
+    
+    def set_text_align_ex(self, text_align: int) -> TransactSelect:
+        """
+        Set the text align (context manager).
+        """
+        return self.TransactSelect(self, text_align, self.set_text_align)
     
     def bit_blt(self, dstX: int, dstY: int, srcX: int, srcY: int, 
                 width: int, height: int, srcHdc: int | HDC, rop: int):
@@ -833,7 +965,6 @@ class DC(Handle):
         """
         Select the given palette.
         """
-        
         hPalettePrev = SelectPalette(self, palette, force_background)
         return Palette.foreign_owner(hPalettePrev)
     
@@ -1029,23 +1160,22 @@ class DC(Handle):
             source = Rect.create(0, 0, bmp_desc.bmWidth, bmp_desc.bmHeight)
         with io.BytesIO() as stream_io:
             stream = ToolStreamOverIO(stream_io)
-            # 0x44726177 'DrwS' / 'SrwD'
+            # 0x44727753 'DrwS' / 'SwrD'
             stream.write(b'SwrD')
             # op 0
             stream.write_uint32(0)
             stream.write_uint32(self.value)
-            stream.write_structure(clip)
+            stream.write_structure(rect)
             # op 1
             stream.write_uint32(1)
             stream.write_uint32(bitmap.value)
             # op 9
             stream.write_uint32(9)
-            stream.write_structure(rect)
+            stream.write_structure(clip)
             stream.write_structure(source)
             stream.write_uint32(options)
             stream.write_structure(margins)
-            # sentinel / gap
-            stream.write_uint32(0)
+            stream.write_uint32(transparent_color)
             # save written data
             stream.seek(0)
             data = stream.read()
@@ -1081,7 +1211,7 @@ class DC(Handle):
         """
         Start the save-restore DC transaction.
         """
-        return DC.Transact(self)
+        return self.Transact(self)
     
     def metrics(self) -> 'TextMetric':
         """
@@ -1091,6 +1221,285 @@ class DC(Handle):
         if not GetTextMetricsW(self, metrics.ref()):
             raise WinException()
         return metrics
+    
+    @property
+    def layout(self) -> int:
+        layout = GetLayout(self)
+        if layout == 0:
+            raise WinException()
+        return layout
+    
+    @layout.setter
+    def layout(self, layout: int):
+        self.set_layout(layout)
+    
+    def set_layout(self, layout: int) -> int:
+        """
+        Set the DC layout.
+        """
+        
+        SetLastError(0)
+        dwPrevLayout = SetLayout(self, layout)
+        if dwPrevLayout == 0:
+            code = GetLastError()
+            if code != 0:
+                raise WinException(code)
+        return dwPrevLayout
+    
+    def lp_to_dp(self, points: Iterable[GraphicUtils.Point]) -> tuple[Point, ...]:
+        """
+        Map the given Logical points of DC to the Device points.
+        """
+        pointsToMap = [GraphicUtils.point(point) for point in points]
+        length = len(points)
+        pPoints = (Point * length)(*pointsToMap)
+        LPtoDP(self, pPoints, length)
+        return tuple(pPoints)
+    
+    def dp_to_lp(self, points: Iterable[GraphicUtils.Point]) -> tuple[Point, ...]:
+        """
+        Map the given Device points of DC to the Logical points.
+        """
+        pointsToMap = [GraphicUtils.point(point) for point in points]
+        length = len(points)
+        pPoints = (Point * length)(*pointsToMap)
+        DPtoLP(self, pPoints, length)
+        return tuple(pPoints)
+    
+    @property
+    def width(self) -> int:
+        return self.caps(HORZRES)
+    
+    @property
+    def height(self) -> int:
+        return self.caps(VERTRES)
+    
+    @property
+    def size(self) -> int:
+        return self.width, self.height
+    
+    def round_rect(self, rect: RECT, width: int, height: int):
+        """
+        Draw rect with rounded corners.
+        """
+        if not RoundRect(self, rect.left, rect.top, rect.right, rect.bottom, width, height):
+            raise WinException()
+        
+    @property
+    def graphics_mode(self) -> int:
+        mode = GetGraphicsMode(self)
+        if not mode: raise WinException()
+        return mode
+    
+    @graphics_mode.setter
+    def graphics_mode(self, graphics_mode: int):
+        self.set_graphics_mode(graphics_mode)
+    
+    def set_graphics_mode(self, graphics_mode: int) -> int:
+        """
+        Set graphics mode.
+        """
+        previous = SetGraphicsMode(self, graphics_mode)
+        if not previous: raise WinException()
+        return previous
+    
+    def set_graphics_mode_ex(self, graphics_mode: int) -> TransactSelect:
+        """
+        Set graphics mode (context manager).
+        """
+        return self.TransactSelect(self, graphics_mode, self.set_graphics_mode)
+
+    def arc(self, rect: Rect, x1: int, y1: int, x2: int, y2: int):
+        """
+        Draw arc (from {x1,y1} to {x2,y2}) limited in bounds rect.
+        """
+        if not Arc(self, rect.left, rect.top, rect.right, rect.bottom, x1, y1, x2, y2):
+            raise WinException()
+        
+    def angle_arc(self, x: int, y: int, r: int, start: float, sweep: float):
+        """
+        Draw angle arc using {x, y} coordinates, radius and start/sweep angles.
+        """
+        if not AngleArc(self, x, y, r, start, sweep):
+            raise WinException()
+
+    def arc_to(self, rect: Rect, x1: int, y1: int, x2: int, y2: int):
+        """
+        Draw arc (from {x1,y1} to {x2,y2}) limited in bounds rect (and move the internal DC position).
+        """
+        if not ArcTo(self, rect.left, rect.top, rect.right, rect.bottom, x1, y1, x2, y2):
+            raise WinException()
+        
+    def flood_fill(self, x: int, y: int, color: Color.IColor | int, type: int = FLOODFILLBORDER):
+        """
+        Execute the flood fill operation.
+        """
+        if not ExtFloodFill(self, x, y, int(color), type):
+            raise WinException()
+        
+    def pie(self, rect: Rect, x1: int, y1: int, x2: int, y2: int):
+        """
+        Draw pie (from {x1,y1} to {x2,y2}) limited in bounds rect.
+        """
+        if not Pie(self, rect.left, rect.top, rect.right, rect.bottom, x1, y1, x2, y2):
+            raise WinException()
+        
+    def poly_polygon(self, polygons: Iterable[GraphicUtils.PointArray]):
+        """
+        Draw poly-polygons over DC.
+        """
+        lengths = (INT*len(polygons))(*[len(polygon) for polygon in polygons])
+        polygons = GraphicUtils.point_array([n for x in polygons for n in x])
+        if not PolyPolygon(self, polygons, lengths, len(lengths)):
+            raise WinException()
+        
+    def polyline(self, vertices: 'GraphicUtils.PointArray'):
+        """
+        Draw the polyline.
+        """
+        pVertices = GraphicUtils.point_array(vertices)
+        if not Polyline(self, pVertices, len(vertices)):
+            raise WinException()
+        
+    def poly_polyline(self, polylines: Iterable[GraphicUtils.PointArray]):
+        """
+        Draw poly-polylines over DC.
+        """
+        lengths = (INT*len(polylines))(*[len(polylines) for polyline in polylines])
+        polylines = GraphicUtils.point_array([n for x in polylines for n in x])
+        if not PolyPolyline(self, polylines, lengths, len(lengths)):
+            raise WinException()
+        
+    def bezier(self, vertices: GraphicUtils.PointArray):
+        """
+        Draw one or more bezier curves.
+        """
+        pVertices = GraphicUtils.point_array(vertices)
+        if not PolyBezier(self, pVertices, len(vertices)):
+            raise WinException()
+        
+    def bezier_to(self, vertices: GraphicUtils.PointArray):
+        """
+        Draw one or more bezier curves (and move the internal DC position).
+        """
+        pVertices = GraphicUtils.point_array(vertices)
+        if not PolyBezierTo(self, pVertices, len(vertices)):
+            raise WinException()
+        
+    def poly_draw(self, vertices: Iterable[PathPoint]):
+        """
+        Draw multiple bezier curves or line segments.
+        """
+        pVertices = (POINT*len(vertices))(*vertices)
+        pTypes = (INT*len(types))(*[vertex.type for vertex in vertices])
+        if not PolyDraw(self, pVertices, pTypes, len(vertices)):
+            raise WinException()
+        
+    @property
+    def arc_direction(self) -> int:
+        direction = GetArcDirection(self)
+        if not direction: raise WinException()
+        return direction
+    
+    @arc_direction.setter
+    def arc_direction(self, arc_direction: int):
+        self.set_arc_direction(arc_direction)
+        
+    def set_arc_direction(self, arc_direction: int) -> int:
+        """
+        Set arc direction (clockwise or counter-clockwise).
+        """
+        previous = SetArcDirection(self, arc_direction)
+        if not previous: raise WinException()
+        return previous
+    
+    def set_arc_direction_ex(self, arc_direction: int) -> TransactSelect:
+        """
+        Set arc direction (clockwise or counter-clockwise) (context manager).
+        """
+        return self.TransactSelect(self, arc_direction, self.set_arc_direction)
+
+    @property
+    def stretch_blt_mode(self) -> int:
+        mode = GetStretchBltMode(self)
+        if not mode: raise WinException()
+        return mode
+    
+    @stretch_blt_mode.setter
+    def stretch_blt_mode(self, stretch_blt_mode: int):
+        self.set_stretch_blt_mode(stretch_blt_mode)
+    
+    def set_stretch_blt_mode(self, stretch_blt_mode: int) -> int:
+        """"
+        Set StretchBlt mode.
+        """
+        previous = SetStretchBltMode(self, stretch_blt_mode)
+        if not previous: raise WinException()
+        return previous
+    
+    def set_stretch_blt_mode_ex(self, stretch_blt_mode: int) -> TransactSelect:
+        """
+        Set StretchBlt mode (context manager).
+        """
+        return self.TransactSelect(self, stretch_blt_mode, self.set_stretch_blt_mode)
+
+    def alpha_blend(self, dest: RECT, source: RECT, source_dc: int | HANDLE, 
+                    blend_function: BLENDFUNCTION = BLENDFUNCTION(AC_SRC_OVER, 0, 255, AC_SRC_ALPHA)):
+        """
+        Blit the source rect from source DC to destination rect of destination DC with alpha-blending.
+        """
+        if not AlphaBlend(self, 
+                          dest.x, dest.y, dest.width, dest.height,
+                          source_dc, 
+                          source.x, source.y, source.width, source.height, 
+                          blend_function):
+            raise WinException()
+        
+    def set_di_bits(self, bitmap: int | HANDLE, bits: WT_ADDRLIKE | MemoryIO, info: BITMAPINFO, lines: int | None = None, start: int = 0, use: int = DIB_RGB_COLORS):
+        """
+        Set DIB bits in bitmap.
+        """
+        if lines is None:
+            lines = bitmap.object.height
+        if isinstance(bits, MemoryIO):
+            bits = bits.memory_address + bits.memory_position
+        if not SetDIBits(self, bitmap, start, lines, bits, info.ref(), use):
+            raise WinException()
+        
+    def draw_bitmap(self, bitmap: int | HANDLE, rect: RECT, alpha: bool = False):
+        """
+        Draw bitmap on DC.
+        """
+        with self.create_compatible() as memory_dc:
+            memory_dc.select(bitmap)
+            if not alpha:
+                self.bit_blt(rect.left, rect.top, 0, 0, rect.right - rect.left, rect.bottom - rect.top, memory_dc, SRCCOPY)
+            else:
+                self.alpha_blend(rect, Rect.create(0, 0, rect.right - rect.left, rect.bottom - rect.top), memory_dc)
+
+    @property
+    def map_mode(self) -> int:
+        map_mode = GetMapMode(self)
+        if not map_mode: raise WinException()
+        return map_mode
+    
+    @map_mode.setter
+    def map_mode(self, map_mode: int):
+        self.set_map_mode(map_mode)
+    
+    def set_map_mode(self, map_mode: int) -> int:
+        """
+        Set the mapping mode.
+        """
+        previous = SetMapMode(self, map_mode)
+        if not previous: raise WinException()
+        return previous
+    
+    def set_map_mode_ex(self, map_mode: int) -> TransactSelect:
+        """
+        Set the mapping mode (context manager).
+        """
+        return self.TransactSelect(self, map_mode, self.set_map_mode)
 
 class Monitor(HMONITOR):
     @classmethod
@@ -1127,7 +1536,7 @@ class Monitor(HMONITOR):
         return i_cast_structure(self.information().rcMonitor, Rect).height
 
 class DPIUtil:
-    system_dpi = DC.get().capabilities(LOGPIXELSX)
+    system_dpi = float(DC.get().capabilities(LOGPIXELSX))
     scale_factor = system_dpi / 96.0
     
     @staticmethod
@@ -1137,6 +1546,32 @@ class DPIUtil:
     @staticmethod
     def adjust_single(li: int) -> int:
         return round(DPIUtil.scale_factor * li)
+    
+    @staticmethod
+    def window(window: int | HANDLE) -> tuple[float, float]:
+        if not is_null(GetDpiForMonitor):
+            hmonitor = MonitorFromWindow(window, MONITOR_DEFAULTTONULL)
+            if not hmonitor:
+                return DPIUtil.system_dpi
+            
+            dpi_x = UINT()
+            dpi_y = UINT()
+            hr = GetDpiForMonitor(hmonitor, MDT_EFFECTIVE_DPI, byref(dpi_x), byref(dpi_y))
+            if FAILED(hr):
+                return DPIUtil.system_dpi
+            
+            return float(dpi_x.value), float(dpi_y.value)
+        return DPIUtil.system_dpi
+
+MONITOR_DPI_TYPE = INT
+MDT_EFFECTIVE_DPI = 0
+MDT_ANGULAR_DPI = 1
+MDT_RAW_DPI = 2
+
+shcore = get_win_library('shcore.dll')
+
+@shcore.foreign(HRESULT, HMONITOR, MONITOR_DPI_TYPE, PUINT, PUINT)
+def GetDpiForMonitor(hmonitor: int, dpiType: int, dpiX: IPointer[UINT], dpiY: IPointer[UINT]) -> int: ...
 
 class BitmapInfo(BITMAPINFO):
     def __init__(self, width: int, height: int, bpp: int, **kwargs):
@@ -1147,7 +1582,7 @@ class BitmapInfo(BITMAPINFO):
         self.bmiHeader.biHeight = -height
         self.bmiHeader.biPlanes = 1
         self.bmiHeader.biBitCount = bpp
-        
+    
     @property
     def width(self) -> int:
         return self.bmiHeader.biWidth
@@ -1289,7 +1724,7 @@ class TextMetric(TEXTMETRICW):
     
     @property
     def descent(self) -> int:
-        return self.tmHeight
+        return self.tmDescent
     
     @descent.setter
     def descent(self, descent: int):
@@ -1760,6 +2195,14 @@ class Region(GDIObjectHandle):
             raise WinException()
         
         return rgn
+    
+    @property
+    def box(self) -> tuple[Rect, int]:
+        box = Rect()
+        complexity = GetRgnBox(self, box.ref())
+        if not complexity:
+            raise WinException()
+        return box, complexity
 
 class IconInfo(ICONINFO):
     """
@@ -2054,12 +2497,65 @@ class Palette(GDIObjectHandle):
             raise WinException()
         
         return palette
-        
+
+class BitmapDesc(BITMAP):
+    @property
+    def type(self) -> int:
+        return self.bmType
+    
+    @type.setter
+    def type(self, type: int):
+        self.bmType = type
+    
+    @property
+    def width(self) -> int:
+        return self.bmWidth
+    
+    @width.setter
+    def width(self, width: int):
+        self.bmWidth = width
+    
+    @property
+    def height(self) -> int:
+        return self.bmHeight
+    
+    @height.setter
+    def height(self, height: int):
+        self.bmHeight = height
+    
+    @property
+    def width_bytes(self) -> int:
+        return self.bmWidth
+    
+    @width_bytes.setter
+    def width_bytes(self, width_bytes: int):
+        self.bmWidthBytes = width_bytes
+    
+    @property
+    def planes(self) -> int:
+        return self.bmPlanes
+    
+    @planes.setter
+    def planes(self, planes: int):
+        self.bmPlanes = planes
+    
+    @property
+    def bpp(self) -> int:
+        return self.bmBitsPixel
+    
+    @bpp.setter
+    def bpp(self, bpp: int):
+        self.bmBitsPixel = bpp
+    
+    @property
+    def bits(self) -> MemoryIO:
+        return MemoryIO(self.bmBits, self.bmWidthBytes * self.bmHeight)
+
 class Bitmap(GDIObjectHandle):
     """
     Class, representing the GDI Bitmap object.
     """
-    object: BITMAP
+    object: BitmapDesc
     
     @classmethod
     def create(cls, width: int, height: int, planes: int = 1, bit_count: int = 32, bits = NULL) -> Self:
@@ -2148,8 +2644,8 @@ class Bitmap(GDIObjectHandle):
         if not hBitmap: 
             raise WinException()
         width = info.bmiHeader.biWidth
-        height = info.bmiHeader.biHeight
-        size = width*height*(info.bmiHeader.biBitCount>>3)
+        height = abs(info.bmiHeader.biHeight)
+        size = (((width*info.bmiHeader.biBitCount+31)>>5)<<2)*height
         
         memory.memory_address = pv.value
         memory.memory_position = 0
@@ -2462,3 +2958,276 @@ class ConvertUtil:
     @staticmethod
     def filetime_to_unix(ft: FILETIME) -> int:
         return (ConvertUtil.filetime_to_int(ft) - 116444736000000000) // 10
+    
+class NamedPipe(Handle):
+    _connected: bool
+    
+    @classmethod
+    def create(cls, name: str, access: int = PIPE_ACCESS_DUPLEX,
+               mode: int = PIPE_TYPE_BYTE, max_instances: int = PIPE_UNLIMITED_INSTANCES,
+               out_buffer_size: int = 0, in_buffer_size: int = 0, 
+               security_attributes: SECURITY_ATTRIBUTES = NULL) -> 'NamedPipe':
+        pipe = cls()
+        pipe._connected = False
+        
+        if not name.startswith('\\'):
+            name = '\\\\.\\pipe\\' + name 
+
+        if security_attributes is not NULL:
+            security_attributes = security_attributes.ref()
+            
+        pipe.value = CreateNamedPipeW(
+            name, access, mode, max_instances, 
+            out_buffer_size, in_buffer_size, 0, 
+            security_attributes)
+        if not pipe.value:
+            raise WinException()
+        
+        return pipe
+    
+    def close(self):
+        if self._connected:
+            self.disconnect()
+        CloseHandle(self)
+        self._closed = True
+            
+    def connect(self): 
+        if not ConnectNamedPipe(self, NULL):
+            raise WinException()
+        self._connected = True
+        
+    def disconnect(self):
+        self._connected = False
+        if not DisconnectNamedPipe(self):
+            raise WinException()
+        
+    def read(self, size: int) -> bytes:
+        buffer = create_string_buffer(size)
+        nBytesRead = DWORD()
+        if not ReadFile(self, buffer, size, byref(nBytesRead), NULL):
+            raise WinException()
+        buffer = i_cast(buffer, PTR(CHAR * nBytesRead.value)).contents
+        return buffer.raw
+    
+    def write(self, buffer: bytes) -> int:
+        buf = create_string_buffer(buffer)
+        nBytesWritten = DWORD()
+        if not WriteFile(self, buf, len(buf), byref(nBytesWritten), NULL):
+            raise WinException()
+        return nBytesWritten.value
+    
+    @classmethod
+    def open(cls, name: str, access: int = GENERIC_READ | GENERIC_WRITE,
+             share: int = 0, security_attributes: SECURITY_ATTRIBUTES = NULL,
+             creation_disposition: int = OPEN_EXISTING, attributes: int = FILE_ATTRIBUTE_NORMAL,
+             template_file: int | HANDLE = NULL) -> 'Pipe':
+        if not name.startswith('\\'):
+            name = '\\\\.\\pipe' + name
+        
+        if security_attributes is not NULL:
+            security_attributes = security_attributes.ref()
+        
+        hPipe = CreateFileW(name, access, share, security_attributes, creation_disposition, attributes, template_file)
+        
+        if not hPipe:
+            raise WinException()
+        
+        pipe: Pipe = cls()
+        pipe.value = hPipe
+        
+        return pipe
+    
+class Pipe(Handle):
+    r: int
+    w: int
+    
+    @classmethod
+    def create(cls, security_attributes: SECURITY_ATTRIBUTES = NULL, size: int = 0) -> 'Pipe':
+        pipe = cls()
+
+        if security_attributes is not NULL:
+            security_attributes = security_attributes.ref()
+        
+        r = HANDLE()
+        w = HANDLE()
+        
+        if not CreatePipe(byref(r), byref(w), security_attributes, size):
+            raise WinException()
+        
+        pipe.r = r.value
+        pipe.w = w.value
+    
+        return pipe
+    
+    def close(self):
+        CloseHandle(self.r)
+        CloseHandle(self.w)
+        self._closed = True
+        
+    def read(self, size: int) -> bytes:
+        buffer = create_string_buffer(size)
+        nBytesRead = DWORD()
+        if not ReadFile(self.r, buffer, size, byref(nBytesRead), NULL):
+            raise WinException()
+        buffer = i_cast(buffer, PTR(CHAR * nBytesRead.value)).contents
+        return buffer.raw
+    
+    def write(self, buffer: bytes) -> int:
+        buf = create_string_buffer(buffer)
+        nBytesWritten = DWORD()
+        if not WriteFile(self.w, buf, len(buf), byref(nBytesWritten), NULL):
+            raise WinException()
+        return nBytesWritten.value
+
+DENSE1_BRUSH_CONTENT = [
+    0x00, 0x00, 0x00, 0x00,
+    0x44, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x44, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00
+]
+DENSE2_BRUSH_CONTENT = [
+    0x00, 0x00, 0x00, 0x00,
+    0x22, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x88, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x22, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+    0x88, 0x00, 0x00, 0x00
+]
+DENSE3_BRUSH_CONTENT = [
+    0x11, 0x00, 0x00, 0x00,
+    0xaa, 0x00, 0x00, 0x00,
+    0x44, 0x00, 0x00, 0x00,
+    0xaa, 0x00, 0x00, 0x00,
+    0x11, 0x00, 0x00, 0x00,
+    0xaa, 0x00, 0x00, 0x00,
+    0x44, 0x00, 0x00, 0x00,
+    0xaa, 0x00, 0x00, 0x00
+]
+DENSE4_BRUSH_CONTENT = [
+    0xaa, 0x00, 0x00, 0x00,
+    0x55, 0x00, 0x00, 0x00,
+    0xaa, 0x00, 0x00, 0x00,
+    0x55, 0x00, 0x00, 0x00,
+    0xaa, 0x00, 0x00, 0x00,
+    0x55, 0x00, 0x00, 0x00,
+    0xaa, 0x00, 0x00, 0x00,
+    0x55, 0x00, 0x00, 0x00
+]
+DENSE5_BRUSH_CONTENT = [
+    0xee, 0x00, 0x00, 0x00,
+    0x55, 0x00, 0x00, 0x00,
+    0xbb, 0x00, 0x00, 0x00,
+    0x55, 0x00, 0x00, 0x00,
+    0xee, 0x00, 0x00, 0x00,
+    0x55, 0x00, 0x00, 0x00,
+    0xbb, 0x00, 0x00, 0x00,
+    0x55, 0x00, 0x00, 0x00
+]
+DENSE6_BRUSH_CONTENT = [
+    0xff, 0x00, 0x00, 0x00,
+    0xdd, 0x00, 0x00, 0x00,
+    0xff, 0x00, 0x00, 0x00,
+    0x77, 0x00, 0x00, 0x00,
+    0xff, 0x00, 0x00, 0x00,
+    0xdd, 0x00, 0x00, 0x00,
+    0xff, 0x00, 0x00, 0x00,
+    0x77, 0x00, 0x00, 0x00
+]
+DENSE7_BRUSH_CONTENT = [
+    0xff, 0x00, 0x00, 0x00,
+    0xff, 0x00, 0x00, 0x00,
+    0xbb, 0x00, 0x00, 0x00,
+    0xff, 0x00, 0x00, 0x00,
+    0xff, 0x00, 0x00, 0x00,
+    0xff, 0x00, 0x00, 0x00,
+    0xbb, 0x00, 0x00, 0x00,
+    0xff, 0x00, 0x00, 0x00
+]
+FO_DENSE1BRUSH = 1
+FO_DENSE2BRUSH = 2
+FO_DENSE3BRUSH = 3
+FO_DENSE4BRUSH = 4
+FO_DENSE5BRUSH = 5
+FO_DENSE6BRUSH = 6
+FO_DENSE7BRUSH = 7
+
+class FrameworkObjectManager:
+    _OBJECTS: dict[int, GDIObjectHandle] = {}
+    
+    @classmethod
+    def request(cls, index: int) -> GDIObjectHandle:
+        if index not in cls._OBJECTS:
+            if index == FO_DENSE1BRUSH:
+                return cls._create_and_set_brush(FO_DENSE1BRUSH, DENSE1_BRUSH_CONTENT)
+            elif index == FO_DENSE2BRUSH:
+                return cls._create_and_set_brush(FO_DENSE2BRUSH, DENSE2_BRUSH_CONTENT)
+            elif index == FO_DENSE3BRUSH:
+                return cls._create_and_set_brush(FO_DENSE3BRUSH, DENSE3_BRUSH_CONTENT)
+            elif index == FO_DENSE4BRUSH:
+                return cls._create_and_set_brush(FO_DENSE4BRUSH, DENSE4_BRUSH_CONTENT)
+            elif index == FO_DENSE5BRUSH:
+                return cls._create_and_set_brush(FO_DENSE5BRUSH, DENSE5_BRUSH_CONTENT)
+            elif index == FO_DENSE6BRUSH:
+                return cls._create_and_set_brush(FO_DENSE6BRUSH, DENSE6_BRUSH_CONTENT)
+            elif index == FO_DENSE7BRUSH:
+                return cls._create_and_set_brush(FO_DENSE7BRUSH, DENSE7_BRUSH_CONTENT)
+        return cls._OBJECTS[index]
+    
+    @classmethod
+    def set(cls, index: int, object: GDIObjectHandle):
+        cls._OBJECTS[index] = object
+        
+    @classmethod
+    def _create_and_set_brush(cls, index: int, array: list[int]) -> PatternBrush:
+        bitmap = Bitmap.create(8, 8, bit_count=1, bits=bytes(array))
+        brush = PatternBrush.create(bitmap)
+        cls._OBJECTS[index] = brush
+        return brush
+    
+class MemoryDC(DC):
+    @classmethod
+    def create(cls, width: int, height: int, dc: int | HANDLE | None = None) -> Self:
+        if dc is None:
+            dc = DC.get()
+        else:
+            if not isinstance(dc, DC):
+                dc = DC.foreign_owner(dc)
+        compatible = dc.create_compatible()
+        bitmap = dc.create_compatible_bitmap(width, height)
+        compatible.select(bitmap)
+        compatible._holdref_from_MemoryDC_bmp = bitmap
+        return compatible
+    
+    @classmethod
+    def bitmap_copy(cls, bitmap: Bitmap, dc: int | HANDLE | None = None) -> Self:
+        if dc is None:
+            dc = DC.get()
+        else:
+            if not isinstance(dc, DC):
+                dc = DC.foreign_owner(dc)
+        compatible = dc.create_compatible()
+        description = bitmap.object
+        bitmap = dc.create_compatible_bitmap(description.width, description.height)
+        info = BitmapInfo(description.width, -description.height, description.bpp)
+        dc.set_di_bits(bitmap, description.bits, info, description.height)
+        compatible.select(bitmap)
+        compatible._holdref_from_MemoryDC_bmp = bitmap
+        return compatible
+    
+    @classmethod
+    def bitmap(cls, bitmap: Bitmap, dc: int | HANDLE | None = None) -> Self:
+        if dc is None:
+            dc = DC.get()
+        else:
+            if not isinstance(dc, DC):
+                dc = DC.foreign_owner(dc)
+        compatible = dc.create_compatible()
+        compatible.select(bitmap)
+        compatible._holdref_from_MemoryDC_bmp = bitmap
+        return compatible

@@ -18,8 +18,8 @@ class Edit(Control):
     on_realigned_to_rtl: MultiEvent
     on_realigned_to_ltr: MultiEvent
     
-    def __init__(self, width: int=None, height: int=None, parent: int | HWND=None, 
-                 identifier: int | HMENU=None, text: str = '', readonly: bool = False, **kwargs):
+    def __init__(self, width: int, height: int, parent: int | HWND, 
+                 identifier: int | HMENU, text: str = '', readonly: bool = False):
         super().__init__(parent, identifier)
         self.class_name = 'EDIT'
         self._text = text
@@ -115,6 +115,17 @@ class Edit(Control):
         tip.ttiIcon = icon
         
         self.send(EM_SHOWBALLOONTIP, 0, tip.ref())
+    
+    def hide_balloon(self):
+        self.send(EM_HIDEBALLOONTIP)
+    
+    @property
+    def number(self) -> int:
+        return int(self.text)
+    
+    @number.setter
+    def number(self, number: int):
+        self.text = str(number)
     
     def parent_window_on_command(self, identifier: int, notify_code: int, hwnd: int):
         if identifier == self.identifier:

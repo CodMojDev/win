@@ -7,7 +7,7 @@ class Tooltip(Window):
         self.styles.add(WS_POPUP)
         self.class_name = TOOLTIPS_CLASSW
         
-    def create(self, parent: int | HANDLE = NULL):
+    def create(self, parent: int | HWND = NULL):
         super().create(parent)
         self.set_position(insert_after=HWND_TOPMOST, flags=SWP_NOACTIVATE)
     
@@ -18,7 +18,7 @@ class Tooltip(Window):
         self.send(TTM_ACTIVATE, False)
         
     def add(self, value: int | HANDLE, text: str,
-            parent: int | HANDLE | None = None, 
+            parent: int | HWND | None = None, 
             rect: RECT | None = None,
             flags: int=0, parameter: int = 0):
         ti = TTTOOLINFOW()

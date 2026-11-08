@@ -216,6 +216,20 @@ class Color:
             if table is None:
                 table = Color.Table
             return cls.color(*(tuple(table._color_(table.ensure()[id]).rgba())[0:cls.length()]))
+        
+        def contrast(self) -> Self:
+            """
+            Get contrast white/black color.
+            """
+            luminance = ((0.299 * self.r) + (0.587 * self.g) + (0.114 * self.b)) / 255
+            return self.__class__.from_id(Color.ID.Black) if luminance > 0.5 else self.__class__.from_id(Color.ID.White)
+        
+        def dark(self) -> bool:
+            """
+            Check if the color is dark.
+            """
+            luminance = ((0.299 * self.r) + (0.587 * self.g) + (0.114 * self.b)) / 255
+            return luminance <= 0.5
 
     class IColorAlpha(IColor):
         """
@@ -555,11 +569,11 @@ class Color:
             
         @property
         def h(self) -> int:
-            return round(self.hue * 360)
+            return round(self.hue)
         
         @h.setter
         def h(self, h: int):
-            self.hue = h / 360.0
+            self.hue = h
         
         @property
         def s(self) -> int:

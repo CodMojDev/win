@@ -1,5 +1,5 @@
 from win.winuser import *
-from typing import TypeAlias, SupportsInt, Iterable, ClassVar
+from typing import TypeAlias, SupportsInt, Iterable, ClassVar, Self
 from win.wingdi import *
     
 class Point(POINT, CStructure):
@@ -289,33 +289,37 @@ class Rect(RECT, CStructure):
     def height(self, height: int):
         self.bottom = self.top + height
         
-    def offset(self, dx: int, dy: int):
+    def offset_rect(self, dx: int, dy: int) -> Self:
         """
         Offset the rect by delta X and delta Y.
         """
         
         OffsetRect(byref(self), int(dx), int(dy))
+        return self
     
-    def deflate(self, dx: int, dy: int):
+    def deflate_rect(self, dx: int, dy: int) -> Self:
         """
         Deflate the rect by delta X and delta Y.
         (Inflate by {-dx, -dy})
         """
         
         InflateRect(byref(self), -int(dx), -int(dy))
+        return self
     
-    def inflate(self, dx: int, dy: int):
+    def inflate_rect(self, dx: int, dy: int) -> Self:
         """
-        Deflate the rect by delta X and delta Y.
+        Inflate the rect by delta X and delta Y.
         """
         
         InflateRect(byref(self), int(dx), int(dy))
+        return self
         
-    def union(self, rect: 'Rect'):
+    def union_rect(self, rect: 'Rect') -> Self:
         """
         Union with the rect.
         """
         UnionRect(byref(self), byref(self), byref(rect))
+        return self
     
     def __contains__(self, pt: 'GraphicUtils.Point') -> bool:
         pt = GraphicUtils.point(pt)
@@ -380,11 +384,37 @@ class Rect(RECT, CStructure):
     def __iter__(self) -> defb_t.Iterator:
         return iter((self.left, self.top, self.right, self.bottom))
     
-    def __eq__(self, V: 'Rect') -> bool:
-        return self.left == V.left and self.top == V.top and self.right == V.right and self.bottom == V.bottom
+    def __eq__(self, V: RECT | None | Iterable) -> bool:
+        if isinstance(V, RECT):
+            return self.left == V.left and self.top == V.top and self.right == V.right and self.bottom == V.bottom
+        if V is None:
+            return False
+        l = []
+        def recursive(x):
+            try:
+                for u in x:
+                    recursive(u)
+            except:
+                l.append(x)
+        recursive(V)
+        l, t, r, b = l[0:4]
+        return self.left == l and self.top == t and self.right == r and self.bottom == b
     
-    def __ne__(self, V: 'Rect') -> bool:
-        return self.left != V.left or self.top != V.top or self.right != V.right or self.bottom != V.bottom
+    def __ne__(self, V: RECT | Any) -> bool:
+        if isinstance(V, RECT):
+            return self.left != V.left or self.top != V.top or self.right != V.right or self.bottom != V.bottom
+        if V is None:
+            return True
+        l = []
+        def recursive(x):
+            try:
+                for u in x:
+                    recursive(u)
+            except:
+                l.append(x)
+        recursive(V)
+        l, t, r, b = l[0:4]
+        return self.left != l or self.top != t or self.right != r or self.bottom != b
     
     def __bool__(self) -> bool:
         return self.left and self.top and self.right and self.bottom
@@ -425,6 +455,9 @@ class MARGINS(CStructure):
 PMARGINS = LPMARGINS = PTR(MARGINS)
     
 class Margins(MARGINS):
+    def __init__(self, left: int = 0, right: int = 0, top: int = 0, bottom: int = 0):
+        super().__init__(left, right, top, bottom)
+    
     def __str__(self) -> str:
         return f'{{{{{self.cxLeftWidth},{self.cxRightWidth}}},{{{self.cyTopHeight},{self.cyBottomHeight}}}}}'
 

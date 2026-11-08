@@ -19,7 +19,7 @@ from . import cpreproc
 if cpreproc.pragma_once("_GDIPLUSCOLOR_H"):
     
     from .gdipluspixelformats import ARGB
-    from .wingdi import GetRValue, GetBValue, GetGValue
+    from .wingdi import GetRValue, GetBValue, GetGValue, RGB
     from .minwindef import *
 
     from typing import *
@@ -51,7 +51,7 @@ if cpreproc.pragma_once("_GDIPLUSCOLOR_H"):
     # Color
     #----------------------------------------------------------------------------
 
-    class Color(CStructure):
+    class GpColor(CStructure):
         _pack_ = 8
         _Argb: int
         
@@ -72,7 +72,7 @@ if cpreproc.pragma_once("_GDIPLUSCOLOR_H"):
             Color values are not premultiplied.
             """
             if not raargb and not gr and not bg and not b: # __init__(self)
-                self._Argb = Color.Black
+                self._Argb = GpColor.Black
             elif (raargb and gr and bg and not b and 
                   isinstance(raargb, int) and 
                   isinstance(gr, int) and 
@@ -90,25 +90,25 @@ if cpreproc.pragma_once("_GDIPLUSCOLOR_H"):
                 raise TypeError(f"Not found function for presented argument types: {type(raargb)}, {type(gr)}, {type(bg)}, {type(b)}")
         
         def GetAlpha(self) -> int:
-            return BYTE(self._Argb >> Color.AlphaShift).value
+            return BYTE(self._Argb >> GpColor.AlphaShift).value
 
         def GetA(self) -> int:
             return self.GetAlpha()
 
         def GetRed(self) -> int:
-            return BYTE(self._Argb >> Color.RedShift).value
+            return BYTE(self._Argb >> GpColor.RedShift).value
 
         def GetR(self) -> int:
             return self.GetRed()
 
         def GetGreen(self) -> int:
-            return BYTE(self._Argb >> Color.GreenShift).value
+            return BYTE(self._Argb >> GpColor.GreenShift).value
 
         def GetG(self) -> int:
             return self.GetGreen()
 
         def GetBlue(self) -> int:
-            return BYTE(self._Argb >> Color.BlueShift).value
+            return BYTE(self._Argb >> GpColor.BlueShift).value
 
         def GetB(self) -> int:
             return self.GetBlue()
@@ -288,9 +288,9 @@ if cpreproc.pragma_once("_GDIPLUSCOLOR_H"):
         
         @staticmethod
         def MakeARGB(a: int, r: int, g: int, b: int):
-            return ARGB(((b) << Color.BlueShift) |
-                    ((g) << Color.GreenShift) |
-                    ((r) << Color.RedShift) |
-                    ((a) << Color.AlphaShift)).value
+            return ARGB(((b) << GpColor.BlueShift) |
+                    ((g) << GpColor.GreenShift) |
+                    ((r) << GpColor.RedShift) |
+                    ((a) << GpColor.AlphaShift)).value
 
     # REGION ***

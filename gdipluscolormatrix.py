@@ -19,7 +19,7 @@ from . import cpreproc
 if cpreproc.pragma_once("_GDIPLUSCOLORMATRIX_H"):
     
     from .gdiplustypes import INT, REAL, BYTE, CStructure
-    from .gdipluscolor import Color
+    from .gdipluscolor import GpColor
 
     # REGION *** Desktop Family ***
 
@@ -86,8 +86,8 @@ if cpreproc.pragma_once("_GDIPLUSCOLORMATRIX_H"):
 
     class ColorMap(CStructure):
         _fields_ = [
-            ("oldColor", Color),
-            ("newColor", Color)
+            ("oldColor", GpColor),
+            ("newColor", GpColor)
         ]
 
 

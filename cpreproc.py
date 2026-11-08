@@ -20,7 +20,7 @@ __all__ = [
 
 class PreprocessorError(OSError): ...
 
-from ctypes import c_uint64, c_void_p, c_int, windll, sizeof, Structure
+from ctypes import c_uint64, c_void_p, c_int, windll, sizeof, Structure, byref
 from queue import Queue
 
 _defines = {}
@@ -45,7 +45,7 @@ _CPreprocState = _CPreprocStateType()
 
 def define(k: str, e=None):
     if k == 'UNICODE':
-        _CPreprocState._internal_cached_UNICODE = k
+        _CPreprocState._internal_cached_UNICODE = True
     if ifndef(k):
         _defines[k] = e
     
@@ -96,6 +96,9 @@ def pragma_pack(n: int):
 def get_version():
     return getdef("_WINVER")
 
+def get_build():
+    return getdef("_BUILD")
+
 from time import strftime, localtime
 
 import typing as t
@@ -108,6 +111,8 @@ if hasattr(sys, '_getframe'):
     from sys import _getframe as getframe
     
     def pragma_once(k: t.Optional[str] = None):
+        if ifndef("WT_PRAGMA_ONCE"):
+            return True
         if k is None:
             k = f'__{getframe().f_back.f_code.co_filename.replace(".", "_")}__'
         if ifndef(k):
@@ -135,7 +140,7 @@ else:
     def file():
         raise RuntimeError('Method not implemented. "sys" module doesn\'t have attribute "_getframe".')
 
-from ctypes.wintypes import WORD, BYTE, DWORD
+from ctypes.wintypes import WORD, BYTE, DWORD, WCHAR, PDWORD
 
 # define the default definitions
 
@@ -175,13 +180,27 @@ def _cpreproc_init():
 
     MAKEWORD = lambda a, b: (WORD((BYTE(DWORD_PTR(a).value & 0xFF).value) | (WORD(BYTE(DWORD_PTR(b).value & 0xFF).value)).value << 8)).value
     LOWORD = lambda l: (WORD((DWORD_PTR(l)).value & 0xFFFF)).value
+    HIWORD = lambda l: (WORD((DWORD_PTR(l or 0).value >> 16) & 0xFFFF)).value
     LOBYTE = lambda w: (BYTE((DWORD_PTR(w)).value & 0xFF)).value
     HIBYTE = lambda w: (WORD((DWORD_PTR(w).value >> 8) & 0xFF)).value
-    windll.kernel32.GetVersion.argtypes = []
-    windll.kernel32.GetVersion.restype = DWORD
-    dwVersion = windll.kernel32.GetVersion()
-
-    define("_WINVER", MAKEWORD(HIBYTE(LOWORD(dwVersion)), LOBYTE(LOWORD(dwVersion))))
+    try:
+        windll.ntdll.RtlGetNtVersionNumbers.restype = None
+        windll.ntdll.RtlGetNtVersionNumbers.argtypes = [PDWORD, PDWORD, PDWORD]
+        dwMajor = DWORD()
+        dwMinor = DWORD()
+        dwBuild = DWORD()
+        windll.ntdll.RtlGetNtVersionNumbers(byref(dwMajor), byref(dwMinor), byref(dwBuild))
+        winver = MAKEWORD(dwMinor.value, dwMajor.value)
+        define("_BUILD", dwBuild.value & 0x0FFFFFFF)
+    except:
+        windll.kernel32.GetVersion.argtypes = []
+        windll.kernel32.GetVersion.restype = DWORD
+        dwVersion = windll.kernel32.GetVersion()
+        if dwVersion < 0x80000000:
+            dwBuild = HIWORD(dwVersion)
+            define("_BUILD", dwBuild)
+        winver = MAKEWORD(HIBYTE(LOWORD(dwVersion)), LOBYTE(LOWORD(dwVersion)))
+    define("_WINVER", winver)
 
 _cpreproc_init()
 

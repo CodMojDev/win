@@ -113,7 +113,7 @@ class Rebar(Control):
             self.send(RB_GETBANDINFOW, self.index, rbbi.ref())
             return rbbi
         
-    def __init__(self, parent: int | HANDLE, identifier: int | HMENU):
+    def __init__(self, parent: int | HWND, identifier: int | HMENU):
         super().__init__(parent, identifier)
         self.class_name = REBARCLASSNAMEW
         

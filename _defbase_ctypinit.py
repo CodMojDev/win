@@ -142,7 +142,7 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
                 @property
                 def kwargs(self):
                     return ParamSpecKwargs(self)
-                def __init__(self, name, *, bound=None, covariant=False, contravariant=False,
+                def __init__(self, name, bound=None, covariant=False, contravariant=False,
                             infer_variance=False, default=_DummyKwargsPlaceholder_NoDefault):
                     if default is _DummyKwargsPlaceholder_NoDefault:
                         default = typing.NoDefault
@@ -173,7 +173,7 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
                 def __reduce__(self): return self.__name__
                 def __call__(self, *args, **kwargs): pass
             typing.ParamSpec = ParamSpec
-            def _type_convert(arg, module=None, *, allow_special_forms=False):
+            def _type_convert(arg, module=None, allow_special_forms=False):
                 if arg is None: return type(None)
                 if isinstance(arg, str):
                     if sys.version_info <= (3, 9, 6):
@@ -493,7 +493,7 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
             def ReadOnly(self, parameters):
                 item = typing._type_check(parameters, f'{self._name} accepts only a single type.')
                 return typing._GenericAlias(self, (item,))
-            def is_protocol(tp: type, /) -> bool:
+            def is_protocol(tp: type) -> bool:
                 return (
                     isinstance(tp, type)
                     and getattr(tp, '_is_protocol', False)
@@ -514,7 +514,7 @@ if sys.version_info < (3, 13) or typing.TYPE_CHECKING:
                         if (not attr.startswith('_abc_') and attr not in _EXCLUDED_ATTRS):
                             attrs.add(attr)
                 return attrs
-            def get_protocol_members(tp: type, /) -> typing.FrozenSet[str]:
+            def get_protocol_members(tp: type) -> typing.FrozenSet[str]:
                 if not is_protocol(tp):
                     raise TypeError(f'{tp!r} is not a Protocol')
                 if hasattr(tp, '__protocol_attrs__'):
@@ -1479,8 +1479,8 @@ class ICData:
     _b_base_: int
     _b_needsfree_: bool
     _objects: typing.Union[Mapping[Any, int], None]
-    def __buffer__(self, flags: int, /) -> memoryview: ...
-    def __ctypes_from_outparam__(self, /): ...
+    def __buffer__(self, flags: int) -> memoryview: ...
+    def __ctypes_from_outparam__(self): ...
     if sys.version_info >= (3, 14):
         __pointer_type__: type
 

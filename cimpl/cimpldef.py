@@ -350,6 +350,7 @@ class CImplAssembly:
         else:
             self._initialize_ks(self._KS_CACHE_ARCH_X86 | self._KS_CACHE_MODE_64)
         self.assembly = CAssembly(allocator)
+        self.symbols = {}
     
     def _initialize_ks(self, cache_flags: int):
         ks_instance = self._KS_CACHE.get(cache_flags, None)
@@ -384,7 +385,7 @@ class CImplAssembly:
         return len(self.assembly.buffer)
     
     def on_symbol(self, lpwszSymbol: str, pUllAddress: IPointer[UINT64]) -> bool:
-        n = self.symbols.get(lpwszSymbol, None)
+        n = self.symbols.get(lpwszSymbol.decode(), None)
         if n is None: return False
         pUllAddress[0] = n
         return True

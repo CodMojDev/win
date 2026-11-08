@@ -683,7 +683,7 @@ class PropertyGridView(Window):
         rows = self.rows()
         
         # set the scroll bar info
-        self.vscroll.enable_all()
+        self.vscroll.enable()
         if self.minimal + self.SCROLL_Y_UNIT >= len(rows):
             self.vscroll.down.disable()
         elif self.minimal == 0:
@@ -734,7 +734,7 @@ class PropertyGridView(Window):
                 
                 bk_rect = Rect.create(self.DIR_AREA_WIDTH, y, self.propname_width, self.DIR_AREA_HEIGHT - 1)
                 name_rect = bk_rect.copy()
-                name_rect.offset(4, 0)
+                name_rect.offset_rect(4, 0)
                 with dc.select_ex(self.logical_name_font):
                     if row.selected:
                         if not self.focus_gained:
@@ -746,14 +746,12 @@ class PropertyGridView(Window):
                             selection_color = self.select_color
                             selection_name_color = self.select_name_color
                         dc.fill(bk_rect, selection_brush)
-                        with DC.TransactSelect(dc, selection_color, dc.set_bk_color):
-                            with DC.TransactSelect(dc, selection_name_color, dc.set_text_color):
-                                dc.draw_text(row.name, name_rect, DT_SINGLELINE | DT_LEFT)
+                        with dc.set_bk_color_ex(selection_color), dc.set_text_color_ex(selection_name_color):
+                            dc.draw_text(row.name, name_rect, DT_SINGLELINE | DT_LEFT)
                     else:
                         dc.fill(bk_rect, self.bk_brush)
-                        with DC.TransactSelect(dc, self.background_color, dc.set_bk_color):
-                            with DC.TransactSelect(dc, self.name_color, dc.set_text_color):
-                                dc.draw_text(row.name, name_rect, DT_SINGLELINE | DT_LEFT)
+                        with dc.set_bk_color_ex(self.background_color), dc.set_text_color_ex(self.name_color):
+                            dc.draw_text(row.name, name_rect, DT_SINGLELINE | DT_LEFT)
                 
                 x = self.DIR_AREA_WIDTH + 1 + self.propname_width
                 width = self.width - self.propname_width - self.DIR_AREA_HEIGHT - 1
@@ -805,9 +803,8 @@ class PropertyGridView(Window):
                     self.ht_map.append((dir_rect, PGVHT_DIRECTORY, name))
                     
                     # draw the directory name with colors
-                    with DC.TransactSelect(dc, self.directory_color, dc.set_bk_color):
-                        with DC.TransactSelect(dc, self.directory_name_color, dc.set_text_color):
-                            dc.draw_text(name, Rect.create(self.DIR_AREA_WIDTH+4, y+2, self.width, self.DIR_AREA_HEIGHT - 1 - 1), DT_LEFT|DT_SINGLELINE)
+                    with dc.set_bk_color_ex(self.directory_color), dc.set_text_color_ex(self.directory_name_color):
+                        dc.draw_text(name, Rect.create(self.DIR_AREA_WIDTH+4, y+2, self.width, self.DIR_AREA_HEIGHT - 1 - 1), DT_LEFT|DT_SINGLELINE)
                     
                 # draw the selected directory rect state
                 if selected:
@@ -1041,7 +1038,7 @@ class PropertyGridDescription(Window):
     def on_paint(self, dc: PaintDC) -> bool:
         with dc.select_ex(self.logical_header_font):
             height = dc.get_text_extent_point(self.header).cy
-            with DC.TransactSelect(dc, self.color_background, dc.set_bk_color):
+            with dc.set_bk_color_ex(self.color_background):
                 dc.text_out(self.edge_cx+5, self.edge_cy+4, self.header)
         with dc.select_ex(self.logical_text_font):
             rc = self.client_rect
@@ -1056,7 +1053,7 @@ class PropertyGridDescription(Window):
                     if 5 + dx + size.cx >= rc.right:
                         dy += size.cy
                         dx = self.edge_cx
-                    with DC.TransactSelect(dc, self.color_background, dc.set_bk_color):
+                    with dc.set_bk_color_ex(self.color_background):
                         dc.text_out(5 + dx, 4 + height + 6 + dy, word)
                     dx += size.cx + dc.get_text_extent_point(' ').cx
         return True

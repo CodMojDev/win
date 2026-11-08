@@ -1,3 +1,7 @@
+from win import cpreproc
+if cpreproc.ifndef("GDIPVER"):
+    cpreproc.define("GDIPVER", 0x0100)
+
 from win.gdiplustypes import *
 from win.gdiplusenums import *
 from .handle import *
@@ -5,6 +9,9 @@ from win.com.comdefbase import *
 from win.defbase_errordef import *
 from win.gdiplusinit import *
 from .io import *
+from win.com.comtl.streams import *
+from win.gdipluscolormatrix import *
+from win.gdipluspixelformats import *
 
 gdiplus = get_win_library('gdiplus.dll')
 
@@ -21,6 +28,9 @@ LPGPMATRIX = PVOID
 LPGPIMAGE = PVOID
 LPGPADJUSTABLEARROWCAP = PVOID
 LPGPPATH = PVOID
+LPGPSTRINGFORMAT = PVOID
+LPGPBITMAP = PVOID
+LPGPIMAGEATTRIBUTES = PVOID
 
 GPSTATUS = DWORD
 
@@ -285,13 +295,264 @@ def GdipSetCustomLineCapWidthScale(customCap: LPGPCUSTOMLINECAP | int, widthScal
 @gdiplus.foreign(GPSTATUS, LPGPCUSTOMLINECAP, PFLOAT)
 def GdipGetCustomLineCapWidthScale(customCap: LPGPCUSTOMLINECAP | int, widthScale: IPointer[FLOAT]) -> int: ...
 
+# *****
+@gdiplus.foreign(GPSTATUS, LPGPGFX, LPWSTR, INT, LPGPFONT, PTR(RectF), LPGPSTRINGFORMAT, LPGPBRUSH)
+def GdipDrawString(graphics: LPGPGFX | int, string: WT_LPWSTR, length: int, font: LPGPFONT | int, layoutRect: IPointer[RectF], stringFormat: LPGPSTRINGFORMAT | int, brush: LPGPBRUSH | int) -> int: ...
 
+# SolidFill
+@gdiplus.foreign(GPSTATUS, LPGPBRUSH)
+def GdipDeleteBrush(brush: LPGPBRUSH | int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, DWORD, PTR(LPGPBRUSH))
+def GdipCreateSolidFill(color: int, brush: IPointer[LPGPBRUSH]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPBRUSH, DWORD)
+def GdipSetSolidFillColor(brush: LPGPBRUSH | int, color: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPBRUSH, PDWORD)
+def GdipGetSolidFillColor(brush: LPGPBRUSH | int, color: IPointer[DWORD]) -> int: ...
+
+# StringFormat
+@gdiplus.foreign(GPSTATUS, INT, LANGID, PTR(LPGPSTRINGFORMAT))
+def GdipCreateStringFormat(formatAttributes: int, language: int, format: IPointer[LPGPSTRINGFORMAT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, PTR(LPGPSTRINGFORMAT))
+def GdipStringFormatGetGenericDefault(format: IPointer[LPGPSTRINGFORMAT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, PTR(LPGPSTRINGFORMAT))
+def GdipStringFormatGetGenericTypographic(format: IPointer[LPGPSTRINGFORMAT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, PTR(LPGPSTRINGFORMAT))
+def GdipDeleteStringFormat(format: int | LPGPSTRINGFORMAT) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, PTR(LPGPSTRINGFORMAT))
+def GdipCloneStringFormat(format: int | LPGPSTRINGFORMAT, newFormat: IPointer[LPGPSTRINGFORMAT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, INT)
+def GdipSetStringFormatFlags(format: int | LPGPSTRINGFORMAT, flags: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, PINT)
+def GdipGetStringFormatFlags(format: int | LPGPSTRINGFORMAT, flags: IPointer[INT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, StringAlignment)
+def GdipSetStringFormatAlign(self, format: int | LPGPSTRINGFORMAT, align: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, PTR(StringAlignment))
+def GdipGetStringFormatAlign(self, format: int | LPGPSTRINGFORMAT, align: IPointer[StringAlignment]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, StringAlignment)
+def GdipSetStringFormatLineAlign(self, format: int | LPGPSTRINGFORMAT, align: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, PTR(StringAlignment))
+def GdipGetStringFormatLineAlign(self, format: int | LPGPSTRINGFORMAT, align: IPointer[StringAlignment]) -> int: ...
+
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, StringTrimming)
+def GdipSetStringFormatTrimming(self, format: int | LPGPSTRINGFORMAT, trimming: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, PTR(StringTrimming))
+def GdipGetStringFormatTrimming(self, format: int | LPGPSTRINGFORMAT, trimming: IPointer[StringTrimming]) -> int: ...
+
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, INT)
+def GdipSetStringFormatHotkeyPrefix(self, format: int | LPGPSTRINGFORMAT, hotkeyPrefix: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, PTR(INT))
+def GdipGetStringFormatHotkeyPrefix(self, format: int | LPGPSTRINGFORMAT, hotkeyPrefix: IPointer[INT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, FLOAT, INT, PFLOAT)
+def GdipSetStringFormatTabStops(self, format: int | LPGPSTRINGFORMAT, firstTabOffset: float, count: int, tabStops: IPointer[FLOAT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, INT, PFLOAT, PFLOAT)
+def GdipGetStringFormatTabStops(self, format: int | LPGPSTRINGFORMAT, count: int, firstTabOffset: IPointer[FLOAT], tabStops: IPointer[FLOAT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, PINT)
+def GdipGetStringFormatTabStopCount(self, format: int | LPGPSTRINGFORMAT, count: IPointer[int]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, LANGID, StringDigitSubstitute)
+def GdipSetStringFormatDigitSubstitution(self, format: int | LPGPSTRINGFORMAT, language: int, substitute: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, PTR(LANGID), PTR(StringDigitSubstitute))
+def GdipGetStringFormatDigitSubstitution(self, format: int | LPGPSTRINGFORMAT, language: IPointer[LANGID], substitute: IPointer[StringDigitSubstitute]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, PTR(INT))
+def GdipGetStringFormatMeasurableCharacterRangeCount(self, format: int | LPGPSTRINGFORMAT, count: IPointer[INT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPSTRINGFORMAT, INT, PTR(CharacterRange))
+def GdipSetStringFormatMeasurableCharacterRanges(self, format: int | LPGPSTRINGFORMAT, rangeCount: int, ranges: IPointer[CharacterRange]) -> int: ...
+
+# Brush
+
+@gdiplus.foreign(GPSTATUS, LPGPBRUSH, PTR(LPGPBRUSH))
+def GdipCloneBrush(brush: LPGPBRUSH | int, cloneBrush: IPointer[LPGPBRUSH]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPBRUSH)
+def GdipDeleteBrush(brush: LPGPBRUSH | int) -> int: ...
+
+BrushTypeSolidColor     = 0
+BrushTypeHatchFill      = 1
+BrushTypeTextureFill    = 2
+BrushTypePathGradient   = 3
+BrushTypeLinearGradient = 4
+
+@gdiplus.foreign(GPSTATUS, LPGPBRUSH, PTR(BrushType))
+def GdipGetBrushType(brush: LPGPBRUSH | int, type: IPointer[BrushType]) -> int: ...
+
+# Graphics
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, LPGPBRUSH, REAL, REAL, REAL, REAL)
+def GdipFillRectangle(graphics: LPGPGFX | int, brush: LPGPBRUSH | int, x: int, y: int, width: int, height: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, CompositingMode)
+def GdipSetCompositingMode(graphics: LPGPGFX | int, compositingMode: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, PTR(CompositingMode))
+def GdipGetCompositingMode(graphics: LPGPGFX | int, compositingMode: IPointer[CompositingMode]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, INT, INT)
+def GdipSetRenderingOrigin(graphics: LPGPGFX | int, x: int, y: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, PINT, PINT)
+def GdipGetRenderingOrigin(graphics: LPGPGFX | int, x: IPointer[INT], y: IPointer[INT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, CompositingQuality)
+def GdipSetCompositingQuality(graphics: LPGPGFX | int, compositingQuality: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, PTR(CompositingQuality))
+def GdipGetCompositingQuality(graphics: LPGPGFX | int, compositingQuality: IPointer[CompositingQuality]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, PTR(SmoothingMode))
+def GdipGetSmoothingMode(graphics: LPGPGFX | int, smoothingMode: IPointer[SmoothingMode]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, SmoothingMode)
+def GdipSetSmoothingMode(graphics: LPGPGFX | int, smoothingMode: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, PixelOffsetMode)
+def GdipSetPixelOffsetMode(graphics: LPGPGFX | int, pixelOffsetMode: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, PTR(PixelOffsetMode))
+def GdipGetPixelOffsetMode(graphics: LPGPGFX | int, pixelOffsetMode: IPointer[PixelOffsetMode]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, TextRenderingHint)
+def GdipSetTextRenderingHint(graphics: LPGPGFX | int, mode: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, PTR(TextRenderingHint))
+def GdipGetTextRenderingHint(graphics: LPGPGFX | int, mode: IPointer[TextRenderingHint]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, UINT)
+def GdipSetTextContrast(graphics: LPGPGFX | int, contrast: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, PTR(UINT))
+def GdipGetTextContrast(graphics: LPGPGFX | int, contrast: IPointer[UINT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, InterpolationMode)
+def GdipSetInterpolationMode(graphics: LPGPGFX | int, interpolationMode: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, PTR(InterpolationMode))
+def GdipGetInterpolationMode(graphics: LPGPGFX | int, interpolationMode: IPointer[InterpolationMode]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, LPGPMATRIX)
+def GdipSetWorldTransform(graphics: LPGPGFX | int, matrix: LPGPMATRIX | int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX)
+def GdipResetWorldTransform(graphics: LPGPGFX | int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, MatrixOrder)
+def GdipMultiplyWorldTransform(graphics: LPGPGFX | int, matrix: LPGPMATRIX | int, order: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, FLOAT, FLOAT, MatrixOrder)
+def GdipTranslateWorldTransform(graphics: LPGPGFX | int, dx: float, dy: float, order: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, FLOAT, FLOAT, MatrixOrder)
+def GdipScaleWorldTransform(graphics: LPGPGFX | int, sx: float, sy: float, order: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, LPGPMATRIX)
+def GdipGetWorldTransform(graphics: LPGPGFX | int, matrix: LPGPMATRIX | int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX)
+def GdipResetPageTransform(graphics: LPGPGFX | int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, PTR(FLOAT))
+def GdipGetDpiX(graphics: LPGPGFX | int, dpi: IPointer[FLOAT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, PTR(FLOAT))
+def GdipGetDpiY(graphics: LPGPGFX | int, dpi: IPointer[FLOAT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, DWORD)
+def GdipGraphicsClear(graphics: LPGPGFX | int, color: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPIMAGE, FLOAT, FLOAT)
+def GdipDrawImage(graphics: LPGPGFX | int, image: LPGPIMAGE | int, x: float, y: float) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPIMAGE, INT, INT)
+def GdipDrawImageI(graphics: LPGPGFX | int, image: LPGPIMAGE | int, x: int, y: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, LPGPIMAGE, FLOAT, FLOAT, FLOAT, FLOAT)
+def GdipDrawImageRect(graphics: LPGPGFX | int, image: LPGPIMAGE | int, x: float, y: float, width: float, height: float) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, LPGPIMAGE, FLOAT, FLOAT, FLOAT, FLOAT, FLOAT, FLOAT, FLOAT, FLOAT, Unit, LPGPIMAGEATTRIBUTES, DrawImageAbort, PVOID)
+def GdipDrawImageRectRect(graphics: LPGPGFX | int, image: LPGPIMAGE | int, dstx: float, dsty: float, dstwidth: float, dstheight: float, srcx: float, srcy: float, srcwidth: float, srcheight: float, srcUnit: int, imageAttributes: LPGPIMAGEATTRIBUTES | int, callback: FARPROC, callbackData: WT_ADDRLIKE) -> int: ...
+
+# Image
+@gdiplus.foreign(GPSTATUS, LPSTREAM, PTR(LPGPIMAGE))
+def GdipLoadImageFromStream(stream: IPointer[IStream], image: IPointer[LPGPIMAGE]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPWSTR, PTR(LPGPIMAGE))
+def GdipLoadImageFromFile(filename: WT_LPWSTR, image: IPointer[LPGPIMAGE]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPIMAGE, PTR(LPGPIMAGE))
+def GdipCloneImage(image: LPGPIMAGE | int, cloneImage: IPointer[LPGPIMAGE]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPIMAGE)
+def GdipDisposeImage(image: LPGPIMAGE | int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPIMAGE, PUINT)
+def GdipGetImageWidth(image: LPGPIMAGE | int, width: IPointer[UINT]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPIMAGE, PUINT)
+def GdipGetImageHeight(image: LPGPIMAGE | int, height: IPointer[UINT]) -> int: ...
+
+# Bitmap
+@gdiplus.foreign(GPSTATUS, HBITMAP, HPALETTE, PTR(LPGPBITMAP))
+def GdipCreateBitmapFromHBITMAP(hbm: int, hpal: int, bitmap: IPointer[LPGPBITMAP]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, HICON, PTR(LPGPBITMAP))
+def GdipCreateBitmapFromHICON(hicon: int, bitmap: IPointer[LPGPBITMAP]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, FLOAT, FLOAT, FLOAT, FLOAT, PixelFormat, LPGPBITMAP, PTR(LPGPBITMAP))
+def GdipCloneBitmapArea(x: float, y: float, width: float, height: float, format: int, srcBitmap: LPGPBITMAP | int, dstBitmap: IPointer[LPGPBITMAP]) -> int: ...
+
+# ImageAttributes
+@gdiplus.foreign(GPSTATUS, PTR(LPGPIMAGEATTRIBUTES))
+def GdipCreateImageAttributes(imageattr: IPointer[LPGPIMAGEATTRIBUTES]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPIMAGEATTRIBUTES, PTR(LPGPIMAGEATTRIBUTES))
+def GdipCloneImageAttributes(imageattr: LPGPIMAGEATTRIBUTES | int, cloneImageattr: IPointer[LPGPIMAGEATTRIBUTES]) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPIMAGEATTRIBUTES)
+def GdipDisposeImageAttributes(imageattr: LPGPIMAGEATTRIBUTES | int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPIMAGEATTRIBUTES, ColorAdjustType)
+def GdipResetImageAttributes(imageattr: LPGPIMAGEATTRIBUTES | int, type: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPIMAGEATTRIBUTES, ColorAdjustType, BOOL, PTR(ColorMatrix), PTR(ColorMatrix), ColorMatrixFlags)
+def GdipSetImageAttributesColorMatrix(imageattr: LPGPIMAGEATTRIBUTES | int, type: int, enableFlag: int, colorMatrix: IPointer[ColorMatrix], grayMatrix: IPointer[ColorMatrix], flags: int) -> int: ...
+
+@gdiplus.foreign(GPSTATUS, LPGPGFX, LPGPPEN, FLOAT, FLOAT, FLOAT, FLOAT)
+def GdipDrawRectangle(graphics: LPGPGFX | int, pen: LPGPPEN | int, x: float, y: float, width: float, height: float) -> int: ...
+
+# Text
+@gdiplus.foreign(GPSTATUS, LPGPGFX, LPWSTR, INT, LPGPFONT, PTR(RectF), LPGPSTRINGFORMAT, PTR(RectF), PINT, PINT)
+def GdipMeasureString(graphics: LPGPGFX | int, string: WT_LPWSTR, length: int, font: LPGPFONT | int, layoutRect: IPointer[RectF], stringFormat: LPGPSTRINGFORMAT | int, boundingBox: IPointer[RectF], codepointsFitted: IPointer[INT], linesFilled: IPointer[INT]) -> int: ...
+
+# *****
 
 class GdipError(RuntimeError):
     GDIP_ERROR_MAP: dict[int, int] = {
         Ok: S_OK,
         GenericError: E_FAIL,
         InvalidParameter: E_INVALIDARG,
+        OutOfMemory: E_OUTOFMEMORY,
         ObjectBusy: MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, ERROR_BUSY),
         InsufficientBuffer: MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, ERROR_INSUFFICIENT_BUFFER),
         NotImplemented: E_NOTIMPL,
@@ -314,25 +575,35 @@ class GdipError(RuntimeError):
         if code == Win32Error:
             code = MAKE_HRESULT(SEVERITY_ERROR, FACILITY_WIN32, GetLastError())
         else:
+            print(code)
             code = self.GDIP_ERROR_MAP.get(code, E_UNEXPECTED)
         super().__init__(f'{COMError(code)}')
 
 class Gdiplus:
-    @staticmethod
-    def startup():
+    def RectF_to_Rect(rect: RectF) -> Rect:
+        return Rect.create(rect.X, rect.Y, rect.Width, rect.Height)
+    
+    def Rect_to_RectF(rect: RECT) -> RectF:
+        return RectF(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
+    
+    TOKEN = ULONG_PTR()
+    
+    @classmethod
+    def startup(cls):
         """
         Initialize the GDI+.
         """
-        status = GdiplusStartup()
+        input = GdiplusStartupInput()
+        status = GdiplusStartup(byref(cls.TOKEN), input.ref(), NULL)
         if status != Ok:
             raise GdipError(status)
         
-    @staticmethod
-    def shutdown():
+    @classmethod
+    def shutdown(cls):
         """
         Uninitialize the GDI+.
         """
-        GdiplusShutdown()
+        GdiplusShutdown(cls.TOKEN.value)
     
     class Graphics(Handle):
         """
@@ -344,17 +615,106 @@ class Gdiplus:
             """
             Create the GDI+ Graphics from `win.abs.core.handle.DC` or `HDC`.
             """
-            gfx = Gdiplus.Graphics()
+            gfx = LPGPGFX()
             status = GdipCreateFromHDC(dc, byref(gfx))
             if status != Ok:
                 raise GdipError(status)
-            return gfx
+            return cls(gfx.value)
         
         def close(self):
             status = GdipDeleteGraphics(self)
             if status != Ok:
                 raise GdipError(status)
             self._closed = True
+            
+        def draw_string(self, text: str, font: 'Gdiplus.Font', rect: RECT | RectF, brush: 'Gdiplus.Brush', format: TUnion['Gdiplus.StringFormat', None] = None):
+            """
+            Draw the string.
+            """
+            if isinstance(rect, RECT):
+                rect = RectF(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
+            status = GdipDrawString(self, text, len(text), font, rect.ref(), format, brush)
+            if status != Ok:
+                raise GdipError(status)
+        
+        @property
+        def smoothing_mode(self) -> int:
+            smoothing_mode = SmoothingMode()
+            status = GdipGetSmoothingMode(self, byref(smoothing_mode))
+            if status != Ok:
+                raise GdipError(status)
+            return smoothing_mode.value
+        
+        @smoothing_mode.setter
+        def smoothing_mode(self, smoothing_mode: int):
+            status = GdipSetSmoothingMode(self, smoothing_mode)
+            if status != Ok:
+                raise GdipError(status)
+            
+        def fill(self, rect: RECT | RectF, brush: 'Gdiplus.Brush'):
+            if isinstance(rect, RECT):
+                rect = RectF(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
+            status = GdipFillRectangle(self, brush, rect.X, rect.Y, rect.Width, rect.Height)
+            if status != Ok:
+                raise GdipError(status)
+            
+        @property
+        def compositing_mode(self) -> int:
+            compositing_mode = CompositingMode()
+            status = GdipGetCompositingMode(self, byref(compositing_mode))
+            if status != Ok:
+                raise GdipError(status)
+            return compositing_mode.value
+        
+        @compositing_mode.setter
+        def compositing_mode(self, compositing_mode: int):
+            status = GdipSetCompositingMode(self, compositing_mode)
+            if status != Ok:
+                raise GdipError(status)
+            
+        def draw_image(self, image: 'Gdiplus.Image', x: float, y: float):
+            status = GdipDrawImage(self, image, x, y)
+            if status != Ok:
+                raise GdipError(status)
+            
+        def draw_image_rect(self, image: 'Gdiplus.Image', x: float, y: float, width: float, height: float):
+            status = GdipDrawImageRect(self, image, x, y, width, height)
+            if status != Ok:
+                raise GdipError(status)
+            
+        def draw_image_ex(self, image: 'Gdiplus.Image', source: RECT | RectF, destination: RECT | RectF, unit: int, attributes: TUnion['Gdiplus.ImageAttributes', None]):
+            if isinstance(source, RECT):
+                source = RectF(source.left, source.top, source.right - source.left, source.bottom - source.top)
+            if isinstance(destination, RECT):
+                destination = RectF(destination.left, destination.top, destination.right - destination.left, destination.bottom - destination.top)
+            status = GdipDrawImageRectRect(self, image, destination.X, destination.Y, destination.Width, destination.Height, source.X, source.Y, source.Width, source.Height, unit, attributes, i_cast(NULL, DrawImageAbort), NULL)
+            if status != Ok:
+                raise GdipError(status)
+            
+        def draw_rectangle(self, rect: RECT | RectF, pen: 'Gdiplus.Pen'):
+            if isinstance(rect, RECT):
+                rect = RectF(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
+            status = GdipDrawRectangle(self, pen, rect.X, rect.Y, rect.Width, rect.Height)
+            if status != Ok:
+                raise GdipError(status)
+            
+        def clear(self, color: Color.IColor):
+            status = GdipGraphicsClear(self, int(color.argb()))
+            if status != Ok:
+                raise GdipError(status)
+            
+        def measure_string(self, string: str, font: 'Gdiplus.Font', layout: RECT | RectF | None = None, format: TUnion['Gdiplus.StringFormat', None] = None) -> tuple[RectF, int, int]:
+            if layout is None:
+                layout = RectF(0.0, 0.0, 999999.0, 999999.0)
+            if isinstance(layout, RECT):
+                layout = Gdiplus.Rect_to_RectF(layout)
+            bounds = RectF()
+            codepoints = INT()
+            lines = INT()
+            status = GdipMeasureString(self, string, len(string), font, layout.ref(), format, bounds.ref(), byref(codepoints), byref(lines))
+            if status != Ok:
+                raise GdipError(status)
+            return bounds, codepoints.value, lines.value  
             
     class Font(Handle):
         """
@@ -366,22 +726,22 @@ class Gdiplus:
             """
             Create the GDI+ font from GDI+ font family, size in EM, font style and unit enumeration.
             """
-            font = Gdiplus.Font()
+            font = LPGPFONT()
             status = GdipCreateFont(family, em, style, unit, byref(font))
             if status != Ok:
                 raise GdipError(status)
-            return font
+            return cls(font.value)
         
         @classmethod
         def from_dc(cls, dc: int | HANDLE) -> 'Gdiplus.Font':
             """
             Create the GDI+ font from `win.abs.core.handle.DC` or `HDC`.
             """
-            font = Gdiplus.Font()
+            font = LPGPFONT()
             status = GdipCreateFontFromDC(dc, byref(font))
             if status != Ok:
                 raise GdipError(status)
-            return font
+            return cls(font.value)
         
         @classmethod
         def from_font(cls, font: int | HANDLE, dc: int | HANDLE | None = None) -> 'Gdiplus.Font':
@@ -390,24 +750,26 @@ class Gdiplus:
             """
             if dc is None:
                 dc = DC.create_compatible(None)
-            lf = GDIObjectHandle.foreign_owner(font).object
-            font = Gdiplus.Font()
+            if not isinstance(font, GDIObjectHandle):
+                font = GDIObjectHandle.foreign_owner(font)
+            lf = font.object
+            font = LPGPFONT()
             status = GdipCreateFontFromLogfontW(dc, lf.ref(), byref(font))
             if status != Ok:
                 raise GdipError(status)
-            return font
+            return cls(font.value)
         
         @classmethod
         def indirect(cls, logfont: LOGFONTW) -> 'Gdiplus.Font':
             """
             Create the GDI+ font indirectly from `LOGFONTW`.
             """
-            font = Gdiplus.Font()
+            font = LPGPFONT()
             with DC.create_compatible(None) as dc:
                 status = GdipCreateFontFromLogfontW(dc, logfont.ref(), byref(font))
             if status != Ok:
                 raise GdipError(status)
-            return font
+            return cls(font.value)
         
         def close(self):
             status = GdipDeleteFont(self)
@@ -419,11 +781,11 @@ class Gdiplus:
             """
             Clone the GDI+ font.
             """
-            font = Gdiplus.Font()
+            font = LPGPFONT()
             status = GdipCloneFont(self, byref(font))
             if status != Ok:
                 raise GdipError(status)
-            return font
+            return self.__class__(font.value)
         
         @property
         def size(self) -> float:
@@ -469,7 +831,7 @@ class Gdiplus:
                 raise GdipError(status)
             return height.value
         
-        def logfont(self, graphics: 'Gdiplus.Graphics' | None = None) -> LOGFONTW:
+        def logfont(self, graphics: TUnion['Gdiplus.Graphics', None] = None) -> Logfont:
             """
             Get the `LOGFONTW` from GDI+ font.
             """
@@ -478,7 +840,7 @@ class Gdiplus:
                     with Gdiplus.Graphics.create(dc) as graphics:
                         return self.logfont(graphics)
             else:
-                logfont = LOGFONTW()
+                logfont = Logfont()
                 status = GdipGetLogFontW(self, graphics, logfont.ref())
                 if status != Ok:
                     raise GdipError(status)
@@ -486,11 +848,11 @@ class Gdiplus:
             
         @property
         def family(self) -> 'Gdiplus.FontFamily':
-            family = Gdiplus.FontFamily()
+            family = LPGPFONTFAMILY()
             status = GdipGetFamily(self, byref(family))
             if status != Ok:
                 raise GdipError(status)
-            return family
+            return Gdiplus.FontFamily(family.value)
             
     class FontFamily(Handle):
         """
@@ -499,27 +861,27 @@ class Gdiplus:
         
         @classmethod
         def serif(cls) -> 'Gdiplus.FontFamily':
-            family = Gdiplus.FontFamily()
+            family = LPGPFONTFAMILY()
             status = GdipGetGenericFontFamilySerif(byref(family))
             if status != Ok:
                 raise GdipError(status)
-            return family
+            return cls(family.value)
         
         @classmethod
         def sans_serif(cls) -> 'Gdiplus.FontFamily':
-            family = Gdiplus.FontFamily()
+            family = LPGPFONTFAMILY()
             status = GdipGetGenericFontFamilySansSerif(byref(family))
             if status != Ok:
                 raise GdipError(status)
-            return family
+            return cls(family.value)
         
         @classmethod
         def monospace(cls) -> 'Gdiplus.FontFamily':
-            family = Gdiplus.FontFamily()
+            family = LPGPFONTFAMILY()
             status = GdipGetGenericFontFamilyMonospace(byref(family))
             if status != Ok:
                 raise GdipError(status)
-            return family
+            return cls(family.value)
         
         def close(self):
             status = GdipDeleteFontFamily(self)
@@ -567,11 +929,11 @@ class Gdiplus:
         
         @classmethod
         def create(cls) -> 'Gdiplus.PrivateFontCollection':
-            collection = Gdiplus.PrivateFontCollection()
+            collection = LPGPFONTCOLLECTION()
             status = GdipNewPrivateFontCollection(byref(collection))
             if status != Ok:
                 raise GdipError(status)
-            return collection
+            return cls(collection.value)
         
         def close(self):
             status = GdipDeletePrivateFontCollection(byref(self))
@@ -617,37 +979,37 @@ class Gdiplus:
         
         @classmethod
         def create(cls) -> 'Gdiplus.InstalledFontCollection':
-            collection = Gdiplus.InstalledFontCollection()
+            collection = LPGPFONTCOLLECTION()
             status = GdipNewInstalledFontCollection(byref(collection))
             if status != Ok:
                 raise GdipError(status)
-            return collection
+            return cls(collection.value)
         
     class Pen(Handle):
         """
         The GDI+ pen.
         """
         @classmethod
-        def create(cls, value: int | Color.IColor, width: float = 1.0, unit: int = UnitPixel) -> 'Gdiplus.Pen':
+        def create(cls, value: Color.IColor, width: float = 1.0, unit: int = UnitPixel) -> 'Gdiplus.Pen':
             """
             Create the GDI+ pen from ARGB color, width and unit enumeration.
             """
-            pen = Gdiplus.Pen()
-            status = GdipCreatePen1(int(value), width, unit, byref(pen))
+            pen = LPGPPEN()
+            status = GdipCreatePen1(int(value.argb()), width, unit, byref(pen))
             if status != Ok:
                 raise GdipError(status)
-            return pen
+            return cls(pen.value)
         
         @classmethod
         def from_brush(cls, brush: 'Gdiplus.Brush', width: float = 1.0, unit: int = UnitPixel) -> 'Gdiplus.Pen':
             """
             Create the GDI+ pen from GDI+ brush, width and unit enumeration.
             """
-            pen = Gdiplus.Pen()
+            pen = LPGPPEN()
             status = GdipCreatePen2(brush, width, unit, byref(pen))
             if status != Ok:
                 raise GdipError(status)
-            return pen
+            return cls(pen.value)
         
         def close(self):
             status = GdipDeletePen(self)
@@ -730,8 +1092,8 @@ class Gdiplus:
             return Color.ARGB(color.value)
         
         @color.setter
-        def color(self, color: int | Color.IColor):
-            status = GdipSetPenColor(self, int(color))
+        def color(self, color: Color.IColor):
+            status = GdipSetPenColor(self, int(color.argb()))
             if status != Ok:
                 raise GdipError(status)
         
@@ -757,23 +1119,288 @@ class Gdiplus:
             if status != Ok:
                 raise GdipError(status)
         
-    class SolidBrush(Handle):
-        ...
-        
-    class HatchBrush(Handle):
-        ...
-        
     class Brush(Handle):
+        def clone(self) -> Self:
+            brush = LPGPBRUSH()
+            status = GdipCloneBrush(self, byref(brush))
+            if status != Ok:
+                raise GdipError(status)
+            return self.__class__(brush.value)
+        
+        def close(self):
+            status = GdipDeleteBrush(self)
+            if status != Ok:
+                raise GdipError(status)
+            self._closed = True
+            
+        @property
+        def type(self) -> int:
+            brush_type = BrushType()
+            status = GdipGetBrushType(self, byref(brush_type))
+            if status != Ok:
+                raise GdipError(status)
+            return brush_type.value
+        
+    class SolidBrush(Brush):
+        @classmethod
+        def create(cls, color: Color.IColor) -> Self:
+            brush = LPGPBRUSH()
+            status = GdipCreateSolidFill(int(color.argb()), byref(brush))
+            if status != Ok:
+                raise GdipError(status)
+            return cls(brush.value)
+        
+        @property
+        def color(self) -> Color.ARGB:
+            color = DWORD()
+            status = GdipGetSolidFillColor(self, byref(color))
+            if status != Ok:
+                raise GdipError(status)
+            return Color.ARGB(status.value)
+        
+        @color.setter
+        def color(self, color: Color.IColor):
+            status = GdipSetSolidFillColor(self, int(color.argb()))
+            if status != Ok:
+                raise GdipError(status)
+        
+    class HatchBrush(Brush):
         ...
         
     class Image(Handle):
-        ...
+        @classmethod
+        def from_stream(cls, stream: io.IOBase | IStream) -> Self:
+            if not isinstance(stream, IStream):
+                stream = StreamOverIO(stream)
+                TlAddRefGuard(stream)
+            image = LPGPIMAGE()
+            status = GdipLoadImageFromStream(stream.ref(), byref(image))
+            if status != Ok:
+                raise GdipError(status)
+            return cls(image.value)
         
-    class Bitmap(Handle):
-        ...
+        @classmethod
+        def from_file(cls, file: str) -> Self:
+            image = LPGPIMAGE()
+            status = GdipLoadImageFromFile(file, byref(image))
+            if status != Ok:
+                raise GdipError(status)
+            return cls(image.value)
+        
+        def close(self):
+            status = GdipDisposeImage(self)
+            if status != Ok:
+                raise GdipError(status)
+            self._closed = True
+            
+        @property
+        def width(self) -> int:
+            width = UINT()
+            status = GdipGetImageWidth(self, byref(width))
+            if status != Ok:
+                raise GdipError(status)
+            return width.value
+            
+        @property
+        def height(self) -> int:
+            height = UINT()
+            status = GdipGetImageHeight(self, byref(height))
+            if status != Ok:
+                raise GdipError(status)
+            return height.value
+        
+    class Bitmap(Image):
+        @classmethod
+        def from_hbitmap(cls, hbm: int | HANDLE, palette: int | HANDLE = NULL) -> Self:
+            bitmap = LPGPBITMAP()
+            status = GdipCreateBitmapFromHBITMAP(hbm, palette, byref(bitmap))
+            if status != Ok:
+                raise GdipError(status)
+            return cls(bitmap.value)
+
+        @classmethod
+        def from_hicon(cls, hicon: int | HANDLE) -> Self:
+            bitmap = LPGPBITMAP()
+            status = GdipCreateBitmapFromHICON(hicon, byref(bitmap))
+            if status != Ok:
+                raise GdipError(status)
+            return cls(bitmap.value)
+        
+        def clone_area(self, rect: RECT | RectF, format: int) -> Self:
+            if isinstance(rect, RECT):
+                rect = RectF(rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
+            bitmap = LPGPBITMAP()
+            status = GdipCloneBitmapArea(rect.X, rect.Y, rect.Width, rect.Height, format, self, byref(bitmap))
+            if status != Ok:
+                raise GdipError(status)
+            return self.__class__(bitmap.value)
         
     class Icon(Handle):
         ...
         
     class Region(Handle):
         ...
+        
+    class StringFormat(Handle):
+        @classmethod
+        def create(cls, attributes: int, language: int) -> Self:
+            format = LPGPSTRINGFORMAT()
+            status = GdipCreateStringFormat(attributes, language, byref(format))
+            if status != Ok:
+                raise GdipError(status)
+            return cls(format.value)
+        
+        @classmethod
+        def generic(cls) -> Self:
+            format = LPGPSTRINGFORMAT()
+            status = GdipStringFormatGetGenericDefault(byref(format))
+            if status != Ok:
+                raise GdipError(status)
+            return cls(format.value)
+        
+        @classmethod
+        def typographic(cls) -> Self:
+            format = LPGPSTRINGFORMAT()
+            status = GdipStringFormatGetGenericTypographic(byref(format))
+            if status != Ok:
+                raise GdipError(status)
+            return cls(format.value)
+        
+        def close(self):
+            try:
+                status = GdipDeleteStringFormat(self)
+            except:
+                status = Ok
+            if status != Ok:
+                raise GdipError(status)
+            self._closed = True
+            
+        def clone(self) -> Self:
+            format = LPGPSTRINGFORMAT()
+            status = GdipCloneStringFormat(self, byref(format))
+            if status != Ok:
+                raise GdipError(status)
+            return self.__class__(format.value)
+        
+        @property
+        def flags(self) -> int:
+            flags = INT()
+            status = GdipGetStringFormatFlags(self, byref(flags))
+            if status != Ok:
+                raise GdipError(status)
+            return flags.value
+        
+        @flags.setter
+        def flags(self, flags: int):
+            status = GdipSetStringFormatFlags(self, flags)
+            if status != Ok:
+                raise GdipError(status)
+        
+        @property
+        def align(self) -> int:
+            align = StringAlignment()
+            status = GdipGetStringFormatAlign(self, byref(align))
+            if status != Ok:
+                raise GdipError(status)
+            return align.value
+        
+        @align.setter
+        def align(self, align: int):
+            status = GdipSetStringFormatAlign(self, align)
+            if status != Ok:
+                raise GdipError(status)
+        
+        @property
+        def line_align(self) -> int:
+            align = StringAlignment()
+            status = GdipGetStringFormatLineAlign(self, byref(align))
+            if status != Ok:
+                raise GdipError(status)
+            return align.value
+        
+        @line_align.setter
+        def line_align(self, line_align: int):
+            status = GdipSetStringFormatLineAlign(self, line_align)
+            if status != Ok:
+                raise GdipError(status)
+        
+        @property
+        def trimming(self) -> int:
+            trimming = StringTrimming()
+            status = GdipGetStringFormatTrimming(self, byref(trimming))
+            if status != Ok:
+                raise GdipError(status)
+            return trimming.value
+        
+        @trimming.setter
+        def trimming(self, trimming: int):
+            status = GdipSetStringFormatTrimming(self, trimming)
+            if status != Ok:
+                raise GdipError(status)
+        
+        @property
+        def hotkey_prefix(self) -> int:
+            hotkey_prefix = INT()
+            status = GdipGetStringFormatHotkeyPrefix(self, byref(hotkey_prefix))
+            if status != Ok:
+                raise GdipError(status)
+            return hotkey_prefix.value
+        
+        @hotkey_prefix.setter
+        def hotkey_prefix(self, hotkey_prefix: int):
+            status = GdipSetStringFormatHotkeyPrefix(self, hotkey_prefix)
+            if status != Ok:
+                raise GdipError(status)
+            
+    class ImageAttributes(Handle):
+        @classmethod
+        def create(cls) -> Self:
+            attributes = LPGPIMAGEATTRIBUTES()
+            status = GdipCreateImageAttributes(byref(attributes))
+            if status != Ok:
+                raise GdipError(status)
+            return cls(attributes.value)
+        
+        def close(self):
+            status = GdipDisposeImageAttributes(self)
+            if status != Ok:
+                raise GdipError(status)
+            self._closed = True
+            
+        def reset(self, adjust: int = ColorAdjustTypeAny):
+            status = GdipResetImageAttributes(self, adjust)
+            if status != Ok:
+                raise GdipError(status)
+            
+        def set_color_matrix(self, grayscale: ColorMatrix | Iterable[float] | Iterable[Iterable[float]] | None, color: ColorMatrix | Iterable[float] | Iterable[Iterable[float]] | None, adjust: int = ColorAdjustTypeAny, flags: int = ColorMatrixFlagsDefault, enable_flag: bool = True):
+            if grayscale is not None:
+                if not isinstance(grayscale, ColorMatrix):
+                    l = []
+                    def recursive(u):
+                        try:
+                            for x in u:
+                                recursive(x)
+                        except:
+                            l.append(u)
+                    recursive(grayscale)
+                    if len(l) != 5*5:
+                        raise ValueError('Invalid grayscale matrix')
+                    grayscale_mem = (FLOAT*(5*5))(*l)
+                    grayscale = i_cast(grayscale_mem, PTR(ColorMatrix)).contents
+            if color is not None:
+                if not isinstance(color, ColorMatrix):
+                    l = []
+                    def recursive(u):
+                        try:
+                            for x in u:
+                                recursive(x)
+                        except:
+                            l.append(u)
+                    recursive(color)
+                    if len(l) != 5*5:
+                        raise ValueError('Invalid color matrix')
+                    color_mem = (FLOAT*(5*5))(*l)
+                    color = i_cast(color_mem, PTR(ColorMatrix)).contents
+            status = GdipSetImageAttributesColorMatrix(self, adjust, enable_flag, color.ref() if color else NULL, grayscale.ref() if grayscale else NULL, flags)
+            if status != Ok:
+                raise GdipError(status)

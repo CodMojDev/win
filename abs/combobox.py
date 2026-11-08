@@ -1,5 +1,54 @@
 from .window import *
 
+class ComboboxInfo(COMBOBOXINFO):
+    @property
+    def item_rect(self) -> Rect:
+        return i_cast_structure(self.rcItem)
+    
+    @item_rect.setter
+    def item_rect(self, item_rect: RECT):
+        self.rcItem = item_rect
+    
+    @property
+    def button_rect(self) -> Rect:
+        return i_cast_structure(self.rcButton)
+    
+    @button_rect.setter
+    def button_rect(self, button_rect: RECT):
+        self.rcButton = button_rect
+        
+    @property
+    def button_state(self) -> int:
+        return self.stateButton
+    
+    @button_state.setter
+    def button_state(self, button_state: int):
+        self.stateButton = button_state
+        
+    @property
+    def combobox(self) -> Window:
+        return Window.foreign(self.hwndCombo)
+    
+    @combobox.setter
+    def combobox(self, combobox: int | HWND):
+        self.hwndCombo = combobox
+        
+    @property
+    def item_window(self) -> Window:
+        return Window.foreign(self.hwndItem)
+    
+    @item_window.setter
+    def item_window(self, item_window: int | HWND):
+        self.hwndItem = item_window
+        
+    @property
+    def list_window(self) -> Window:
+        return Window.foreign(self.hwndList)
+    
+    @list_window.setter
+    def list_window(self, list_window: int | HWND):
+        self.hwndList = list_window
+
 class Combobox(Control):
     class Item:
         cb: 'Combobox'
@@ -97,6 +146,14 @@ class Combobox(Control):
     @item_height.setter
     def item_height(self, item_height: int):
         self.send(CB_SETITEMHEIGHT, 0, item_height)
+    
+    @property
+    def info(self) -> ComboboxInfo:
+        cbi = ComboboxInfo()
+        cbi.cbSize = cbi.size()
+        if not GetComboBoxInfo(self, cbi.ref()):
+            raise WinException()
+        return cbi
     
     def parent_window_on_command(self, identifier: int, notify_code: int, hwnd: int):
         if identifier == self.identifier:

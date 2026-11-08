@@ -16,6 +16,10 @@ Win supports very large and flexible list of Windows API versions, from NT 5.0 (
 
 Win runs on all СPython versions from 3.8 to 3.14 inclusive.
 
+### Installation
+
+Just clone the repository into &lt;Python path&gt;/Lib/site-packages or &lt;Python path&gt;/Lib and start writing code with win.* imports.
+
 ### Main library terms
 
 1. IML - Instructions Markup Language, custom DSL standard for this library. 

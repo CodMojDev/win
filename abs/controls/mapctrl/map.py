@@ -26,11 +26,14 @@ class MapControl(AxHost):
             self.ctrl._execute_script(f'{self.name}.bindPopup("{string}").openPopup();')
     
     _tile_url: str
+    _attribution: str
     
     def __init__(self, width: int, height: int, parent: int | HWND, identifier: int | HMENU, 
-                 tile_url: str = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'):
+                 tile_url: str = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', 
+                 attribution: str = '(С) OpenStreetMap'):
         super().__init__('htmlfile', width, height, parent, identifier)
         self._tile_url = tile_url
+        self._attribution = attribution
     
     def _execute_script(self, code: str):
         holder = TL_GUARD_OBJECT()
@@ -64,6 +67,7 @@ class MapControl(AxHost):
         data = data.replace(
             '[MAP CONTROL] PLACEHOLDER - ICON PATH',
             URL.path(script_relative('data')).value)
+        data = data.replace('[MAP CONTROL] PLACEHOLDER - ATTRIBUTION', self._attribution)
         data = data.replace('[MAP CONTROL] PLACEHOLDER - TILE URL', self._tile_url)
         variant = Variant()
         variant.value = data

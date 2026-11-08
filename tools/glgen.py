@@ -33,6 +33,7 @@ class SAXOpenGLSpecParser(xml.sax.ContentHandler):
     extensions: dict[str, OpenGLFeatureOrExt]
     
     last_feature: OpenGLFeatureOrExt | None
+    last_last_feature: OpenGLFeatureOrExt | None
     last_command: OpenGLCommand | None
     
     subcommand: str | None
@@ -51,6 +52,7 @@ class SAXOpenGLSpecParser(xml.sax.ContentHandler):
         self.extensions = {}
         
         self.last_feature = None
+        self.last_last_feature = None
         self.last_command = None
         
         self.subcommand = None
@@ -61,7 +63,10 @@ class SAXOpenGLSpecParser(xml.sax.ContentHandler):
         if name in ('enums', 'commands', 'feature', 'extensions'):
             self.section = name
             if name == 'feature':
-                self.last_feature = OpenGLFeatureOrExt(attrs['api']+'_'+attrs['number'])
+                feature = OpenGLFeatureOrExt(attrs['api']+'_'+attrs['number'])
+                if self.last_last_feature is not None:
+                    feature.requires = self.last_last_feature.requires.copy()
+                self.last_feature = feature
         elif name == 'command':
             if self.section == 'commands':
                 self.last_command = OpenGLCommand()
@@ -99,6 +104,7 @@ class SAXOpenGLSpecParser(xml.sax.ContentHandler):
             self.last_command = None
         elif name == 'feature':
             self.features[self.last_feature.number] = self.last_feature
+            self.last_last_feature = self.last_feature
             self.last_feature = None
         elif name in ('commands', 'types', 'enums'):
             self.section = None

@@ -122,7 +122,7 @@ def BufferedPaintStopAllAnimations(hwnd: WT_HANDLE) -> int: ...
 @uxtheme.foreign(HRESULT)
 def BufferedPaintUnInit() -> int: ...
 
-@uxtheme.foreign(HANIMATIONBUFFER, HWND, HDC, PRECT, BP_BUFFERFORMAT, PBP_ANIMATIONPARAMS, PTR(HDC), PTR(HDC))
+@uxtheme.foreign(HANIMATIONBUFFER, HWND, HDC, PRECT, BP_BUFFERFORMAT, PBP_PAINTPARAMS, PBP_ANIMATIONPARAMS, PTR(HDC), PTR(HDC))
 def BeginBufferedAnimation(hwnd: WT_HANDLE, hdcTarget: WT_HANDLE, prcTarget: IPointer[RECT], dwFormat: int, pPaintParams: IPointer[BP_PAINTPARAMS], pAnimationParams: IPointer[BP_ANIMATIONPARAMS], phdcFrom: IPointer[HDC], phdcTo: IPointer[HDC]) -> int: ...
 
 @uxtheme.foreign(HRESULT, HANIMATIONBUFFER, BOOL)
@@ -204,6 +204,13 @@ class BufferedAnimation(Handle):
         if FAILED(hr):
             raise COMError(hr)
         self._closed = True
+    
+    @staticmethod
+    def render(window: int | HWND, dc: int | HANDLE) -> bool:
+        """
+        Try to render the buffered paint animation.
+        """
+        return BufferedPaintRenderAnimation(window, dc) == TRUE
 
 class BufferedPaintDC(DC):
     handle: WT_HANDLE
@@ -687,6 +694,11 @@ def GetThemeSysInt(hTheme: int, iIntId: int, piVal: IPointer[INT]) -> int: ...
 @uxtheme.foreign(INT, HTHEME, INT)
 def GetThemeSysSize(hTheme: int, iSizeId: int) -> int: ...
 
+# Undocumented (Ordinal 74)
+
+@uxtheme.foreign(HRESULT, HTHEME, LPWSTR, INT, ordinal=74)
+def GetThemeClass(hTheme: int, pName: WT_LPWSTR, nCount: int) -> int: ...
+
 class Theme(Handle):
     """
     Class, representing Windows theme.
@@ -901,13 +913,35 @@ class Theme(Handle):
         hr = GetThemeMargins(self, dc, part_id, state_id, prop_id, rect.ref() if rect is not None else NULL, margins.ref())
         if FAILED(hr): raise COMError(hr)
         return margins
+    
+    def get_stream(self, part_id: int, state_id: int, prop_id: int, handle: int) -> MemoryIO:
+        """
+        Get the stream from theme.
+        """
+        pstream = PVOID()
+        cb = DWORD()
+        hr = GetThemeStream(self, part_id, state_id, prop_id, byref(pstream), byref(cb), handle)
+        if FAILED(hr): raise COMError(hr)
+        return MemoryIO(pstream, cb.value)
+    
+    @property
+    def class_name(self) -> str:
+        buf = create_unicode_buffer(48)
+        hr = GetThemeClass(self, buf, 48)
+        if FAILED(hr):
+            raise COMError(hr)
+        return buf.value
 
 class VisualStyleElement:
-    THEME_HANDLES: ClassVar[dict[str, Theme]] = {}
+    THEME_HANDLES: ClassVar[dict[int | None, dict[str, Theme]]] = {}
     
     @classmethod
-    def refresh(cls):
-        cls.THEME_HANDLES.clear()
+    def refresh(cls, hwnd: int | HANDLE):
+        if hwnd is not None:
+            hwnd = PtrUtil.get_address(hwnd)
+        themes = cls.THEME_HANDLES.get(hwnd, None)
+        if themes is not None:
+            themes.clear()
     
     class_name: str
     part_id: int
@@ -922,13 +956,15 @@ class VisualStyleElement:
         """
         Get the Theme handle from Visual Style element.
         """
-        if hwnd is None:
-            theme = self.THEME_HANDLES.get(self.class_name, None)
-            if theme is None:
-                theme = Theme.create(NULL, self.class_name)
-                self.THEME_HANDLES[self.class_name] = theme
-        else:
+        if hwnd is not None:
+            hwnd = PtrUtil.get_address(hwnd)
+        themes = self.THEME_HANDLES.get(hwnd, None)
+        if themes is None:
+            self.THEME_HANDLES[hwnd] = themes = {}
+        theme = themes.get(self.class_name, None)
+        if theme is None:
             theme = Theme.create(hwnd, self.class_name)
+            themes[self.class_name] = theme
         return theme
     
     def draw_background(self, dc: DC, rc: RECT, hwnd: int | HANDLE | None = None):
@@ -1068,6 +1104,12 @@ class VisualStyleElement:
         Get the metric property of Visual Style Element.
         """
         return self.get(hwnd).get_metric(self.part_id, self.state_id, property_id, dc)
+ 
+    def stream(self, property_id: int, handle: int, hwnd: int | HWND | None = None) -> MemoryIO:
+        """
+        Get the stream from theme.
+        """
+        return self.get(hwnd).get_stream(self.part_id, self.state_id, property_id, handle)
  
 class VisualStyleElements:
     class Button:

@@ -41,7 +41,7 @@ class ProgressBar(Control):
             self.progress_bar.send(PBM_STEPIT)
     
     def __init__(self, width: int, height: int, 
-                 parent: int | HWND, identifier: int | HANDLE):
+                 parent: int | HWND, identifier: int | HMENU):
         super().__init__(parent, identifier)
         self._width = width
         self._height = height
